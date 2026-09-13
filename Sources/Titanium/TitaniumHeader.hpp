@@ -7,7 +7,7 @@ namespace TiRHI
     static constexpr bool ValidationLayer = true;
 #else
     static constexpr bool ValidationLayer = true;
-#endif
+#endif // defined(TITANIUM_VALIDATION_LAYER)
 }
 
 #endif // TITANIUM_TITIANUIM_HEADER_H

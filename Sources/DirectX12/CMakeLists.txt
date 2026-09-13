@@ -4,6 +4,9 @@ target_sources(
     TitaniumRHI
     PRIVATE
         DirectX12-Device.cpp
+        DirectX12-Header.hpp
+        DirectX12-Instance.cpp
+        DirectX12-Instance.hpp
 )
 
 target_include_directories(
