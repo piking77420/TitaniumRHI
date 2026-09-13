@@ -9,18 +9,19 @@
 #include <Titanium/Device.hpp>
 
 #include <d3d12.h>
-
-#include <wrl.h>
-template<typename T>
-using MComPtr = Microsoft::WRL::ComPtr<T>;
+#include <dxgidebug.h>
 
 #include <dxgi1_6.h>
-MComPtr<IDXGIFactory6> factory;
+#include <DirectX12-Header.hpp>
+#include <DirectX12-Instance.hpp>
 
 namespace TiRHI
 {
+    MComPtr<IDXGIFactory6> factory;
+
     struct Device::Backend
     {
+        DirectX12::Instance instance;
         MComPtr<ID3D12Device> device;
         MComPtr<ID3D12CommandQueue> graphicsQueue;
 
@@ -30,11 +31,13 @@ namespace TiRHI
             MComPtr<ID3D12Fence> deviceFence;
             uint32_t deviceFenceValue = 1u;
         } waitForFence;
+
+        void createFactory();
     };
 
     Device::Device()
+        : m_impl(std::make_unique<Device::Backend>())
     {
-        UINT dxgiFactoryFlags = 0;
     }
 
     Device::~Device()

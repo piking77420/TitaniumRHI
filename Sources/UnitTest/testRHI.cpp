@@ -1,10 +1,12 @@
-
 #include <iostream>
+
+#include <Titanium/Device.hpp>
 
 int main()
 {
+    TiRHI::Device device;
 
-    std::cout << "Hello world" << std::endl;
+    std::cout << "get c" << std::endl;
     std::getchar();
     return 0;
 }
