@@ -15,6 +15,8 @@ set(RHI_BACKENDS
 set(TITANIUM_RHI_BACKEND "Vulkan" CACHE STRING "RHI backend")
 set_property(CACHE TITANIUM_RHI_BACKEND PROPERTY STRINGS ${RHI_BACKENDS})
 
+set(TITANIUM_RHI_BACKEND "Metal") ## tmpr just for test
+
 if(NOT TITANIUM_RHI_BACKEND IN_LIST RHI_BACKENDS)
     message(FATAL_ERROR
         "TITANIUM_RHI_BACKEND must be one of: ${RHI_BACKENDS}"
@@ -22,16 +24,14 @@ if(NOT TITANIUM_RHI_BACKEND IN_LIST RHI_BACKENDS)
 endif()
 
 add_library(TitaniumRHI STATIC)
-
-if (NOT APPLE)
-    add_subdirectory(ThirdParty/VulkanMemoryAllocator)
-    set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
-endif()
-
 add_subdirectory(Sources/Titanium)
 
 if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
     message(STATUS "RHI Backend: Vulkan")
+    if (NOT APPLE)
+        add_subdirectory(ThirdParty/VulkanMemoryAllocator)
+        set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
+endif()
     add_subdirectory(Sources/Vulkan)
 
 elseif(TITANIUM_RHI_BACKEND STREQUAL "DirectX12")
@@ -40,6 +40,7 @@ elseif(TITANIUM_RHI_BACKEND STREQUAL "DirectX12")
 
 elseif(TITANIUM_RHI_BACKEND STREQUAL "Metal")
     message(STATUS "RHI Backend: Metal")
+    set(ABSOLUTE_METAL_CPP_DIR "${CMAKE_SOURCE_DIR}/ThirdParty/metal-cpp/")
     add_subdirectory(Sources/Metal)
 endif()
 
