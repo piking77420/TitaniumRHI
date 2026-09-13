@@ -5,7 +5,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 target_sources(
     TitaniumRHI
     PRIVATE
-        Metal-Device.cpp
+        Metal-RHI.cpp
 )
 
 target_include_directories(

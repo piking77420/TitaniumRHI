@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
-        DirectX12-Device.cpp
+        DirectX12-RHI.cpp
         DirectX12-Header.hpp
         DirectX12-Instance.cpp
         DirectX12-Instance.hpp

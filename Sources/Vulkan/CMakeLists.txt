@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
-        Vulkan-Device.cpp
+        Vulkan-RHI.cpp
 )
 
 target_include_directories(

@@ -5,11 +5,11 @@
 
 namespace TiRHI
 {
-    class Device
+    class RHI
     {
     public:
-        Device();
-        ~Device();
+        RHI();
+        ~RHI();
 
         void waitForDeviceIdle();
 

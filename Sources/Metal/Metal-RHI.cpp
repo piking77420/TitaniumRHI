@@ -1,5 +1,5 @@
-#ifndef TITANIUM_METAL_DEVICE_H
-#define TITANIUM_METAL_DEVICE_H
+#ifndef TITANIUM_METAL_RHI_H
+#define TITANIUM_METAL_RHI_H
 
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
@@ -10,21 +10,21 @@
 
 #include <Metal/Metal.hpp>
 
-#include <Titanium/Device.hpp>
+#include <Titanium/RHI.hpp>
 
 namespace TiRHI
 {
-    struct Device::Backend
+    struct RHI::Backend
     {
     };
 
-    Device::Device()
+    RHI::RHI()
     {
     }
 
-    Device::~Device()
+    RHI::~RHI()
     {
     }
 }
 
-#endif // TITANIUM_METAL_DEVICE_H
+#endif // TITANIUM_METAL_RHI_H
