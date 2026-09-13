@@ -5,6 +5,10 @@
 
 namespace TiRHI
 {
+    struct Device::Backend
+    {
+    };
+
     Device::Device()
     {
     }
