@@ -1,6 +1,8 @@
 #ifndef TITANIUM_D3D12_DEVICE_H
 #define TITANIUM_D3D12_DEVICE_H
 
+#include <memory>
+
 namespace TiRHI
 {
     class Device
@@ -10,6 +12,8 @@ namespace TiRHI
         ~Device();
 
     private:
+        struct Backend;
+        std::unique_ptr<Backend> m_impl;
     };
 }
 
