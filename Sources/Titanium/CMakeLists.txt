@@ -5,7 +5,7 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
-        Device.hpp
+        RHI.hpp
         TitaniumHeader.hpp
         Version.hpp
 )
