@@ -22,8 +22,18 @@ if(NOT TITANIUM_RHI_BACKEND IN_LIST RHI_BACKENDS)
 endif()
 
 add_library(TitaniumRHI STATIC)
+
+## Enable Validation Layer
+if (VALIDATION_LAYER)
+target_compile_definitions(TitaniumRHI PRIVATE TITANIUM_VALIDATION_LAYER=1)
+message(STATUS "VALIDATION LAYER ON")
+else()
+message(STATUS "VALIDATION LAYER OFF")
+endif()
+
 add_subdirectory(Sources/Titanium)
 
+## Choose wich backend
 if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
     message(STATUS "RHI Backend: Vulkan")
     if (NOT APPLE)
