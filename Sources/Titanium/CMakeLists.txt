@@ -6,6 +6,7 @@ target_sources(
     TitaniumRHIInterface
     INTERFACE
         Device.hpp
+        TitaniumHeader.hpp
         Version.hpp
 )
 

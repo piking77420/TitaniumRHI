@@ -11,6 +11,8 @@ namespace TiRHI
         Device();
         ~Device();
 
+        void waitForDeviceIdle();
+
     private:
         struct Backend;
         std::unique_ptr<Backend> m_impl;
