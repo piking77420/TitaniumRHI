@@ -55,8 +55,6 @@ jobs:
             -S .
             -B build
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-            -DBUILD_UNIT_TEST=ON
-            -DBUILD_BENCHMARK=ON
 
       - name: Upload clang-tidy results
         if: always()
