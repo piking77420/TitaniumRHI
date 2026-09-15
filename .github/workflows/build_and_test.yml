@@ -19,94 +19,95 @@ jobs:
           # Linux x64 GCC
           # ============================================================
 
-          - name: Linux x64 GCC
+          - name: Linux x64 Vulkan
             os: ubuntu-24.04
             build_type: Release
             configure_args: >-
               -DCMAKE_CXX_COMPILER=g++
-
-
-          # ============================================================
-          # Linux x64 Clang
-          # ============================================================
-
-          - name: Linux x64 Clang
-            os: ubuntu-24.04
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=clang++
-
+              -DTITANIUM_RHI_BACKEND=Vulkan
 
           # ============================================================
           # Linux ARM64 GCC
           # ============================================================
 
-          - name: Linux ARM64 GCC
+          - name: Linux ARM64 Vulkan
             os: ubuntu-24.04-arm
             build_type: Release
             configure_args: >-
               -DCMAKE_CXX_COMPILER=g++
-
-          # ============================================================
-          # Linux ARM64 Clang
-          # ============================================================
-
-          - name: Linux ARM64 Clang Default
-            os: ubuntu-24.04-arm
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=clang++
+              -DTITANIUM_RHI_BACKEND=Vulkan
 
           # ============================================================
           # Windows x64 MSVC
           # ============================================================
 
-          - name: Windows x64 MSVC Default
+          - name: Windows x64 MSVC DirectX12
             os: windows-2025
             build_type: Release
             configure_args: >-
               -G "Visual Studio 18 2026"
               -A x64
+              -DTITANIUM_RHI_BACKEND=DirectX12
 
-          # ============================================================
-          # Windows x64 ClangCL
-          # ============================================================
-
-          - name: Windows x64 ClangCL Default
+          - name: Windows x64 MSVC Vulkan
             os: windows-2025
             build_type: Release
             configure_args: >-
               -G "Visual Studio 18 2026"
               -A x64
-              -T ClangCL
+              -DTITANIUM_RHI_BACKEND=Vulkan
 
           # ============================================================
-          # Mac OS
+          # Mac OS Metal
           # ============================================================
-          - name: macOS ARM64 Clang Default
+          - name: macOS ARM64 Clang Default Metal
             os: macos-26
             build_type: Release
             configure_args: >-
               -G "Ninja"
+              -DTITANIUM_RHI_BACKEND=Metal
 
     runs-on: ${{ matrix.os }}
 
     steps:
+    # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
+    # 2. Install dependencies
+      - name: Install Vulkan dependencies - Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev
 
+      - name: Install Vulkan SDK - Windows
+        if: runner.os == 'Windows' && contains(matrix.configure_args, 'TITANIUM_RHI_BACKEND=Vulkan')
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+
+      - name: Install Metal toolchain
+        if: runner.os == 'macOS'
+        run: |
+          xcodebuild -downloadComponent MetalToolchain
+
+     # 2. Configure
       - name: Configure
         run: >
           cmake
           -S .
           -B build
           ${{ matrix.configure_args }}
-
+     # 3. Build
       - name: Build
         run: cmake
           --build build
           --config ${{ matrix.build_type }}
-
+     # 4. Run
       - name: Run tests
         run: ctest
           --test-dir build
