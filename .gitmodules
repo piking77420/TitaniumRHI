@@ -1,0 +1,6 @@
+[submodule "ThirdParty/VulkanMemoryAllocator"]
+	path = ThirdParty/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "ThirdParty/metal-cpp"]
+	path = ThirdParty/metal-cpp
+	url = https://github.com/apple/metal-cpp.git
