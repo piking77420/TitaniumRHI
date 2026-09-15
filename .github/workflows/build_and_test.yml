@@ -83,11 +83,12 @@ jobs:
           sudo apt-get install -y libvulkan-dev
 
       - name: Install Vulkan SDK - Windows
-        if: runner.os == 'Windows'
-        uses: humbletim/install-vulkan-sdk@v1.2
+        if: runner.os == 'Windows' && contains(matrix.configure_args, 'TITANIUM_RHI_BACKEND=Vulkan')
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
         with:
-          version: 1.4.357.0
-          cache: true
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
 
       - name: Install Metal toolchain
         if: runner.os == 'macOS'
