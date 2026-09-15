@@ -34,20 +34,22 @@ endif()
 add_subdirectory(Sources/Titanium)
 
 ## Choose wich backend
+## TODO add guard for os
 if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
     message(STATUS "RHI Backend: Vulkan")
-    if (NOT APPLE)
-        add_subdirectory(ThirdParty/VulkanMemoryAllocator)
-        set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
-endif()
+    target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_VULKAN=1)
+    add_subdirectory(ThirdParty/VulkanMemoryAllocator)
+    set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
     add_subdirectory(Sources/Vulkan)
 
 elseif(TITANIUM_RHI_BACKEND STREQUAL "DirectX12")
     message(STATUS "RHI Backend: DirectX12")
+    target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_DIRECT_X12=1)
     add_subdirectory(Sources/DirectX12)
 
 elseif(TITANIUM_RHI_BACKEND STREQUAL "Metal")
     message(STATUS "RHI Backend: Metal")
+        target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_METAL=1)
     set(ABSOLUTE_METAL_CPP_DIR "${CMAKE_SOURCE_DIR}/ThirdParty/metal-cpp/")
     add_subdirectory(Sources/Metal)
 endif()
