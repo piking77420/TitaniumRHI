@@ -1,6 +1,3 @@
-#ifndef TITANIUM_VULKAN_RHI_H
-#define TITANIUM_VULKAN_RHI_H
-
 #include <Vulkan/Vulkan-RHI.hpp>
 
 namespace TiRHI
@@ -17,5 +14,3 @@ namespace TiRHI
     {
     }
 }
-
-#endif // TITANIUM_VULKAN_RHI_H

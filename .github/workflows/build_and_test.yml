@@ -70,23 +70,43 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+    # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           submodules: recursive
+    # 2. Install dependencies
+      - name: Install Vulkan dependencies - Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev
 
+      - name: Install Vulkan SDK - Windows
+        if: runner.os == 'Windows'
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: 1.4.357.0
+          cache: true
+
+      - name: Install Metal toolchain
+        if: runner.os == 'macOS'
+        run: |
+          xcodebuild -downloadComponent MetalToolchain
+
+     # 2. Configure
       - name: Configure
         run: >
           cmake
           -S .
           -B build
           ${{ matrix.configure_args }}
-
+     # 3. Build
       - name: Build
         run: cmake
           --build build
           --config ${{ matrix.build_type }}
-
+     # 4. Run
       - name: Run tests
         run: ctest
           --test-dir build
