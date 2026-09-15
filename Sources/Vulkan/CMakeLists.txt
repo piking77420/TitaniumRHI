@@ -4,6 +4,7 @@ target_sources(
     TitaniumRHI
     PRIVATE
         Vulkan-RHI.cpp
+        Vulkan-RHI.hpp
 )
 
 target_include_directories(

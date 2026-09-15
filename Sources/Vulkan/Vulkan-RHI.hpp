@@ -5,17 +5,16 @@
 
 namespace TiRHI
 {
-    RHI::RHI()
+    class RHI
     {
-    }
+    public:
+        RHI();
+        ~RHI();
 
-    RHI::~RHI()
-    {
-    }
+        void waitForDeviceIdle();
 
-    void RHI::waitForDeviceIdle()
-    {
-    }
+    private:
+    };
 }
 
 #endif // TITANIUM_VULKAN_RHI_H

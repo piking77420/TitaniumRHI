@@ -6,6 +6,7 @@ target_sources(
     TitaniumRHI
     PRIVATE
         Metal-RHI.cpp
+        Metal-RHI.hpp
 )
 
 target_include_directories(

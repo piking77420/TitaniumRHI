@@ -4,7 +4,7 @@
 
 int main()
 {
-    TiRHI::RHI device;
+    TiRHI::RHI rhi;
 
     std::cout << "get c" << std::endl;
     std::getchar();
