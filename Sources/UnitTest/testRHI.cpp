@@ -1,12 +1,16 @@
 #include <iostream>
 
+#include <gtest/gtest.h>
 #include <Titanium/RHI.hpp>
 
-int main()
+TEST(DummyTest, Test)
 {
-    TiRHI::RHI rhi;
+    TiRHI::RHI device;
+    EXPECT_TRUE(true);
+}
 
-    std::cout << "get c" << std::endl;
-    std::getchar();
-    return 0;
+int main(int argc, char** argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
