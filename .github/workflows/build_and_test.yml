@@ -22,9 +22,11 @@ jobs:
           - name: Linux x64 Vulkan
             os: ubuntu-24.04
             build_type: Release
+            run_tests: true
             configure_args: >-
               -DCMAKE_CXX_COMPILER=g++
               -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
           # ============================================================
           # Linux ARM64 GCC
@@ -33,9 +35,11 @@ jobs:
           - name: Linux ARM64 Vulkan
             os: ubuntu-24.04-arm
             build_type: Release
+            run_tests: true
             configure_args: >-
               -DCMAKE_CXX_COMPILER=g++
               -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
           # ============================================================
           # Windows x64 MSVC
@@ -44,18 +48,22 @@ jobs:
           - name: Windows x64 MSVC DirectX12
             os: windows-2025
             build_type: Release
+            run_tests: true
             configure_args: >-
               -G "Visual Studio 18 2026"
               -A x64
               -DTITANIUM_RHI_BACKEND=DirectX12
+              -DBUILD_UNIT_TEST=True
 
           - name: Windows x64 MSVC Vulkan
             os: windows-2025
             build_type: Release
+            run_tests: true
             configure_args: >-
               -G "Visual Studio 18 2026"
               -A x64
               -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
           # ============================================================
           # Mac OS Metal
@@ -63,9 +71,30 @@ jobs:
           - name: macOS ARM64 Clang Default Metal
             os: macos-26
             build_type: Release
+            run_tests: true
             configure_args: >-
               -G "Ninja"
               -DTITANIUM_RHI_BACKEND=Metal
+              -DBUILD_UNIT_TEST=True
+
+          # ============================================================
+          # Android ARM64 Vulkan
+          # ============================================================
+
+          - name: Android ARM64 Vulkan
+            os: ubuntu-24.04
+            build_type: Release
+            run_tests: false
+            android: true
+            configure_args: >-
+              -G Ninja
+              -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/29.0.14206865/build/cmake/android.toolchain.cmake
+              -DANDROID_ABI=arm64-v8a
+              -DANDROID_PLATFORM=android-24
+              -DANDROID_STL=c++_shared
+              -DCMAKE_BUILD_TYPE=Release
+              -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
     runs-on: ${{ matrix.os }}
 
@@ -95,20 +124,27 @@ jobs:
         run: |
           xcodebuild -downloadComponent MetalToolchain
 
-     # 2. Configure
+      - name: Setup Android SDK
+        if: matrix.android == true
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools ndk;29.0.14206865'
+
+     # 3. Configure
       - name: Configure
         run: >
           cmake
           -S .
           -B build
           ${{ matrix.configure_args }}
-     # 3. Build
+     # 4. Build
       - name: Build
         run: cmake
           --build build
           --config ${{ matrix.build_type }}
-     # 4. Run
+     # 5. Run
       - name: Run tests
+        if: matrix.run_tests == true
         run: ctest
           --test-dir build
           -C ${{ matrix.build_type }}

@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(CMAKE_CROSSCOMPILING)
+    set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
+endif()
+
 set(RHI_BACKENDS
     Vulkan
     DirectX12
@@ -60,7 +64,7 @@ target_link_libraries(
         TitaniumRHIInterface
 )
 
-if (BUILD_UNIT_TEST OR TRUE)
+if (BUILD_UNIT_TEST)
     include(CTest)  
     enable_testing()
     add_subdirectory(Sources/UnitTest)
