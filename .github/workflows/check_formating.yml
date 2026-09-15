@@ -50,10 +50,19 @@ jobs:
           config_file: ".clang-tidy"
           build_dir: "build"
           include: "*.cpp,*.cc,*.cxx"
+          apt_packages: >-
+            libvulkan-dev,
+            libx11-dev,
+            libxrandr-dev,
+            libxinerama-dev,
+            libxcursor-dev,
+            libxi-dev,
+            libxext-dev
           cmake_command: >-
             cmake
             -S .
             -B build
+            -DTITANIUM_RHI_BACKEND=Vulkan
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Upload clang-tidy results
