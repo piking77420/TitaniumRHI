@@ -1,6 +1,9 @@
 #ifndef TITANIUM_VULKAN_INSTANCE_H
 #define TITANIUM_VULKAN_INSTANCE_H
 
+#include <set>
+#include <string>
+
 #include <vulkan/vulkan.hpp>
 #include <Vulkan-Functions.hpp>
 

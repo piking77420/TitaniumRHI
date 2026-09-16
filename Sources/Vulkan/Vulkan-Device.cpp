@@ -7,7 +7,7 @@
 namespace TiRHI::Vulkan
 {
     int getPhyscialDeviceScrore(const vk::PhysicalDevice& physicalDevice,
-                                const vk::PhysicalDeviceProperties& properties)
+                                const vk::PhysicalDeviceProperties& properties, Device::Extension& extensionSupported)
     {
         int score = 0;
         // properties.pipelineCacheUUID // TODO take a look at it
@@ -29,31 +29,12 @@ namespace TiRHI::Vulkan
         const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
             physicalDevice.enumerateDeviceExtensionProperties();
 
-        std::println("Enumerate vulkan device extension");
-        for (const auto& ext : deviceExtensionProperties)
-        {
-            const std::string_view extName = std::string_view(ext.extensionName);
-            std::println("{} - spec version {}", extName, ext.specVersion);
-        }
-        std::println();
+        extensionSupported = Device::Extension(deviceExtensionProperties);
 
-        const bool supportsSwapchain = std::ranges::any_of(
-            deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-            { return std::strcmp(extension.extensionName.data(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; });
-        const bool supportsRaytracing = std::ranges::any_of(
-            deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-            { return std::strcmp(extension.extensionName.data(), VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0; });
-        const bool supportsMultiview = std::ranges::any_of(
-            deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-            { return std::strcmp(extension.extensionName.data(), VK_KHR_MULTIVIEW_EXTENSION_NAME) == 0; });
-        const bool supportsMeshShader = std::ranges::any_of(
-            deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-            { return std::strcmp(extension.extensionName.data(), VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0; });
-
-        score += supportsSwapchain ? 1000 : -1000;
-        score += supportsRaytracing ? 100 : -100;
-        score += supportsMultiview ? 10 : -10;
-        score += supportsMeshShader ? 100 : -100;
+        score += extensionSupported.supportsSwapchain ? 1000 : -1000;
+        score += extensionSupported.supportsRaytracing ? 100 : -100;
+        score += extensionSupported.supportsMultiview ? 10 : -10;
+        score += extensionSupported.supportsMeshShader ? 100 : -100;
 
         return score;
     }
@@ -61,50 +42,117 @@ namespace TiRHI::Vulkan
     Device::Device(Instance& instance)
     {
         choosePhysicalDevice(instance);
+        createDevice();
     }
 
     Device::~Device()
     {
+        std::println("Destroying Device");
     }
 
     void Device::choosePhysicalDevice(Instance& instance)
     {
         vk::Instance vkInstance = instance.getInstance();
         uint32_t physicalDeviceCount = 0;
-        const std::vector<vk::PhysicalDevice> physicalDevices = vkInstance.enumeratePhysicalDevices();
-        if (physicalDevices.empty())
+        m_physicalDevices = vkInstance.enumeratePhysicalDevices();
+        if (m_physicalDevices.empty())
         {
             std::println("Failed to enumerate physical devices");
             return;
         }
 
         std::println("Available physical device : ");
-        for (const vk::PhysicalDevice& physicalDevice : physicalDevices)
+        for (const vk::PhysicalDevice& physicalDevice : m_physicalDevices)
         {
             const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
             std::println("GPU: {}", properties.deviceName.data());
         }
         std::println();
 
-        std::vector<int> physicalDeviceScores;
-        size_t lastBestPhysicalDevice = 0;
+        m_extension.resize(m_physicalDevices.size());
+
+        size_t lastBestPhysicalDeviceIndex = 0;
         int lastBestScore = std::numeric_limits<int>::min();
-        for (const vk::PhysicalDevice& physicalDevice : physicalDevices)
+        for (size_t i = 0; i < m_physicalDevices.size(); i++)
         {
+            const vk::PhysicalDevice& physicalDevice = m_physicalDevices[i];
             const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
-            int currentScore = getPhyscialDeviceScrore(physicalDevice, properties);
+            int currentScore = getPhyscialDeviceScrore(physicalDevice, properties, m_extension[i]);
 
             if (currentScore > lastBestScore)
             {
                 lastBestScore = currentScore;
-                lastBestPhysicalDevice = std::distance(&physicalDevice, physicalDevices.data());
+                lastBestPhysicalDeviceIndex = i;
             }
         }
 
+        if (lastBestPhysicalDeviceIndex == std::numeric_limits<int>::min() && lastBestScore == 0)
         {
-            const vk::PhysicalDeviceProperties properties = physicalDevices[lastBestPhysicalDevice].getProperties();
-            std::println("Device Choose: {}", properties.deviceName.data());
+            std::println("Failed to choose a physical device");
+            return;
         }
+
+        if (!m_extension[lastBestPhysicalDeviceIndex].supportsSwapchain)
+        {
+            std::println("choosen physical device dont support swap chain");
+            return;
+        }
+
+        const vk::PhysicalDeviceProperties properties = m_physicalDevices[lastBestPhysicalDeviceIndex].getProperties();
+        m_currentPhysicalDeviceIndex = lastBestPhysicalDeviceIndex;
+        std::println("Device Choose: {}", properties.deviceName.data());
+        return;
+    }
+
+    void Device::createDevice()
+    {
+        const std::vector<vk::QueueFamilyProperties> queueFamilyPropertie =
+            getPhysicalDevice().getQueueFamilyProperties();
+
+        size_t allPropertiesQueuIndex = std::numeric_limits<size_t>::max();
+
+        for (size_t i = 0; i < queueFamilyPropertie.size(); i++)
+        {
+            if (queueFamilyPropertie[i].queueFlags &
+                (vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eTransfer))
+            {
+                allPropertiesQueuIndex = i;
+                break;
+            }
+        }
+
+        if (allPropertiesQueuIndex == std::numeric_limits<size_t>::max())
+        {
+            std::println("Failed to find an valid queu");
+            return;
+        }
+
+        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo = {};
+        std::array<float, 1> queuePriority = {1.f};
+        queueCreateInfo.resize(1);
+
+        for (uint32_t i = 0; i < 1; i++)
+        {
+            queueCreateInfo[i].sType = vk::StructureType::eDeviceQueueCreateInfo;
+            queueCreateInfo[i].queueFamilyIndex = allPropertiesQueuIndex;
+            queueCreateInfo[i].queueCount = 1;
+            queueCreateInfo[i].pQueuePriorities = queuePriority.data();
+        }
+
+        std::vector<const char*> getDeviceExtensionName = m_extension[m_currentPhysicalDeviceIndex].getExtensionName();
+
+        vk::DeviceCreateInfo deviceCreateInfo{};
+        deviceCreateInfo.sType = vk::StructureType::eDeviceCreateInfo;
+        deviceCreateInfo.pNext = nullptr;
+        deviceCreateInfo.pQueueCreateInfos = queueCreateInfo.data();
+        deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfo.size());
+        deviceCreateInfo.pEnabledFeatures = nullptr;
+
+        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(getDeviceExtensionName.size());
+        deviceCreateInfo.ppEnabledExtensionNames = getDeviceExtensionName.data();
+
+        std::println("Create Device");
+        m_device = getPhysicalDevice().createDeviceUnique(deviceCreateInfo);
     }
 
 } // namespace TiRHI::Vulkan

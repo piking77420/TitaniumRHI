@@ -50,13 +50,18 @@ namespace TiRHI::Vulkan
 
     Instance::Instance()
     {
+        std::set<std::string> m_requireExtensionNeeded;
+
         // TODO should be pass by the user
         std::vector<const char*> requiredExtensions = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME}; // may ask the user to use it
+
+        for (auto& ext : requiredExtensions)
+            m_requireExtensionNeeded.insert(ext);
 
         constexpr bool useDebugScope = true;
         if (useDebugScope)
         {
-            requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            m_requireExtensionNeeded.insert(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
 
         std::vector<const char*> extensions;
