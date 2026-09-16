@@ -23,22 +23,20 @@ namespace TiRHI::Vulkan
 
             Extension(const std::vector<vk::ExtensionProperties> deviceExtensionProperties)
             {
+                // clang-format off
                 supportsSwapchain = std::ranges::any_of(
                     deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
                     { return std::strcmp(extension.extensionName.data(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; });
-                supportsRaytracing =
-                    std::ranges::any_of(deviceExtensionProperties,
-                                        [](const vk::ExtensionProperties& extension)
-                                        {
-                                            return std::strcmp(extension.extensionName.data(),
-                                                               VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0;
-                                        });
+                supportsSwapchain = std::ranges::any_of(
+                    deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
+                    { return std::strcmp(extension.extensionName.data(), VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0; });
                 supportsMultiview = std::ranges::any_of(
                     deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
                     { return std::strcmp(extension.extensionName.data(), VK_KHR_MULTIVIEW_EXTENSION_NAME) == 0; });
                 supportsMeshShader = std::ranges::any_of(
                     deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
                     { return std::strcmp(extension.extensionName.data(), VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0; });
+                // clang-format on
             }
 
             std::vector<const char*> getExtensionName()

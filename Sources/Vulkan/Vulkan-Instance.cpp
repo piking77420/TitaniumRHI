@@ -65,7 +65,8 @@ namespace TiRHI::Vulkan
         }
 
         std::vector<const char*> extensions;
-        extensions.append_range(requiredExtensions);
+        for (auto& ext : requiredExtensions)
+            extensions.push_back(ext);
 
         vk::ApplicationInfo appInfo = {};
         appInfo.sType = vk::StructureType::eApplicationInfo;

@@ -105,10 +105,12 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_VALIDATION_LAYER)
     }
 
+#if defined(TITANIUM_VALIDATION_LAYER)
     D3D12MessageFunc Instance::getMessageCallBack()
     {
         return &validationLayersDebugCallback;
     }
+#endif // defined(TITANIUM_VALIDATION_LAYER)
 
     void Instance::setupValidationLayer()
     {

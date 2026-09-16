@@ -16,8 +16,12 @@ namespace TiRHI::DirectX12
         Instance();
         ~Instance();
 
+#if defined(TITANIUM_VALIDATION_LAYER)
         using D3D12MessageFunc = void (*)(D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY, D3D12_MESSAGE_ID, LPCSTR,
                                           void*);
+#endif // defined(TITANIUM_VALIDATION_LAYER)
+
+        D3D12MessageFunc getMessageCallBack();
 
         UINT getFactoryFlags() const
         {
@@ -28,8 +32,6 @@ namespace TiRHI::DirectX12
         {
             return m_factory;
         }
-
-        D3D12MessageFunc getMessageCallBack();
 
     private:
         UINT m_dxgiFactoryFlags = 0;
