@@ -24,7 +24,7 @@ jobs:
             build_type: Release
             run_tests: true
             configure_args: >-
-              -DCMAKE_CXX_COMPILER=g++
+              -DCMAKE_CXX_COMPILER=g++-14
               -DTITANIUM_RHI_BACKEND=Vulkan
               -DBUILD_UNIT_TEST=True
 
@@ -37,7 +37,7 @@ jobs:
             build_type: Release
             run_tests: true
             configure_args: >-
-              -DCMAKE_CXX_COMPILER=g++
+              -DCMAKE_CXX_COMPILER=g++-14
               -DTITANIUM_RHI_BACKEND=Vulkan
               -DBUILD_UNIT_TEST=True
 
@@ -105,11 +105,22 @@ jobs:
         with:
           submodules: recursive
     # 2. Install dependencies
+      - name: Install dependencies - Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev gcc-14 g++-14
+
       - name: Install Vulkan dependencies - Linux
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvulkan-dev
+          sudo apt-get install -y \
+            libvulkan-dev \
+            mesa-vulkan-drivers \
+            vulkan-tools
+
+          vulkaninfo --summary
 
       - name: Install Vulkan SDK - Windows
         if: runner.os == 'Windows' && contains(matrix.configure_args, 'TITANIUM_RHI_BACKEND=Vulkan')
