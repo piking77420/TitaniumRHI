@@ -43,6 +43,8 @@ if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
     message(STATUS "RHI Backend: Vulkan")
     target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_VULKAN=1)
     add_subdirectory(ThirdParty/VulkanMemoryAllocator)
+    add_subdirectory(ThirdParty/Vulkan-Headers)
+
     set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
     add_subdirectory(Sources/Vulkan)
 

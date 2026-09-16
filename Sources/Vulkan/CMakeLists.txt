@@ -26,14 +26,6 @@ target_include_directories(
         "${VMA_INCLUDE}"
 )
 
-add_library(VulkanHeaders INTERFACE)
-
-target_include_directories(
-    VulkanHeaders
-    INTERFACE
-        "${VULKAN_HEADERS_INCLUDE}"
-)
-
 if(ANDROID)
 
     find_library(
@@ -42,11 +34,17 @@ if(ANDROID)
         REQUIRED
     )
 
+    target_compile_definitions(
+        TitaniumRHI
+        PRIVATE
+            VK_USE_PLATFORM_ANDROID_KHR
+    )
+
     target_link_libraries(
         TitaniumRHI
         PUBLIC
+            Vulkan::Headers
             ${VULKAN_LIB}
-            VulkanHeaders
             VMA
     )
 
@@ -57,6 +55,7 @@ else()
     target_link_libraries(
         TitaniumRHI
         PUBLIC
+            Vulkan::Headers
             Vulkan::Vulkan
             VMA
     )
