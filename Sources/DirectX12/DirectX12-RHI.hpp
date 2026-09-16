@@ -14,6 +14,7 @@
 #include <dxgi1_6.h>
 #include <DirectX12-Header.hpp>
 #include <DirectX12-Instance.hpp>
+#include <DirectX12-Device.hpp>
 
 namespace TiRHI
 {
@@ -26,16 +27,16 @@ namespace TiRHI
         void waitForDeviceIdle();
 
     private:
-        DirectX12::Instance instance;
-        MComPtr<ID3D12Device> device;
-        MComPtr<ID3D12CommandQueue> graphicsQueue;
+        DirectX12::Instance m_instance;
+        DirectX12::Device m_device;
+        MComPtr<ID3D12CommandQueue> m_graphicsQueue;
 
-        struct WaitForFence
+        struct Synchronisation
         {
             HANDLE deviceFenceEvent;
             MComPtr<ID3D12Fence> deviceFence;
             uint32_t deviceFenceValue = 1u;
-        } waitForFence;
+        } m_synchronisation;
     };
 }
 

@@ -16,6 +16,9 @@ namespace TiRHI::DirectX12
         Instance();
         ~Instance();
 
+        using D3D12MessageFunc = void (*)(D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY, D3D12_MESSAGE_ID, LPCSTR,
+                                          void*);
+
         UINT getFactoryFlags() const
         {
             return m_dxgiFactoryFlags;
@@ -25,6 +28,8 @@ namespace TiRHI::DirectX12
         {
             return m_factory;
         }
+
+        D3D12MessageFunc getMessageCallBack();
 
     private:
         UINT m_dxgiFactoryFlags = 0;

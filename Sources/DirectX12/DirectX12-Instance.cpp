@@ -57,19 +57,19 @@ namespace TiRHI::DirectX12
         switch (severity)
         {
         case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-            std::print("corruption : {}", dets);
+            std::println("corruption : {}", dets);
             break;
         case D3D12_MESSAGE_SEVERITY_ERROR:
-            std::print("Error : {}", dets);
+            std::println("Error : {}", dets);
             break;
         case D3D12_MESSAGE_SEVERITY_WARNING:
-            std::print("warning : {}", dets);
+            std::println("warning : {}", dets);
             break;
         case D3D12_MESSAGE_SEVERITY_INFO:
-            std::print("info : {}", dets);
+            return;
         case D3D12_MESSAGE_SEVERITY_MESSAGE:
         default:
-            std::print("{}", dets);
+            std::println("{}", dets);
             break;
         }
     }
@@ -77,13 +77,38 @@ namespace TiRHI::DirectX12
 
     Instance::Instance()
     {
-        std::println("DirectX12 backend");
+        std::println("DirectX12 backend \n");
 
         setupValidationLayer();
         createFactory();
     }
 
-    Instance::~Instance() = default;
+    Instance::~Instance()
+    {
+        std::println("Destroying Factory... {}", static_cast<void*>(m_factory.Get()));
+        m_factory = nullptr;
+
+#if defined(TITANIUM_VALIDATION_LAYER)
+
+        // Report live objects
+        MComPtr<IDXGIDebug1> dxgiDebug = nullptr;
+
+        const HRESULT hrDebugInterface = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug));
+        if (SUCCEEDED(hrDebugInterface))
+        {
+            dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+        }
+        else
+        {
+            std::println("Validation layer uninitialized failed.");
+        }
+#endif // defined(TITANIUM_VALIDATION_LAYER)
+    }
+
+    D3D12MessageFunc Instance::getMessageCallBack()
+    {
+        return &validationLayersDebugCallback;
+    }
 
     void Instance::setupValidationLayer()
     {
@@ -100,7 +125,7 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                std::println("Validation layer DebugController initialization failed \n Error Code: {}",
+                std::println("Validation layer DebugController initialization failed \n Error Code: {} \n",
                              hrDebugInterface);
             }
         }
@@ -125,7 +150,7 @@ namespace TiRHI::DirectX12
                 }
                 else
                 {
-                    std::println("Validation layer DebugInfoQueue uninitialized failed.");
+                    std::println("Validation layer DebugInfoQueue uninitialized failed. \n");
                 }
             }
 
@@ -140,11 +165,11 @@ namespace TiRHI::DirectX12
         const HRESULT hrFactoryCreated = CreateDXGIFactory2(m_dxgiFactoryFlags, IID_PPV_ARGS(&m_factory));
         if (FAILED(hrFactoryCreated))
         {
-            std::println("Create Factory failed {}", hrFactoryCreated);
+            std::println("Create Factory failed {} \n", hrFactoryCreated);
         }
         else
         {
-            std::println("Create Factory success");
+            std::println("Create Factory success \n");
         }
     }
 } // namespace TiRHI::DirectX12

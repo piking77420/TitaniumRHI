@@ -64,7 +64,7 @@ target_link_libraries(
         TitaniumRHIInterface
 )
 
-if (BUILD_UNIT_TEST)
+if (BUILD_UNIT_TEST OR True)
     include(CTest)  
     enable_testing()
     add_subdirectory(Sources/UnitTest)
