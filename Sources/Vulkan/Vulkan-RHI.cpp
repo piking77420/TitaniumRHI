@@ -3,6 +3,7 @@
 namespace TiRHI
 {
     RHI::RHI()
+        : m_device(m_instance)
     {
     }
 
@@ -14,4 +15,3 @@ namespace TiRHI
     {
     }
 } // namespace TiRHI
-

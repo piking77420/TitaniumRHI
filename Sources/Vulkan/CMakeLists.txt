@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Vulkan-Device.cpp
+        Vulkan-Device.hpp
         Vulkan-Functions.hpp
         Vulkan-Instance.cpp
         Vulkan-Instance.hpp

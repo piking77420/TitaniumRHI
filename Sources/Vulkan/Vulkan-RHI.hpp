@@ -2,6 +2,7 @@
 #define TITANIUM_VULKAN_RHI_H
 
 #include <Vulkan-Instance.hpp>
+#include <Vulkan-Device.hpp>
 
 namespace TiRHI
 {
@@ -15,6 +16,7 @@ namespace TiRHI
 
     private:
         Vulkan::Instance m_instance;
+        Vulkan::Device m_device;
     };
 }
 

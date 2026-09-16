@@ -12,6 +12,11 @@ namespace TiRHI::Vulkan
         Instance();
         ~Instance();
 
+        vk::Instance getInstance() noexcept
+        {
+            return m_instance;
+        }
+
     private:
         vk::Instance m_instance;
 
