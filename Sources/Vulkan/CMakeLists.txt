@@ -18,18 +18,47 @@ target_include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-find_package(Vulkan REQUIRED)
-
 add_library(VMA INTERFACE)
+
 target_include_directories(
     VMA
     INTERFACE
-    "${VMA_INCLUDE}"
+        "${VMA_INCLUDE}"
 )
 
-target_link_libraries(
-    TitaniumRHI
-    PUBLIC
-    Vulkan::Vulkan
-    VMA
+add_library(VulkanHeaders INTERFACE)
+
+target_include_directories(
+    VulkanHeaders
+    INTERFACE
+        "${VULKAN_HEADERS_INCLUDE}"
 )
+
+if(ANDROID)
+
+    find_library(
+        VULKAN_LIB
+        vulkan
+        REQUIRED
+    )
+
+    target_link_libraries(
+        TitaniumRHI
+        PUBLIC
+            ${VULKAN_LIB}
+            VulkanHeaders
+            VMA
+    )
+
+else()
+
+    find_package(Vulkan REQUIRED)
+
+    target_link_libraries(
+        TitaniumRHI
+        PUBLIC
+            Vulkan::Vulkan
+            VMA
+    )
+
+endif()
