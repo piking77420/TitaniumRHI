@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Vulkan-Functions.hpp
+        Vulkan-Instance.cpp
+        Vulkan-Instance.hpp
         Vulkan-RHI.cpp
         Vulkan-RHI.hpp
 )
@@ -24,7 +27,7 @@ target_include_directories(
 
 target_link_libraries(
     TitaniumRHI
-    PRIVATE
+    PUBLIC
     Vulkan::Vulkan
     VMA
 )

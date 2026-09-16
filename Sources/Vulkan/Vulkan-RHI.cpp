@@ -13,4 +13,5 @@ namespace TiRHI
     void RHI::waitForDeviceIdle()
     {
     }
-}
+} // namespace TiRHI
+

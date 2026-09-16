@@ -1,7 +1,7 @@
 #ifndef TITANIUM_VULKAN_RHI_H
 #define TITANIUM_VULKAN_RHI_H
 
-#include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan-Instance.hpp>
 
 namespace TiRHI
 {
@@ -14,6 +14,7 @@ namespace TiRHI
         void waitForDeviceIdle();
 
     private:
+        Vulkan::Instance m_instance;
     };
 }
 
