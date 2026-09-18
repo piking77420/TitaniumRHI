@@ -1,4 +1,4 @@
-name: Build and Test C/C++ Code
+name: Build and Run
 
 on:
   push:
@@ -19,142 +19,143 @@ jobs:
           # Linux x64 GCC
           # ============================================================
 
-          - name: Linux x64 GCC Default
+          - name: Linux x64 Vulkan
             os: ubuntu-24.04
             build_type: Release
+            run_tests: true
             configure_args: >-
-              -DCMAKE_CXX_COMPILER=g++
-
-          - name: Linux x64 GCC AVX2
-            os: ubuntu-24.04
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=g++
-
-
-          # ============================================================
-          # Linux x64 Clang
-          # ============================================================
-
-          - name: Linux x64 Clang Default
-            os: ubuntu-24.04
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=clang++
-
-          - name: Linux x64 Clang AVX2
-            os: ubuntu-24.04
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=clang++
-
+              -DCMAKE_CXX_COMPILER=g++-14
+              -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
           # ============================================================
           # Linux ARM64 GCC
           # ============================================================
 
-          - name: Linux ARM64 GCC Default
+          - name: Linux ARM64 Vulkan
             os: ubuntu-24.04-arm
             build_type: Release
+            run_tests: true
             configure_args: >-
-              -DCMAKE_CXX_COMPILER=g++
-
-          - name: Linux ARM64 GCC NEON
-            os: ubuntu-24.04-arm
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=g++
-
-
-          # ============================================================
-          # Linux ARM64 Clang
-          # ============================================================
-
-          - name: Linux ARM64 Clang Default
-            os: ubuntu-24.04-arm
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=clang++
-
-          - name: Linux ARM64 Clang NEON
-            os: ubuntu-24.04-arm
-            build_type: Release
-            configure_args: >-
-              -DCMAKE_CXX_COMPILER=clang++
+              -DCMAKE_CXX_COMPILER=g++-14
+              -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
           # ============================================================
           # Windows x64 MSVC
           # ============================================================
 
-          - name: Windows x64 MSVC Default
+          - name: Windows x64 MSVC DirectX12
             os: windows-2025
             build_type: Release
+            run_tests: true
             configure_args: >-
               -G "Visual Studio 18 2026"
               -A x64
+              -DTITANIUM_RHI_BACKEND=DirectX12
+              -DBUILD_UNIT_TEST=True
 
-          - name: Windows x64 MSVC AVX2
-            os: windows-2025
-            build_type: Release
-            configure_args: >-
-              -G "Visual Studio 18 2026"
-              -A x64
-
-
-          # ============================================================
-          # Windows x64 ClangCL
-          # ============================================================
-
-          - name: Windows x64 ClangCL Default
-            os: windows-2025
-            build_type: Release
-            configure_args: >-
-              -G "Visual Studio 18 2026"
-              -A x64
-              -T ClangCL
-
-          - name: Windows x64 ClangCL AVX2
-            os: windows-2025
-            build_type: Release
-            configure_args: >-
-              -G "Visual Studio 18 2026"
-              -A x64
-              -T ClangCL
+          ## - name: Windows x64 MSVC Vulkan
+            ## os: windows-2025
+            ## build_type: Release
+            ## run_tests: true
+            ## configure_args: >-
+              ## -G "Visual Studio 18 2026"
+              ## -A x64
+              ## -DTITANIUM_RHI_BACKEND=Vulkan
+              ## -DBUILD_UNIT_TEST=True
 
           # ============================================================
-          # Mac OS
+          # Mac OS Metal
           # ============================================================
-          - name: macOS ARM64 Clang Default
+          - name: macOS ARM64 Clang Default Metal
             os: macos-26
             build_type: Release
+            run_tests: true
             configure_args: >-
               -G "Ninja"
+              -DTITANIUM_RHI_BACKEND=Metal
+              -DBUILD_UNIT_TEST=True
 
-          - name: macOS x64 Clang Default
-            os: macos-26-intel
+          # ============================================================
+          # Android ARM64 Vulkan
+          # ============================================================
+
+          - name: Android ARM64 Vulkan
+            os: ubuntu-24.04
             build_type: Release
+            run_tests: false
+            android: true
             configure_args: >-
-              -G "Ninja"
+              -G Ninja
+              -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/29.0.14206865/build/cmake/android.toolchain.cmake
+              -DANDROID_ABI=arm64-v8a
+              -DANDROID_PLATFORM=android-24
+              -DANDROID_STL=c++_shared
+              -DCMAKE_BUILD_TYPE=Release
+              -DTITANIUM_RHI_BACKEND=Vulkan
+              -DBUILD_UNIT_TEST=True
 
     runs-on: ${{ matrix.os }}
 
     steps:
+    # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
+    # 2. Install dependencies
+      - name: Install dependencies - Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev gcc-14 g++-14
 
+      - name: Install Vulkan dependencies - Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libvulkan-dev \
+            mesa-vulkan-drivers \
+            vulkan-tools
+
+          vulkaninfo --summary
+
+      - name: Install Vulkan SDK - Windows
+        if: runner.os == 'Windows' && contains(matrix.configure_args, 'TITANIUM_RHI_BACKEND=Vulkan')
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.304.1
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+
+      - name: Install Metal toolchain
+        if: runner.os == 'macOS'
+        run: |
+          xcodebuild -downloadComponent MetalToolchain
+
+      - name: Setup Android SDK
+        if: matrix.android == true
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools ndk;29.0.14206865'
+
+     # 3. Configure
       - name: Configure
         run: >
           cmake
           -S .
           -B build
           ${{ matrix.configure_args }}
-
+     # 4. Build
       - name: Build
         run: cmake
           --build build
           --config ${{ matrix.build_type }}
-
+     # 5. Run
       - name: Run tests
+        if: matrix.run_tests == true
         run: ctest
           --test-dir build
           -C ${{ matrix.build_type }}
