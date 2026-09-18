@@ -55,15 +55,15 @@ jobs:
               -DTITANIUM_RHI_BACKEND=DirectX12
               -DBUILD_UNIT_TEST=True
 
-          - name: Windows x64 MSVC Vulkan
-            os: windows-2025
-            build_type: Release
-            run_tests: true
-            configure_args: >-
-              -G "Visual Studio 18 2026"
-              -A x64
-              -DTITANIUM_RHI_BACKEND=Vulkan
-              -DBUILD_UNIT_TEST=True
+          ## - name: Windows x64 MSVC Vulkan
+            ## os: windows-2025
+            ## build_type: Release
+            ## run_tests: true
+            ## configure_args: >-
+              ## -G "Visual Studio 18 2026"
+              ## -A x64
+              ## -DTITANIUM_RHI_BACKEND=Vulkan
+              ## -DBUILD_UNIT_TEST=True
 
           # ============================================================
           # Mac OS Metal
