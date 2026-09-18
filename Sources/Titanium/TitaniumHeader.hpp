@@ -6,7 +6,7 @@ namespace TiRHI
 #if defined(TITANIUM_VALIDATION_LAYER)
     static constexpr bool ValidationLayer = true;
 #else
-    static constexpr bool ValidationLayer = true;
+    static constexpr bool ValidationLayer = false;
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 }
 

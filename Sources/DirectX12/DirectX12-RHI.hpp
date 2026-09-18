@@ -6,6 +6,7 @@
 // https://github.com/mrouffet/FromVulkanToDirectX12/blob/main/Sources/mainDX12.cpp
 
 #include <Titanium/TitaniumHeader.hpp>
+#include <Titanium/RHITypes.hpp>
 
 #include <stdint.h>
 #include <d3d12.h>
@@ -21,7 +22,7 @@ namespace TiRHI
     class RHI
     {
     public:
-        RHI();
+        RHI(const RhiCreate& rhiCreate);
         ~RHI();
 
         void waitForDeviceIdle();
