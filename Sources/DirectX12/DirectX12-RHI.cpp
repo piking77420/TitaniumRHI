@@ -4,7 +4,7 @@
 
 namespace TiRHI
 {
-    RHI::RHI()
+    RHI::RHI(const RhiCreate& rhiCreate)
         : m_device(m_instance)
     {
         // Set up queue
@@ -24,15 +24,27 @@ namespace TiRHI
                     m_device.getDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_graphicsQueue));
                 if (FAILED(hrGFXCmdQueueCreated))
                 {
-                    std::println("Create Graphics Queue failed! \n Error Code: {} \n", hrGFXCmdQueueCreated);
+                    if (const auto& callback = rhiCreate.logCallback)
+                    {
+                        callback(std::format(L"Create Graphics Queue failed!\nError Code: 0x{:08X}",
+                                             static_cast<unsigned long>(hrGFXCmdQueueCreated)),
+                                 TiRHI::RhiMessageLocation::Rhi, TiRHI::RhiApi::DirectX12,
+                                 TiRHI::RhiMessageSeverity::Error);
+                    }
+
                     return;
                 }
                 else
                 {
                     const LPCWSTR name = L"GraphicsQueue";
                     m_graphicsQueue->SetName(name);
-                    std::println("Create Graphics Queue success. \n{} {}\n", std::string(name, name + lstrlenW(name)),
-                                 static_cast<void*>(m_graphicsQueue.Get()));
+                    if (const auto& callback = rhiCreate.logCallback)
+                    {
+                        callback(std::format(L"Create Graphics Queue success. Name: {} Address: {}", name,
+                                             static_cast<void*>(m_graphicsQueue.Get())),
+                                 TiRHI::RhiMessageLocation::Rhi, TiRHI::RhiApi::DirectX12,
+                                 TiRHI::RhiMessageSeverity::Info);
+                    }
                 }
             }
         }
