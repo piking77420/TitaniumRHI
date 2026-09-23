@@ -15,6 +15,10 @@ set(RHI_BACKENDS
     DirectX12
     Metal
 )
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+    set(TITANIUM_RHI_BACKEND "Metal" CACHE STRING "RHI backend")
+endif()
+
 set(TITANIUM_RHI_BACKEND "Vulkan" CACHE STRING "RHI backend")
 set_property(CACHE TITANIUM_RHI_BACKEND PROPERTY STRINGS ${RHI_BACKENDS})
 option(TITANIUM_USE_PIX "Enable PIX instrumentation for DirectX 12" OFF)
