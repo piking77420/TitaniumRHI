@@ -4,30 +4,32 @@
 #include <Titanium/RHI.hpp>
 #include <iostream>
 
-static constexpr std::string_view AnsiReset = "\x1b[0m";
-static constexpr std::string_view AnsiBlack = "\x1b[30m";
-static constexpr std::string_view AnsiRed = "\x1b[31m";
-static constexpr std::string_view AnsiGreen = "\x1b[32m";
-static constexpr std::string_view AnsiYellow = "\x1b[33m";
-static constexpr std::string_view AnsiOrange = "\x1b[38;2;255;165;0m";
-static constexpr std::string_view AnsiBlue = "\x1b[34m";
-static constexpr std::string_view AnsiMagenta = "\x1b[35m";
-static constexpr std::string_view AnsiCyan = "\x1b[36m";
-static constexpr std::string_view AnsiWhite = "\x1b[37m";
-static constexpr std::string_view AnsiGrey = "\x1b[90m";
-static constexpr std::string_view AnsiBrightRed = "\x1b[91m";
-static constexpr std::string_view AnsiBrightGreen = "\x1b[92m";
-static constexpr std::string_view AnsiBrightYellow = "\x1b[93m";
-static constexpr std::string_view AnsiBrightBlue = "\x1b[94m";
-static constexpr std::string_view AnsiBrightMagenta = "\x1b[95m";
-static constexpr std::string_view AnsiBrightCyan = "\x1b[96m";
-static constexpr std::string_view AnsiBrightWhite = "\x1b[97m";
+using namespace std::literals;
+
+static constexpr std::wstring_view AnsiReset = L"\x1b[0m"sv;
+static constexpr std::wstring_view AnsiBlack = L"\x1b[30m"sv;
+static constexpr std::wstring_view AnsiRed = L"\x1b[31m"sv;
+static constexpr std::wstring_view AnsiGreen = L"\x1b[32m"sv;
+static constexpr std::wstring_view AnsiYellow = L"\x1b[33m"sv;
+static constexpr std::wstring_view AnsiOrange = L"\x1b[38;2;255;165;0m"sv;
+static constexpr std::wstring_view AnsiBlue = L"\x1b[34m"sv;
+static constexpr std::wstring_view AnsiMagenta = L"\x1b[35m"sv;
+static constexpr std::wstring_view AnsiCyan = L"\x1b[36m"sv;
+static constexpr std::wstring_view AnsiWhite = L"\x1b[37m"sv;
+static constexpr std::wstring_view AnsiGrey = L"\x1b[90m"sv;
+static constexpr std::wstring_view AnsiBrightRed = L"\x1b[91m"sv;
+static constexpr std::wstring_view AnsiBrightGreen = L"\x1b[92m"sv;
+static constexpr std::wstring_view AnsiBrightYellow = L"\x1b[93m"sv;
+static constexpr std::wstring_view AnsiBrightBlue = L"\x1b[94m"sv;
+static constexpr std::wstring_view AnsiBrightMagenta = L"\x1b[95m"sv;
+static constexpr std::wstring_view AnsiBrightCyan = L"\x1b[96m"sv;
+static constexpr std::wstring_view AnsiBrightWhite = L"\x1b[97m"sv;
 bool error = false;
 
 void debugCallBack(const std::wstring& message, TiRHI::RhiMessageLocation location, TiRHI::RhiApi api,
                    TiRHI::RhiMessageSeverity severity)
 {
-    auto getColor = [&severity]() -> std::string_view
+    auto getColor = [&severity]() -> std::wstring_view
     {
         switch (severity)
         {
@@ -44,8 +46,8 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiMessageLocation locati
         }
     };
 
-    std::cout << "[RHI]" << '[' << TiRHI::toString(api) << ']' << getColor() << '[' << TiRHI::toString(severity) << ']'
-              << AnsiReset << '[' << TiRHI::toString(location) << "] ";
+    std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}] {}\n", TiRHI::toWstring(api), getColor(),
+                              TiRHI::toWstring(severity), AnsiReset, TiRHI::toWstring(location), message);
 
     if (severity == TiRHI::RhiMessageSeverity::Fatal || severity == TiRHI::RhiMessageSeverity::Error)
         error = true;
@@ -55,8 +57,8 @@ TEST(DummyTest, Test)
 {
     TiRHI::RhiCreate create{.logCallback = debugCallBack};
 
-    TiRHI::RHI device(create);
-    EXPECT_TRUE(error);
+    TiRHI::RHI rhi(create);
+    EXPECT_FALSE(error);
 }
 
 int main(int argc, char** argv)

@@ -6,6 +6,8 @@
 #include <dxgi1_6.h>
 #include <dxgi1_4.h>
 
+#include <Titanium/RHITypes.hpp>
+
 #include <DirectX12-Header.hpp>
 
 namespace TiRHI::DirectX12
@@ -13,7 +15,7 @@ namespace TiRHI::DirectX12
     class Instance
     {
     public:
-        Instance();
+        Instance(const RhiCreate& rhiCreate);
         ~Instance();
 
 #if defined(TITANIUM_VALIDATION_LAYER)

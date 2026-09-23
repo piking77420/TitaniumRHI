@@ -15,8 +15,13 @@
 
 namespace TiRHI
 {
+    namespace Private
+    {
+        static inline LogCallBackSignature logCallBack;
+    } // namespace Private
+
     template<typename T>
-    concept RHISignature = std::constructible_from<T, RhiCreate> && requires(T& thing) {
+    concept RHISignature = std::constructible_from<T, const RhiCreate&> && requires(T& thing) {
         { thing.waitForDeviceIdle() } -> std::same_as<void>;
     };
 

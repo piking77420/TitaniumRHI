@@ -3,13 +3,14 @@
 
 #include <Vulkan-Instance.hpp>
 #include <Vulkan-Device.hpp>
+#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
     class RHI
     {
     public:
-        RHI();
+        RHI(const TiRHI::RhiCreate& create);
         ~RHI();
 
         void waitForDeviceIdle();

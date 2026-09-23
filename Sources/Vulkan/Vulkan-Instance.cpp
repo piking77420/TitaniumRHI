@@ -1,7 +1,7 @@
 #include <Vulkan-Instance.hpp>
 
-#include <print>
 #include <vector>
+#include <Titanium/Log.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -13,9 +13,10 @@ namespace TiRHI::Vulkan
     {
         uint32_t layerCount;
         vk::Result r = (vk::enumerateInstanceLayerProperties(&layerCount, nullptr));
-        if (r != vk::Result::eSuccess)
+        if (r != vk::Result::eSuccess) // TODO add string to error types
         {
-            std::println("Failed to enumerate enumerate Instance Layer Properties");
+            RHI_LOG_ERROR(L"Failed to enumerate enumerate Instance Layer Properties", RhiMessageLocation::Rhi,
+                          RhiApi::Vulkan);
             return false;
         }
 
@@ -23,7 +24,7 @@ namespace TiRHI::Vulkan
         r = vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
         if (r != vk::Result::eSuccess)
         {
-            std::println("Failed to enumerate Instance Layer Properties");
+            RHI_LOG_ERROR(L"Failed to enumerate Instance Layer Propertiess", RhiMessageLocation::Rhi, RhiApi::Vulkan);
             return false;
         }
         for (const char* layerName : validationLayers)
@@ -48,8 +49,10 @@ namespace TiRHI::Vulkan
         return true;
     }
 
-    Instance::Instance()
+    Instance::Instance(const RhiCreate& rhiCreate)
     {
+        Private::logCallBack = rhiCreate.logCallback;
+
         std::set<std::string> m_requireExtensionNeeded;
 
         // TODO should be pass by the user
@@ -90,7 +93,7 @@ namespace TiRHI::Vulkan
 
         if (!checkValidationLayerSupport())
         {
-            std::println("missing validation layer support");
+            RHI_LOG_ERROR(L"Missing validation layer support", RhiMessageLocation::Rhi, RhiApi::Vulkan);
             instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             instanceCreateInfo.ppEnabledLayerNames = validationLayers.data();
         }
@@ -104,11 +107,11 @@ namespace TiRHI::Vulkan
         m_instance = vk::createInstance(instanceCreateInfo);
         if (m_instance)
         {
-            std::println("Vulkan Instance creation sucess");
+            RHI_LOG_INFO(L"Vulkan Instance creation sucess", RhiMessageLocation::Rhi, RhiApi::Vulkan);
         }
         else
         {
-            std::println("Vulkan Instance creation failed");
+            RHI_LOG_ERROR(L"Vulkan Instance creation failed", RhiMessageLocation::Rhi, RhiApi::Vulkan);
         }
 
         if (useDebugScope)
@@ -130,7 +133,7 @@ namespace TiRHI::Vulkan
     Instance::~Instance()
     {
         m_instance.destroy();
-        std::println("Destroying Vulkan Instance");
+        RHI_LOG_INFO(L"Destroying Vulkan Instance", RhiMessageLocation::Rhi, RhiApi::Vulkan);
         m_instance = nullptr;
     }
 

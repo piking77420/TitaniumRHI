@@ -1,11 +1,14 @@
 #include <DirectX12-RHI.hpp>
 
-#include <print>
+#include <format>
+
+#include <Titanium/Log.hpp>
 
 namespace TiRHI
 {
     RHI::RHI(const RhiCreate& rhiCreate)
-        : m_device(m_instance)
+        : m_instance(rhiCreate)
+        , m_device(m_instance)
     {
         // Set up queue
         {
@@ -24,13 +27,9 @@ namespace TiRHI
                     m_device.getDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_graphicsQueue));
                 if (FAILED(hrGFXCmdQueueCreated))
                 {
-                    if (const auto& callback = rhiCreate.logCallback)
-                    {
-                        callback(std::format(L"Create Graphics Queue failed!\nError Code: 0x{:08X}",
-                                             static_cast<unsigned long>(hrGFXCmdQueueCreated)),
-                                 TiRHI::RhiMessageLocation::Rhi, TiRHI::RhiApi::DirectX12,
-                                 TiRHI::RhiMessageSeverity::Error);
-                    }
+                    RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed!\nError Code: 0x{:08X}",
+                                              static_cast<unsigned long>(hrGFXCmdQueueCreated)),
+                                  RhiMessageLocation::Rhi, RhiApi::DirectX12, RhiMessageSeverity::Error);
 
                     return;
                 }
@@ -38,43 +37,45 @@ namespace TiRHI
                 {
                     const LPCWSTR name = L"GraphicsQueue";
                     m_graphicsQueue->SetName(name);
-                    if (const auto& callback = rhiCreate.logCallback)
                     {
-                        callback(std::format(L"Create Graphics Queue success. Name: {} Address: {}", name,
-                                             static_cast<void*>(m_graphicsQueue.Get())),
-                                 TiRHI::RhiMessageLocation::Rhi, TiRHI::RhiApi::DirectX12,
-                                 TiRHI::RhiMessageSeverity::Info);
+                        RHI_LOG_INFO(std::format(L"Create Graphics Queue success. Name: {} Address: {}", name,
+                                                 static_cast<void*>(m_graphicsQueue.Get())),
+                                     RhiMessageLocation::Rhi, RhiApi::DirectX12);
                     }
                 }
-            }
-        }
 
-        // Sync
-        {
-            m_synchronisation.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
-            if (!m_synchronisation.deviceFenceEvent)
-            {
-                std::println("Create Device Fence Event failed! \n");
-                return;
-            }
-            else
-            {
-                std::println("Create Device Fence Event success. \n");
-            }
+                // Sync
+                {
+                    m_synchronisation.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+                    if (!m_synchronisation.deviceFenceEvent)
+                    {
+                        RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                        return;
+                    }
+                    else
+                    {
+                        RHI_LOG_INFO(L"Create Device Fence Event success.", RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                    }
 
-            const HRESULT hrDeviceFenceCreated = m_device.getDevice()->CreateFence(
-                0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronisation.deviceFence));
-            if (FAILED(hrDeviceFenceCreated))
-            {
-                std::println("Create Device Fence failed! \n Error Code: {} \n", hrDeviceFenceCreated);
-                return;
-            }
-            else
-            {
-                const LPCWSTR name = L"DeviceFence";
-                m_synchronisation.deviceFence->SetName(name);
-                std::println("Create Swapchain Fence success.\n[{}] [{}] \n", std::string(name, name + lstrlenW(name)),
-                             static_cast<void*>(m_synchronisation.deviceFence.Get()));
+                    const HRESULT hrDeviceFenceCreated = m_device.getDevice()->CreateFence(
+                        0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronisation.deviceFence));
+                    if (FAILED(hrDeviceFenceCreated))
+                    {
+                        RHI_LOG_ERROR(
+                            std::format(L"Create Device Fence failed! \n Error Code: {}", hrDeviceFenceCreated),
+                            RhiMessageLocation::Rhi, RhiApi::DirectX12);
+
+                        return;
+                    }
+                    else
+                    {
+                        const LPCWSTR name = L"DeviceFence";
+                        m_synchronisation.deviceFence->SetName(name);
+                        RHI_LOG_INFO(
+                            std::format(L"Create Swapchain Fence success. [{}] [{}]", name, hrDeviceFenceCreated),
+                            RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                    }
+                }
             }
         }
     }
@@ -86,4 +87,5 @@ namespace TiRHI
     void RHI::waitForDeviceIdle()
     {
     }
-}
+
+} // namespace TiRHI

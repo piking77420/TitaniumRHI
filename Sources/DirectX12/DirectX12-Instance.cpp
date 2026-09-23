@@ -2,7 +2,7 @@
 
 #include <string>
 #include <format>
-#include <print>
+#include <Titanium/Log.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -10,74 +10,77 @@ namespace TiRHI::DirectX12
     void validationLayersDebugCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity,
                                        D3D12_MESSAGE_ID iD, LPCSTR description, [[mayeb_unused]] void* context)
     {
-        std::string categoryStr;
+        using namespace std::literals;
+
+        std::wstring_view categoryStr;
 
         switch (category)
         {
         case D3D12_MESSAGE_CATEGORY_APPLICATION_DEFINED:
-            categoryStr = "Application Defined";
+            categoryStr = L"Application Defined"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_MISCELLANEOUS:
-            categoryStr = "Miscellaneous";
+            categoryStr = L"Miscellaneous"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_INITIALIZATION:
-            categoryStr = "Initialization";
+            categoryStr = L"Initialization"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_CLEANUP:
-            categoryStr = "Cleanup";
+            categoryStr = L"Cleanup"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_COMPILATION:
-            categoryStr = "Compilation";
+            categoryStr = L"Compilation"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_STATE_CREATION:
-            categoryStr = "State Creation";
+            categoryStr = L"State Creation"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_STATE_SETTING:
-            categoryStr = "State Setting";
+            categoryStr = L"State Setting"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_STATE_GETTING:
-            categoryStr = "State Getting";
+            categoryStr = L"State Getting"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_RESOURCE_MANIPULATION:
-            categoryStr = "Resource Manipulation";
+            categoryStr = L"Resource Manipulation"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_EXECUTION:
-            categoryStr = "Execution";
+            categoryStr = L"Execution"sv;
             break;
         case D3D12_MESSAGE_CATEGORY_SHADER:
-            categoryStr = "Shader";
+            categoryStr = L"Shader"sv;
             break;
         default:
-            categoryStr = "Unknown";
+            categoryStr = L"Unknown"sv;
             break;
         }
 
-        std::string dets = std::format("ID[{}]\tCategory[{}]", static_cast<int>(iD), categoryStr);
+        std::wstring dets = std::format(L"ID[{}]\tCategory[{}]", static_cast<int>(iD), categoryStr);
 
         switch (severity)
         {
         case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-            std::println("corruption : {}", dets);
+            RHI_LOG_FATAL(std::format(L"corruption : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
             break;
         case D3D12_MESSAGE_SEVERITY_ERROR:
-            std::println("Error : {}", dets);
+            RHI_LOG_ERROR(std::format(L"error : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
             break;
         case D3D12_MESSAGE_SEVERITY_WARNING:
-            std::println("warning : {}", dets);
+            RHI_LOG_WARNING(std::format(L"warning : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
             break;
         case D3D12_MESSAGE_SEVERITY_INFO:
             return;
         case D3D12_MESSAGE_SEVERITY_MESSAGE:
         default:
-            std::println("{}", dets);
+            RHI_LOG_INFO(std::format(L"warning : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
             break;
         }
     }
 #endif
 
-    Instance::Instance()
+    Instance::Instance(const RhiCreate& rhiCreate)
     {
-        std::println("DirectX12 backend \n");
+        RHI_LOG_INFO(L"DirectX12 backend", RhiMessageLocation::Api, RhiApi::DirectX12);
+        Private::logCallBack = rhiCreate.logCallback; // set up global call back
 
         setupValidationLayer();
         createFactory();
@@ -85,7 +88,7 @@ namespace TiRHI::DirectX12
 
     Instance::~Instance()
     {
-        std::println("Destroying Factory... {}", static_cast<void*>(m_factory.Get()));
+        RHI_LOG_INFO(L"Destroying Factory...", RhiMessageLocation::Api, RhiApi::DirectX12);
         m_factory = nullptr;
 
 #if defined(TITANIUM_VALIDATION_LAYER)
@@ -100,7 +103,7 @@ namespace TiRHI::DirectX12
         }
         else
         {
-            std::println("Validation layer uninitialized failed.");
+            RHI_LOG_ERROR(L"Validation layer uninitialized failed.", RhiMessageLocation::Api, RhiApi::DirectX12);
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
     }
@@ -127,8 +130,9 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                std::println("Validation layer DebugController initialization failed \n Error Code: {} \n",
-                             hrDebugInterface);
+                RHI_LOG_ERROR(std::format(L"Validation layer DebugController initialization failed \n Error Code: {}",
+                                          hrDebugInterface),
+                              RhiMessageLocation::Api, RhiApi::DirectX12);
             }
         }
 
@@ -152,7 +156,10 @@ namespace TiRHI::DirectX12
                 }
                 else
                 {
-                    std::println("Validation layer DebugInfoQueue uninitialized failed. \n");
+                    RHI_LOG_ERROR(
+                        std::format(L"Validation layer DebugController initialization failed \n Error Code: {} \n",
+                                    hrDebugInterface),
+                        RhiMessageLocation::Api, RhiApi::DirectX12);
                 }
             }
 
@@ -167,11 +174,12 @@ namespace TiRHI::DirectX12
         const HRESULT hrFactoryCreated = CreateDXGIFactory2(m_dxgiFactoryFlags, IID_PPV_ARGS(&m_factory));
         if (FAILED(hrFactoryCreated))
         {
-            std::println("Create Factory failed {} \n", hrFactoryCreated);
+            RHI_LOG_ERROR(std::format(L"Create Factory failed {}", hrFactoryCreated), RhiMessageLocation::Api,
+                          RhiApi::DirectX12);
         }
         else
         {
-            std::println("Create Factory success \n");
+            RHI_LOG_INFO(L"Create Factory success", RhiMessageLocation::Api, RhiApi::DirectX12);
         }
     }
 } // namespace TiRHI::DirectX12
