@@ -5,7 +5,9 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
+        Log.hpp
         RHI.hpp
+        RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp
 )

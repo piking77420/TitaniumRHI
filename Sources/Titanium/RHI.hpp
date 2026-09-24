@@ -11,10 +11,17 @@
 #include <Metal/Metal-RHI.hpp>
 #endif // defined(TITANIUM_VULKAN)
 
+#include <Titanium/RHITypes.hpp>
+
 namespace TiRHI
 {
+    namespace Private
+    {
+        static inline LogCallBackSignature logCallBack;
+    } // namespace Private
+
     template<typename T>
-    concept RHISignature = requires(T& thing) {
+    concept RHISignature = std::constructible_from<T, const RhiCreate&> && requires(T& thing) {
         { thing.waitForDeviceIdle() } -> std::same_as<void>;
     };
 

@@ -2,8 +2,9 @@
 
 namespace TiRHI
 {
-    RHI::RHI()
-        : m_device(m_instance)
+    RHI::RHI(const TiRHI::RhiCreate& create)
+        : m_instance(create)
+        , m_device(m_instance)
     {
     }
 

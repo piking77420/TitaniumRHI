@@ -5,6 +5,9 @@
 #include <string>
 
 #include <vulkan/vulkan.hpp>
+
+#include <Titanium/RHITypes.hpp>
+
 #include <Vulkan-Functions.hpp>
 
 namespace TiRHI::Vulkan
@@ -12,7 +15,7 @@ namespace TiRHI::Vulkan
     class Instance
     {
     public:
-        Instance();
+        Instance(const RhiCreate& rhiCreate);
         ~Instance();
 
         vk::Instance getInstance() noexcept
@@ -24,6 +27,10 @@ namespace TiRHI::Vulkan
         vk::Instance m_instance;
 
         VulkanFunctions m_vulkanFunctions;
+
+        vk::DebugUtilsMessengerEXT m_debugUtilsMessenger;
+
+        void queryVulkanFunctions();
     };
 
 } // namespace TiRHI::Vulkan

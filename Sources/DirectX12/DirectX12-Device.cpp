@@ -1,6 +1,8 @@
-#include "DirectX12-Device.hpp"
+#include <DirectX12-Device.hpp>
 
-#include <print>
+#include <format>
+
+#include <Titanium/Log.hpp>
 #include <DirectX12/DirectX12-Instance.hpp>
 
 namespace TiRHI::DirectX12
@@ -14,7 +16,7 @@ namespace TiRHI::DirectX12
             factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));
         if (FAILED(hrQueryGPU))
         {
-            std::println("Adapter not found! \n Error Code: {}", hrQueryGPU);
+            RHI_LOG_ERROR(std::format(L"Adapter not found! \n Error Code: {}", hrQueryGPU), RhiApi::DirectX12);
             return;
         }
 
@@ -22,14 +24,14 @@ namespace TiRHI::DirectX12
             D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
         if (FAILED(hrDeviceCreated))
         {
-            std::println("Create Device failed! \n Error Code: {}", hrDeviceCreated);
+            RHI_LOG_ERROR(std::format(L"Create Device failed! \n Error Code: {}", hrDeviceCreated), RhiApi::DirectX12);
             return;
         }
         else
         {
             const LPCWSTR name = L"Main Device";
             m_device->SetName(name);
-            std::println("Create Device success. \n{}", std::string(name, name + lstrlenW(name)).data());
+            RHI_LOG_INFO(std::format(L"Create Device Success! Name: {}", name), RhiApi::DirectX12);
         }
 
 #if defined(TITANIUM_VALIDATION_LAYER)
@@ -53,8 +55,10 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                std::println("Device query info queue to enable validation layers failed. \n Error Code: {}",
-                             hrQueryInfoQueue);
+                RHI_LOG_INFO(
+                    std::format(L"Device query info queue to enable validation layers failed. \n Error Code: {}",
+                                hrQueryInfoQueue),
+                    RhiApi::DirectX12);
             }
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
@@ -76,7 +80,8 @@ namespace TiRHI::DirectX12
             }
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
-        std::println("Destroy Device... {}", static_cast<void*>(m_device.Get()));
+
+        RHI_LOG_INFO(std::format(L"Destroy Device... "), RhiApi::DirectX12);
         m_device = nullptr;
     }
 }

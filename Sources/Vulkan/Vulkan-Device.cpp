@@ -1,7 +1,7 @@
 #include <Vulkan-Device.hpp>
 
-#include <print>
 #include <string>
+#include <Titanium/Log.hpp>
 #include <Vulkan-Instance.hpp>
 
 namespace TiRHI::Vulkan
@@ -47,7 +47,7 @@ namespace TiRHI::Vulkan
 
     Device::~Device()
     {
-        std::println("Destroying Device");
+        RHI_LOG_INFO(L"Destroying Device", RhiApi::Vulkan);
     }
 
     void Device::choosePhysicalDevice(Instance& instance)
@@ -55,19 +55,23 @@ namespace TiRHI::Vulkan
         vk::Instance vkInstance = instance.getInstance();
         uint32_t physicalDeviceCount = 0;
         m_physicalDevices = vkInstance.enumeratePhysicalDevices();
+
         if (m_physicalDevices.empty())
         {
-            std::println("Failed to enumerate physical devices");
+            RHI_LOG_ERROR(L"Failed to enumerate physical devices", RhiApi::Vulkan);
             return;
         }
 
-        std::println("Available physical device : ");
+        RHI_LOG_VERBOSE(L"Available physical device : ", RhiApi::Vulkan);
+
         for (const vk::PhysicalDevice& physicalDevice : m_physicalDevices)
         {
             const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
-            std::println("GPU: {}", properties.deviceName.data());
+            const std::string_view name{properties.deviceName.data()};
+            const std::wstring wideName(name.begin(), name.end());
+
+            RHI_LOG_VERBOSE(std::format(L"GPU: {}", wideName), RhiApi::Vulkan);
         }
-        std::println();
 
         m_extension.resize(m_physicalDevices.size());
 
@@ -88,19 +92,22 @@ namespace TiRHI::Vulkan
 
         if (lastBestPhysicalDeviceIndex == std::numeric_limits<int>::min() && lastBestScore == 0)
         {
-            std::println("Failed to choose a physical device");
+            RHI_LOG_ERROR(L"Failed to choose a physical device", RhiApi::Vulkan);
             return;
         }
 
         if (!m_extension[lastBestPhysicalDeviceIndex].supportsSwapchain)
         {
-            std::println("choosen physical device dont support swap chain");
+            RHI_LOG_ERROR(L"Choosen physical device dont support swap chain", RhiApi::Vulkan);
             return;
         }
 
         const vk::PhysicalDeviceProperties properties = m_physicalDevices[lastBestPhysicalDeviceIndex].getProperties();
         m_currentPhysicalDeviceIndex = lastBestPhysicalDeviceIndex;
-        std::println("Device Choose: {}", properties.deviceName.data());
+        const std::string_view name{properties.deviceName.data()};
+        const std::wstring wideName(name.begin(), name.end());
+        RHI_LOG_INFO(std::format(L"Device Choosen: {}", wideName), RhiApi::Vulkan);
+
         return;
     }
 
@@ -123,7 +130,7 @@ namespace TiRHI::Vulkan
 
         if (allPropertiesQueuIndex == std::numeric_limits<size_t>::max())
         {
-            std::println("Failed to find an valid queu");
+            RHI_LOG_ERROR(L"Failed to find an valid queu", RhiApi::Vulkan);
             return;
         }
 
@@ -151,7 +158,7 @@ namespace TiRHI::Vulkan
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(getDeviceExtensionName.size());
         deviceCreateInfo.ppEnabledExtensionNames = getDeviceExtensionName.data();
 
-        std::println("Create Device");
+        RHI_LOG_INFO(L"Create Device", RhiApi::Vulkan);
         m_device = getPhysicalDevice().createDeviceUnique(deviceCreateInfo);
     }
 
