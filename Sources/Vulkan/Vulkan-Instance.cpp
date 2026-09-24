@@ -10,12 +10,17 @@
 #elif defined(__linux__)
 
 #if defined(USE_WAYLAND)
-#include <vulkan/vulkan_wayland.h
-#else
-#error ("only supports for wayland")
-#endif
+#include <wayland-client.h>
+#include <vulkan/vulkan_wayland.h>
+#elif defined(USE_XCB)
+#include <xcb/xcb.h>
+#include <vulkan/vulkan_xcb.h>
+#elif defined(USE_XLIB)
+#include <X11/Xlib.h>
+#include <vulkan/vulkan_xlib.h>
+#endif // defined(USE_WAYLAND)
 
-#endif
+#endif // defined(_WIN32)
 
 #include <Titanium/Log.hpp>
 
@@ -148,8 +153,11 @@ namespace TiRHI::Vulkan
 #elif defined(__linux__)
 
 #if defined(USE_WAYLAND)
-            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
-#else
+            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+#elif defined(USE_XCB)
+            VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#elif defined(USE_XLIB)
+            VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
 #endif // defined(__linux__)
 #endif // defined(_WIN32)
         };
