@@ -2,8 +2,10 @@
 #define TITANIUM_RHI_H
 
 #include <concepts>
+#include <span>
 
 #include <Titanium/RHITypes.hpp>
+#include <Titanium/RHI-Adapter.hpp>
 
 namespace TiRHI
 {
@@ -31,7 +33,13 @@ namespace TiRHI
 
         void wait();
 
-    private:
+        const std::span<const Adapter> getAdapters() const noexcept
+        {
+            return std::span<const Adapter>(m_adapters);
+        }
+
+    protected:
+        std::vector<Adapter> m_adapters;
     };
 
     template<typename Derived>

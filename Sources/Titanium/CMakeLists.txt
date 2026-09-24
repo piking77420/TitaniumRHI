@@ -6,6 +6,8 @@ target_sources(
     TitaniumRHIInterface
     INTERFACE
         Log.hpp
+        RHI-Adapter.cpp
+        RHI-Adapter.hpp
         RHI.hpp
         RHITypes.hpp
         TitaniumHeader.hpp

@@ -56,9 +56,9 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiApi api, TiRHI::RhiMes
 
 TEST(DummyTest, Test)
 {
-    TiRHI::RhiCreate create{.logCallback = debugCallBack};
+    TiRHI::RhiCreate create;
 
-    const TiRHI::Rhi rhi(create);
+    const TiRHI::Rhi rhi({.logCallback = debugCallBack});
     EXPECT_FALSE(error);
 }
 
