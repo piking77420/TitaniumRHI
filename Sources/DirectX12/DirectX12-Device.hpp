@@ -10,12 +10,10 @@
 
 namespace TiRHI::DirectX12
 {
-    class Instance;
-
     class Device
     {
     public:
-        Device(Instance& instance);
+        Device(MComPtr<IDXGIFactory6>& factory);
         ~Device();
 
         MComPtr<ID3D12Device>& getDevice()

@@ -11,7 +11,7 @@
 
 #include <dxgi1_6.h>
 #include <DirectX12-Header.hpp>
-#include <DirectX12-Instance.hpp>
+#include <DirectX12-Factory.hpp>
 #include <DirectX12-Device.hpp>
 
 #include <Titanium/RHI.hpp>
@@ -28,8 +28,8 @@ namespace TiRHI
         void waitImpl();
 
     private:
-        DirectX12::Instance m_instance;
-        DirectX12::Device m_device;
+        DirectX12::Factory m_factory;
+        DirectX12::Device m_adaptater;
         MComPtr<ID3D12CommandQueue> m_graphicsQueue;
 
         struct Synchronisation
