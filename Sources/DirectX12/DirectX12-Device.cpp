@@ -16,8 +16,7 @@ namespace TiRHI::DirectX12
             factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));
         if (FAILED(hrQueryGPU))
         {
-            RHI_LOG_ERROR(std::format(L"Adapter not found! \n Error Code: {}", hrQueryGPU), RhiMessageLocation::Rhi,
-                          RhiApi::DirectX12);
+            RHI_LOG_ERROR(std::format(L"Adapter not found! \n Error Code: {}", hrQueryGPU), RhiApi::DirectX12);
             return;
         }
 
@@ -25,16 +24,14 @@ namespace TiRHI::DirectX12
             D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
         if (FAILED(hrDeviceCreated))
         {
-            RHI_LOG_ERROR(std::format(L"Create Device failed! \n Error Code: {}", hrDeviceCreated),
-                          RhiMessageLocation::Rhi, RhiApi::DirectX12);
+            RHI_LOG_ERROR(std::format(L"Create Device failed! \n Error Code: {}", hrDeviceCreated), RhiApi::DirectX12);
             return;
         }
         else
         {
             const LPCWSTR name = L"Main Device";
             m_device->SetName(name);
-            RHI_LOG_INFO(std::format(L"Create Device Success! Name: {}", name), RhiMessageLocation::Rhi,
-                         RhiApi::DirectX12);
+            RHI_LOG_INFO(std::format(L"Create Device Success! Name: {}", name), RhiApi::DirectX12);
         }
 
 #if defined(TITANIUM_VALIDATION_LAYER)
@@ -61,7 +58,7 @@ namespace TiRHI::DirectX12
                 RHI_LOG_INFO(
                     std::format(L"Device query info queue to enable validation layers failed. \n Error Code: {}",
                                 hrQueryInfoQueue),
-                    RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                    RhiApi::DirectX12);
             }
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
@@ -84,7 +81,7 @@ namespace TiRHI::DirectX12
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
-        RHI_LOG_INFO(std::format(L"Destroy Device... "), RhiMessageLocation::Rhi, RhiApi::DirectX12);
+        RHI_LOG_INFO(std::format(L"Destroy Device... "), RhiApi::DirectX12);
         m_device = nullptr;
     }
 }

@@ -59,19 +59,19 @@ namespace TiRHI::DirectX12
         switch (severity)
         {
         case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-            RHI_LOG_FATAL(std::format(L"corruption : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
+            RHI_LOG_FATAL(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
             break;
         case D3D12_MESSAGE_SEVERITY_ERROR:
-            RHI_LOG_ERROR(std::format(L"error : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
+            RHI_LOG_ERROR(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
             break;
         case D3D12_MESSAGE_SEVERITY_WARNING:
-            RHI_LOG_WARNING(std::format(L"warning : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
+            RHI_LOG_WARNING(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
             break;
         case D3D12_MESSAGE_SEVERITY_INFO:
             return;
         case D3D12_MESSAGE_SEVERITY_MESSAGE:
         default:
-            RHI_LOG_INFO(std::format(L"warning : {}", dets), RhiMessageLocation::Api, RhiApi::DirectX12);
+            RHI_LOG_INFO(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
             break;
         }
     }
@@ -79,7 +79,7 @@ namespace TiRHI::DirectX12
 
     Instance::Instance(const RhiCreate& rhiCreate)
     {
-        RHI_LOG_INFO(L"DirectX12 backend", RhiMessageLocation::Api, RhiApi::DirectX12);
+        RHI_LOG_INFO(L"DirectX12 backend", RhiApi::DirectX12);
         Private::logCallBack = rhiCreate.logCallback; // set up global call back
 
         setupValidationLayer();
@@ -88,7 +88,7 @@ namespace TiRHI::DirectX12
 
     Instance::~Instance()
     {
-        RHI_LOG_INFO(L"Destroying Factory...", RhiMessageLocation::Api, RhiApi::DirectX12);
+        RHI_LOG_INFO(L"Destroying Factory...", RhiApi::DirectX12);
         m_factory = nullptr;
 
 #if defined(TITANIUM_VALIDATION_LAYER)
@@ -103,7 +103,7 @@ namespace TiRHI::DirectX12
         }
         else
         {
-            RHI_LOG_ERROR(L"Validation layer uninitialized failed.", RhiMessageLocation::Api, RhiApi::DirectX12);
+            RHI_LOG_ERROR(L"Validation layer uninitialized failed.", RhiApi::DirectX12);
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
     }
@@ -132,7 +132,7 @@ namespace TiRHI::DirectX12
             {
                 RHI_LOG_ERROR(std::format(L"Validation layer DebugController initialization failed \n Error Code: {}",
                                           hrDebugInterface),
-                              RhiMessageLocation::Api, RhiApi::DirectX12);
+                              RhiApi::DirectX12);
             }
         }
 
@@ -159,7 +159,7 @@ namespace TiRHI::DirectX12
                     RHI_LOG_ERROR(
                         std::format(L"Validation layer DebugController initialization failed \n Error Code: {} \n",
                                     hrDebugInterface),
-                        RhiMessageLocation::Api, RhiApi::DirectX12);
+                        RhiApi::DirectX12);
                 }
             }
 
@@ -174,12 +174,11 @@ namespace TiRHI::DirectX12
         const HRESULT hrFactoryCreated = CreateDXGIFactory2(m_dxgiFactoryFlags, IID_PPV_ARGS(&m_factory));
         if (FAILED(hrFactoryCreated))
         {
-            RHI_LOG_ERROR(std::format(L"Create Factory failed {}", hrFactoryCreated), RhiMessageLocation::Api,
-                          RhiApi::DirectX12);
+            RHI_LOG_ERROR(std::format(L"Create Factory failed {}", hrFactoryCreated), RhiApi::DirectX12);
         }
         else
         {
-            RHI_LOG_INFO(L"Create Factory success", RhiMessageLocation::Api, RhiApi::DirectX12);
+            RHI_LOG_INFO(L"Create Factory success", RhiApi::DirectX12);
         }
     }
 } // namespace TiRHI::DirectX12

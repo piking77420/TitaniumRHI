@@ -27,6 +27,10 @@ namespace TiRHI::Vulkan
         vk::Instance m_instance;
 
         VulkanFunctions m_vulkanFunctions;
+
+        vk::DebugUtilsMessengerEXT m_debugUtilsMessenger;
+
+        void queryVulkanFunctions();
     };
 
 } // namespace TiRHI::Vulkan

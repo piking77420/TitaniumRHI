@@ -57,40 +57,6 @@ namespace TiRHI
         return L"Unknown"sv;
     }
 
-    enum struct RhiMessageLocation
-    {
-        Rhi,
-        Api
-    };
-
-    constexpr std::string_view toString(RhiMessageLocation rhiMessageLocation)
-    {
-        using namespace std::literals;
-
-        switch (rhiMessageLocation)
-        {
-        case RhiMessageLocation::Rhi:
-            return "Rhi"sv;
-        case RhiMessageLocation::Api:
-            return "Api"sv;
-        }
-        return "Unknown"sv;
-    }
-
-    constexpr std::wstring_view toWstring(RhiMessageLocation rhiMessageLocation)
-    {
-        using namespace std::literals;
-
-        switch (rhiMessageLocation)
-        {
-        case RhiMessageLocation::Rhi:
-            return L"Rhi"sv;
-        case RhiMessageLocation::Api:
-            return L"Api"sv;
-        }
-        return L"Unknown"sv;
-    }
-
     enum struct RhiApi
     {
         DirectX12,
@@ -130,7 +96,7 @@ namespace TiRHI
         return L"Unknown"sv;
     }
 
-    using LogCallBackSignature = void (*)(const std::wstring&, RhiMessageLocation, RhiApi, RhiMessageSeverity);
+    using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate
     {

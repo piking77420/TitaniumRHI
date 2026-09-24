@@ -29,7 +29,7 @@ namespace TiRHI
                 {
                     RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed!\nError Code: 0x{:08X}",
                                               static_cast<unsigned long>(hrGFXCmdQueueCreated)),
-                                  RhiMessageLocation::Rhi, RhiApi::DirectX12, RhiMessageSeverity::Error);
+                                  RhiApi::DirectX12, RhiMessageSeverity::Error);
 
                     return;
                 }
@@ -40,7 +40,7 @@ namespace TiRHI
                     {
                         RHI_LOG_INFO(std::format(L"Create Graphics Queue success. Name: {} Address: {}", name,
                                                  static_cast<void*>(m_graphicsQueue.Get())),
-                                     RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                                     RhiApi::DirectX12);
                     }
                 }
 
@@ -49,12 +49,12 @@ namespace TiRHI
                     m_synchronisation.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
                     if (!m_synchronisation.deviceFenceEvent)
                     {
-                        RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                        RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiApi::DirectX12);
                         return;
                     }
                     else
                     {
-                        RHI_LOG_INFO(L"Create Device Fence Event success.", RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                        RHI_LOG_INFO(L"Create Device Fence Event success.", RhiApi::DirectX12);
                     }
 
                     const HRESULT hrDeviceFenceCreated = m_device.getDevice()->CreateFence(
@@ -63,7 +63,7 @@ namespace TiRHI
                     {
                         RHI_LOG_ERROR(
                             std::format(L"Create Device Fence failed! \n Error Code: {}", hrDeviceFenceCreated),
-                            RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                            RhiApi::DirectX12);
 
                         return;
                     }
@@ -73,7 +73,7 @@ namespace TiRHI
                         m_synchronisation.deviceFence->SetName(name);
                         RHI_LOG_INFO(
                             std::format(L"Create Swapchain Fence success. [{}] [{}]", name, hrDeviceFenceCreated),
-                            RhiMessageLocation::Rhi, RhiApi::DirectX12);
+                            RhiApi::DirectX12);
                     }
                 }
             }

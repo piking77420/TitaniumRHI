@@ -26,8 +26,7 @@ static constexpr std::wstring_view AnsiBrightCyan = L"\x1b[96m"sv;
 static constexpr std::wstring_view AnsiBrightWhite = L"\x1b[97m"sv;
 bool error = false;
 
-void debugCallBack(const std::wstring& message, TiRHI::RhiMessageLocation location, TiRHI::RhiApi api,
-                   TiRHI::RhiMessageSeverity severity)
+void debugCallBack(const std::wstring& message, TiRHI::RhiApi api, TiRHI::RhiMessageSeverity severity)
 {
     auto getColor = [&severity]() -> std::wstring_view
     {
@@ -46,8 +45,8 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiMessageLocation locati
         }
     };
 
-    std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}] {}\n", TiRHI::toWstring(api), getColor(),
-                              TiRHI::toWstring(severity), AnsiReset, TiRHI::toWstring(location), message);
+    std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}]\n", TiRHI::toWstring(api), getColor(), TiRHI::toWstring(severity),
+                              AnsiReset, message);
 
     if (severity == TiRHI::RhiMessageSeverity::Fatal || severity == TiRHI::RhiMessageSeverity::Error)
         error = true;
