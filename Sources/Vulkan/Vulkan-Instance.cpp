@@ -141,10 +141,8 @@ namespace TiRHI::Vulkan
         return VK_FALSE;
     }
 
-    Instance::Instance(const RhiCreate& rhiCreate)
+    Instance::Instance()
     {
-        Private::logCallBack = rhiCreate.logCallback;
-
         std::vector<const char*> extensions = {
             VK_KHR_SURFACE_EXTENSION_NAME,
 #if defined(_WIN32)

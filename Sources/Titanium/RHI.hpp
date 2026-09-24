@@ -16,6 +16,8 @@ namespace TiRHI
     class RHI : public RHIGlobalState
     {
     public:
+        using _Derived = Derived;
+
         RHI() = delete;
         ~RHI() = default;
 
