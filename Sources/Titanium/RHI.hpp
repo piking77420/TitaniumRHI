@@ -3,29 +3,51 @@
 
 #include <concepts>
 
-#if defined(TITANIUM_VULKAN)
-#include <Vulkan/Vulkan-RHI.hpp>
-#elif defined(TITANIUM_DIRECT_X12)
-#include <DirectX12/DirectX12-RHI.hpp>
-#elif defined(TITANIUM_METAL)
-#include <Metal/Metal-RHI.hpp>
-#endif // defined(TITANIUM_VULKAN)
-
 #include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
-    namespace Private
+    struct RHIGlobalState
     {
-        static inline LogCallBackSignature logCallBack;
-    } // namespace Private
-
-    template<typename T>
-    concept RHISignature = std::constructible_from<T, const RhiCreate&> && requires(T& thing) {
-        { thing.waitForDeviceIdle() } -> std::same_as<void>;
+        static inline LogCallBackSignature logCallBack{nullptr};
     };
 
-    static_assert(RHISignature<RHI>);
+    template<typename Derived>
+    class RHI : public RHIGlobalState
+    {
+    public:
+        using _Derived = Derived;
+
+        RHI() = delete;
+        ~RHI() = default;
+
+        RHI(RHI&& otherRHI) noexcept = default;
+        RHI(const RHI& otherRHI) = default;
+
+        RHI& operator=(RHI&& otherRHI) noexcept = default;
+        RHI& operator=(const RHI& otherRHI) = default;
+
+        RHI(const RhiCreate& rhiCreate);
+
+        void wait();
+
+    private:
+    };
+
+    template<typename Derived>
+    inline RHI<Derived>::RHI(const RhiCreate& rhiCreate)
+    {
+        static_assert(std::derived_from<Derived, RHI<Derived>>, "Derived must inherit from RHI<Derived>");
+
+        logCallBack = rhiCreate.logCallback;
+    }
+
+    template<typename Derived>
+    inline void RHI<Derived>::wait()
+    {
+        static_cast<Derived&>(*this).waitImpl();
+    }
+
 }
 
-#endif // TITANIUM_D3D12_DEVICE_H
+#endif // TITANIUM_RHI_H

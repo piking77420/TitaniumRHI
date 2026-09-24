@@ -2,17 +2,13 @@
 
 namespace TiRHI
 {
-    RHI::RHI(const TiRHI::RhiCreate& create)
-        : m_instance(create)
+    VulkanRHI::VulkanRHI(const TiRHI::RhiCreate& create)
+        : RHI<VulkanRHI>(create)
         , m_device(m_instance)
     {
     }
 
-    RHI::~RHI()
-    {
-    }
-
-    void RHI::waitForDeviceIdle()
+    void VulkanRHI::waitImpl()
     {
     }
 } // namespace TiRHI

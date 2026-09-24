@@ -2,18 +2,10 @@
 #define TITANIUM_LOG_H
 
 #include <Titanium/RHITypes.hpp>
-
-namespace TiRHI
-{
-    namespace Private
-    {
-        inline LogCallBackSignature logCallBack{nullptr};
-    } // namespace Private
-
-} // TiRHI
+#include <Titanium/RHI.hpp>
 
 #define RHI_LOG(MESSAGE, API, SEVERITY)                                                                                \
-    TiRHI::Private::logCallBack ? TiRHI::Private::logCallBack(MESSAGE, API, SEVERITY) : void(0)
+    TiRHI::RHIGlobalState::logCallBack ? TiRHI::RHIGlobalState::logCallBack(MESSAGE, API, SEVERITY) : void(0)
 
 #define RHI_LOG_VERBOSE(MESSAGE, API) RHI_LOG(MESSAGE, API, RhiMessageSeverity::Verbose)
 

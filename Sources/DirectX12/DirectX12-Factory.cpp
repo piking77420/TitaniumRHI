@@ -1,4 +1,4 @@
-#include <DirectX12-Instance.hpp>
+#include <DirectX12-Factory.hpp>
 
 #include <string>
 #include <format>
@@ -7,87 +7,13 @@
 
 namespace TiRHI::DirectX12
 {
-#if defined(TITANIUM_VALIDATION_LAYER)
-    void validationLayersDebugCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity,
-                                       D3D12_MESSAGE_ID iD, LPCSTR description, [[mayeb_unused]] void* context)
+    Factory::Factory()
     {
-        using namespace std::literals;
-
-        std::wstring_view categoryStr;
-
-        switch (category)
-        {
-        case D3D12_MESSAGE_CATEGORY_APPLICATION_DEFINED:
-            categoryStr = L"Application Defined"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_MISCELLANEOUS:
-            categoryStr = L"Miscellaneous"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_INITIALIZATION:
-            categoryStr = L"Initialization"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_CLEANUP:
-            categoryStr = L"Cleanup"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_COMPILATION:
-            categoryStr = L"Compilation"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_STATE_CREATION:
-            categoryStr = L"State Creation"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_STATE_SETTING:
-            categoryStr = L"State Setting"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_STATE_GETTING:
-            categoryStr = L"State Getting"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_RESOURCE_MANIPULATION:
-            categoryStr = L"Resource Manipulation"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_EXECUTION:
-            categoryStr = L"Execution"sv;
-            break;
-        case D3D12_MESSAGE_CATEGORY_SHADER:
-            categoryStr = L"Shader"sv;
-            break;
-        default:
-            categoryStr = L"Unknown"sv;
-            break;
-        }
-
-        std::wstring dets = std::format(L"ID[{}]\tCategory[{}]", static_cast<int>(iD), categoryStr);
-
-        switch (severity)
-        {
-        case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-            RHI_LOG_FATAL(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
-            break;
-        case D3D12_MESSAGE_SEVERITY_ERROR:
-            RHI_LOG_ERROR(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
-            break;
-        case D3D12_MESSAGE_SEVERITY_WARNING:
-            RHI_LOG_WARNING(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
-            break;
-        case D3D12_MESSAGE_SEVERITY_INFO:
-            return;
-        case D3D12_MESSAGE_SEVERITY_MESSAGE:
-        default:
-            RHI_LOG_INFO(std::format(L"Validation Layer: {}", dets), RhiApi::DirectX12);
-            break;
-        }
-    }
-#endif
-
-    Instance::Instance(const RhiCreate& rhiCreate)
-    {
-        RHI_LOG_INFO(L"DirectX12 backend", RhiApi::DirectX12);
-        Private::logCallBack = rhiCreate.logCallback; // set up global call back
-
         setupValidationLayer();
         createFactory();
     }
 
-    Instance::~Instance()
+    Factory::~Factory()
     {
         RHI_LOG_INFO(L"Destroying Factory...", RhiApi::DirectX12);
         m_factory = nullptr;
@@ -109,14 +35,7 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_VALIDATION_LAYER)
     }
 
-#if defined(TITANIUM_VALIDATION_LAYER)
-    D3D12MessageFunc Instance::getMessageCallBack()
-    {
-        return &validationLayersDebugCallback;
-    }
-#endif // defined(TITANIUM_VALIDATION_LAYER)
-
-    void Instance::setupValidationLayer()
+    void Factory::setupValidationLayer()
     {
 #if defined(TITANIUM_VALIDATION_LAYER)
         {
@@ -170,7 +89,7 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_VALIDATION_LAYER)
     }
 
-    void Instance::createFactory()
+    void Factory::createFactory()
     {
         const HRESULT hrFactoryCreated = CreateDXGIFactory2(m_dxgiFactoryFlags, IID_PPV_ARGS(&m_factory));
         if (FAILED(hrFactoryCreated))

@@ -15,7 +15,7 @@ namespace TiRHI::Vulkan
     class Instance
     {
     public:
-        Instance(const RhiCreate& rhiCreate);
+        Instance();
         ~Instance();
 
         vk::Instance getInstance() noexcept

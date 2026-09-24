@@ -5,31 +5,31 @@
 // for FromVulkanToDirectX12
 // https://github.com/mrouffet/FromVulkanToDirectX12/blob/main/Sources/mainDX12.cpp
 
-#include <Titanium/TitaniumHeader.hpp>
-#include <Titanium/RHITypes.hpp>
-
 #include <stdint.h>
 #include <d3d12.h>
 #include <dxgidebug.h>
 
 #include <dxgi1_6.h>
 #include <DirectX12-Header.hpp>
-#include <DirectX12-Instance.hpp>
+#include <DirectX12-Factory.hpp>
 #include <DirectX12-Device.hpp>
+
+#include <Titanium/RHI.hpp>
+#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
-    class RHI
+    class DirectX12RHI : public RHI<DirectX12RHI>
     {
     public:
-        RHI(const RhiCreate& rhiCreate);
-        ~RHI();
+        DirectX12RHI(const RhiCreate& rhiCreate);
+        ~DirectX12RHI() = default;
 
-        void waitForDeviceIdle();
+        void waitImpl();
 
     private:
-        DirectX12::Instance m_instance;
-        DirectX12::Device m_device;
+        DirectX12::Factory m_factory;
+        DirectX12::Device m_adaptater;
         MComPtr<ID3D12CommandQueue> m_graphicsQueue;
 
         struct Synchronisation

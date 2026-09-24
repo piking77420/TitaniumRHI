@@ -1,19 +1,21 @@
 #ifndef TITANIUM_VULKAN_RHI_H
 #define TITANIUM_VULKAN_RHI_H
 
+#include <Titanium/RHITypes.hpp>
+#include <Titanium/RHI.hpp>
+
 #include <Vulkan-Instance.hpp>
 #include <Vulkan-Device.hpp>
-#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
-    class RHI
+    class VulkanRHI : public RHI<VulkanRHI>
     {
     public:
-        RHI(const TiRHI::RhiCreate& create);
-        ~RHI();
+        VulkanRHI(const RhiCreate& rhiCreate);
+        ~VulkanRHI() = default;
 
-        void waitForDeviceIdle();
+        void waitImpl();
 
     private:
         Vulkan::Instance m_instance;

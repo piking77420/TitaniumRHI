@@ -6,8 +6,8 @@ target_sources(
         DirectX12-Device.cpp
         DirectX12-Device.hpp
         DirectX12-Header.hpp
-        DirectX12-Instance.cpp
-        DirectX12-Instance.hpp
+        DirectX12-Factory.cpp
+        DirectX12-Factory.hpp
         DirectX12-RHI.cpp
         DirectX12-RHI.hpp
 )
