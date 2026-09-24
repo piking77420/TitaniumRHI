@@ -6,8 +6,9 @@
 
 namespace TiRHI
 {
-    RHI::RHI(const RhiCreate& rhiCreate)
-        : m_instance(rhiCreate)
+    DirectX12RHI::DirectX12RHI(const RhiCreate& rhiCreate)
+        : RHI<DirectX12RHI>(rhiCreate)
+        , m_instance(rhiCreate)
         , m_device(m_instance)
     {
         // Set up queue
@@ -80,11 +81,7 @@ namespace TiRHI
         }
     }
 
-    RHI::~RHI()
-    {
-    }
-
-    void RHI::waitForDeviceIdle()
+    void DirectX12RHI::waitImpl()
     {
     }
 

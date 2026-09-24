@@ -80,9 +80,6 @@ namespace TiRHI::DirectX12
 
     Instance::Instance(const RhiCreate& rhiCreate)
     {
-        RHI_LOG_INFO(L"DirectX12 backend", RhiApi::DirectX12);
-        Private::logCallBack = rhiCreate.logCallback; // set up global call back
-
         setupValidationLayer();
         createFactory();
     }

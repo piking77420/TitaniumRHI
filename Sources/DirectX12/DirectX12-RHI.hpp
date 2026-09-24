@@ -5,9 +5,6 @@
 // for FromVulkanToDirectX12
 // https://github.com/mrouffet/FromVulkanToDirectX12/blob/main/Sources/mainDX12.cpp
 
-#include <Titanium/TitaniumHeader.hpp>
-#include <Titanium/RHITypes.hpp>
-
 #include <stdint.h>
 #include <d3d12.h>
 #include <dxgidebug.h>
@@ -17,15 +14,18 @@
 #include <DirectX12-Instance.hpp>
 #include <DirectX12-Device.hpp>
 
+#include <Titanium/RHI.hpp>
+#include <Titanium/RHITypes.hpp>
+
 namespace TiRHI
 {
-    class RHI
+    class DirectX12RHI : public RHI<DirectX12RHI>
     {
     public:
-        RHI(const RhiCreate& rhiCreate);
-        ~RHI();
+        DirectX12RHI(const RhiCreate& rhiCreate);
+        ~DirectX12RHI() = default;
 
-        void waitForDeviceIdle();
+        void waitImpl();
 
     private:
         DirectX12::Instance m_instance;

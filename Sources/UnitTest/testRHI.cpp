@@ -3,8 +3,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#include <Titanium/RHI.hpp>
 #include <Titanium/RHITypes.hpp>
+#include <Titanium/TitaniumHeader.hpp>
 
 using namespace std::literals;
 
@@ -58,7 +58,7 @@ TEST(DummyTest, Test)
 {
     TiRHI::RhiCreate create{.logCallback = debugCallBack};
 
-    const TiRHI::RHI rhi(create);
+    const TiRHI::Rhi rhi(create);
     EXPECT_FALSE(error);
 }
 
