@@ -27,9 +27,17 @@ namespace TiRHI
 
         void waitImpl();
 
+        /*Create device autmatically*/
+        bool createDeviceImpl();
+
+        /*Create device from user*/
+        bool createDeviceImpl(size_t adapterIndex);
+
+        const Adapter* getUsedAdapterImpl() const;
+
     private:
         DirectX12::Factory m_factory;
-        DirectX12::Device m_adaptater;
+        DirectX12::Device m_device;
         MComPtr<ID3D12CommandQueue> m_graphicsQueue;
 
         struct Synchronisation
