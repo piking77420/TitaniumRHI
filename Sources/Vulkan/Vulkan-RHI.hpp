@@ -19,7 +19,7 @@ namespace TiRHI
 
         bool createDeviceImpl();
 
-        bool createDeviceImpl(const Adapter& adapter);
+        bool createDeviceImpl(size_t adapterIndex);
 
         const Adapter* getUsedAdapterImpl() const;
 

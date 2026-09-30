@@ -41,7 +41,7 @@ namespace TiRHI
         bool createDevice();
 
         /*Create device from user*/
-        bool createDevice(const Adapter& adapter);
+        bool createDevice(size_t adapterIndex);
 
         const Adapter* getUsedAdapter() const;
 
@@ -70,9 +70,9 @@ namespace TiRHI
     }
 
     template<typename Derived>
-    inline bool RHI<Derived>::createDevice(const Adapter& adapter)
+    inline bool RHI<Derived>::createDevice(size_t adapterIndex)
     {
-        return static_cast<Derived&>(*this).createDeviceImpl(adapter);
+        return static_cast<Derived&>(*this).createDeviceImpl(adapterIndex);
     }
 
     template<typename Derived>

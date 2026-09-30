@@ -20,23 +20,12 @@ namespace TiRHI
         return m_device.getDevice() != VK_NULL_HANDLE;
     }
 
-    bool VulkanRHI::createDeviceImpl(const Adapter& adapter)
+    bool VulkanRHI::createDeviceImpl(size_t adapterIndex)
     {
-        size_t index = std::numeric_limits<size_t>::max();
-        for (size_t i = 0; i < m_adapters.size(); i++)
-        {
-            if (m_adapters[i].getName() == adapter.getName())
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == std::numeric_limits<size_t>::max())
-            RHI_LOG_FATAL(L"Couldn't find request adapter", RhiApi::Vulkan);
-
-        m_device.createDevice(index, m_adapters);
+        m_device.createDevice(adapterIndex, m_adapters);
         return m_device.getDevice() != VK_NULL_HANDLE;
     }
+
     const Adapter* VulkanRHI::getUsedAdapterImpl() const
     {
         const size_t index = m_device.getSelectPhyscialDeviceIndex();

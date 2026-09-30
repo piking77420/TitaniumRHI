@@ -79,7 +79,7 @@ namespace TiRHI::Vulkan
 
         void createDevice(const std::vector<Adapter>& adapter);
 
-        void createDevice(size_t adapterIndex, const std::vector<Adapter>& adapters);
+        void createDevice(size_t adapterIndex, const std::vector<Adapter>& adapter);
 
         size_t getSelectPhyscialDeviceIndex() const
         {
