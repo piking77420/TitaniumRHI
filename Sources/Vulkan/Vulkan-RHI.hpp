@@ -17,6 +17,12 @@ namespace TiRHI
 
         void waitImpl();
 
+        bool createDeviceImpl();
+
+        bool createDeviceImpl(const Adapter& adapter);
+
+        const Adapter* getUsedAdapterImpl() const;
+
     private:
         Vulkan::Instance m_instance;
         Vulkan::Device m_device;

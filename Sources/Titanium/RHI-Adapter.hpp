@@ -16,7 +16,36 @@ namespace TiRHI
         {
             RayTracing,
             MeshShader,
-            VariableRateShading
+        };
+
+        static constexpr std::string_view toString(Features features) noexcept
+        {
+            using namespace std::literals;
+
+            switch (features)
+            {
+            case TiRHI::Adapter::Features::RayTracing:
+                return "RayTracing"sv;
+            case TiRHI::Adapter::Features::MeshShader:
+                return "MeshShader"sv;
+            default:
+                return "Unknow"sv;
+            }
+        };
+
+        static constexpr std::wstring_view toWString(Features features) noexcept
+        {
+            using namespace std::literals;
+
+            switch (features)
+            {
+            case TiRHI::Adapter::Features::RayTracing:
+                return L"RayTracing"sv;
+            case TiRHI::Adapter::Features::MeshShader:
+                return L"MeshShader"sv;
+            default:
+                return L"Unknow"sv;
+            }
         };
 
         Adapter() = default;
@@ -28,7 +57,7 @@ namespace TiRHI
         Adapter& operator=(Adapter&& other) noexcept = default;
         Adapter& operator=(const Adapter& other) = default;
 
-        Adapter(const std::string& name, const std::vector<Features>& features, uint64_t vramMemoryGb,
+        Adapter(const std::string_view& name, const std::vector<Features>& features, uint64_t vramMemoryGb,
                 uint32_t vendorId);
 
         const std::string_view getName() const noexcept
@@ -38,7 +67,12 @@ namespace TiRHI
 
         const std::string_view getVendor() const noexcept
         {
-            return m_name;
+            return m_vendor;
+        }
+
+        const uint64_t getVramMemoryGb() const noexcept
+        {
+            return m_vramMemoryGb;
         }
 
         const std::span<const Features> getFeatures() const noexcept
@@ -46,14 +80,23 @@ namespace TiRHI
             return std::span<const Features>(m_features);
         }
 
+        template<Features F>
+        bool supportFeatures()
+        {
+            return std::ranges::find_if(m_features, F) != m_features.end();
+        }
+
+        auto operator<=>(const Adapter& other) const = default;
+
     private:
         std::string m_name;
 
         std::string m_vendor;
 
-        std::vector<Features> m_features;
-
         uint64_t m_vramMemoryGb{0ull};
+
+        // TODO may use flag
+        std::vector<Features> m_features;
 
         constexpr static std::string_view vendorName(uint32_t vendorId)
         {

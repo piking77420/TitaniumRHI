@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <ranges>
 
 #include <Titanium/RHITypes.hpp>
 #include <Titanium/TitaniumHeader.hpp>
@@ -58,7 +59,33 @@ TEST(DummyTest, Test)
 {
     TiRHI::RhiCreate create;
 
-    const TiRHI::Rhi rhi({.logCallback = debugCallBack});
+    TiRHI::Rhi rhi({.logCallback = debugCallBack});
+
+    EXPECT_FALSE(rhi.getAdapters().empty());
+
+    const auto adapters = rhi.getAdapters();
+
+    for (const auto& ada : adapters)
+    {
+        std::cout << "Adatper Name = " << ada.getName() << '\n';
+        std::cout << "Vendor Name = " << ada.getVendor() << '\n';
+        std::cout << "Vram GB= " << ada.getVramMemoryGb() << '\n';
+        auto features = ada.getFeatures();
+        if (!features.empty())
+        {
+            std::cout << "Supported Featurse : " << '\n';
+            for (const auto& f : ada.getFeatures())
+            {
+                std::cout << TiRHI::Adapter::toString(f) << ',';
+            }
+            std::cout << '\n';
+        }
+    }
+    auto it = std::ranges::max_element(adapters, {}, &TiRHI::Adapter::getVramMemoryGb);
+
+    EXPECT_TRUE(rhi.createDevice());
+    EXPECT_TRUE(rhi.getUsedAdapter() != nullptr);
+
     EXPECT_FALSE(error);
 }
 

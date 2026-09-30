@@ -37,6 +37,13 @@ namespace TiRHI
         {
             return std::span<const Adapter>(m_adapters);
         }
+        /*Create device autmatically*/
+        bool createDevice();
+
+        /*Create device from user*/
+        bool createDevice(const Adapter& adapter);
+
+        const Adapter* getUsedAdapter() const;
 
     protected:
         std::vector<Adapter> m_adapters;
@@ -54,6 +61,24 @@ namespace TiRHI
     inline void RHI<Derived>::wait()
     {
         static_cast<Derived&>(*this).waitImpl();
+    }
+
+    template<typename Derived>
+    inline bool RHI<Derived>::createDevice()
+    {
+        return static_cast<Derived&>(*this).createDeviceImpl();
+    }
+
+    template<typename Derived>
+    inline bool RHI<Derived>::createDevice(const Adapter& adapter)
+    {
+        return static_cast<Derived&>(*this).createDeviceImpl(adapter);
+    }
+
+    template<typename Derived>
+    inline const Adapter* RHI<Derived>::getUsedAdapter() const
+    {
+        return static_cast<const Derived&>(*this).getUsedAdapterImpl();
     }
 
 }

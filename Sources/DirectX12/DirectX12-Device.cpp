@@ -152,7 +152,6 @@ namespace TiRHI::DirectX12
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
-        RHI_LOG_INFO(std::format(L"Destroy Device... "), RhiApi::DirectX12);
         m_device = nullptr;
     }
 }

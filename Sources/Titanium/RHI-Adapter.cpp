@@ -2,7 +2,7 @@
 
 namespace TiRHI
 {
-    Adapter::Adapter(const std::string& name, const std::vector<Features>& features, uint64_t m_vramMemoryGb,
+    Adapter::Adapter(const std::string_view& name, const std::vector<Features>& features, uint64_t m_vramMemoryGb,
                      uint32_t vendorId)
         : m_name(name)
         , m_vendor(vendorName(vendorId))

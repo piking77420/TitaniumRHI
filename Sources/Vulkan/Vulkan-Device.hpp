@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include <Titanium/RHI-Adapter.hpp>
+
 #include <vulkan/vulkan.hpp>
 
 namespace TiRHI::Vulkan
@@ -12,8 +14,13 @@ namespace TiRHI::Vulkan
     class Device
     {
     public:
-        Device(Instance& instance);
-        ~Device();
+        Device() = delete;
+        ~Device() = default;
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
+        Device(Device&&) noexcept = default;
+        Device& operator=(Device&&) noexcept = default;
+        Device(Instance& instance, std::vector<Adapter>& adapter);
 
         struct Extension
         {
@@ -70,6 +77,15 @@ namespace TiRHI::Vulkan
             return m_device.get();
         }
 
+        void createDevice(const std::vector<Adapter>& adapter);
+
+        void createDevice(size_t adapterIndex, const std::vector<Adapter>& adapters);
+
+        size_t getSelectPhyscialDeviceIndex() const
+        {
+            return m_currentPhysicalDeviceIndex;
+        }
+
     private:
         std::vector<vk::PhysicalDevice> m_physicalDevices;
 
@@ -79,9 +95,11 @@ namespace TiRHI::Vulkan
 
         vk::UniqueDevice m_device;
 
-        void choosePhysicalDevice(Instance& instance);
+        [[nodiscard]] std::vector<Adapter> queryPhysicalDeviceAvailable(Instance& instance);
 
-        void createDevice();
+        void choosePhysicalDevice(const std::vector<Adapter>& adapter);
+
+        void createLogicalDevice(const Adapter& adapter);
     };
 
 } // namespace TiRHI::Vulkan
