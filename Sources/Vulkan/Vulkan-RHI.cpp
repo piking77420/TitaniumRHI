@@ -25,7 +25,7 @@ namespace TiRHI
         size_t index = std::numeric_limits<size_t>::max();
         for (size_t i = 0; i < m_adapters.size(); i++)
         {
-            if (m_adapters[i] == adapter)
+            if (m_adapters[i].getName() == adapter.getName())
             {
                 index = i;
                 break;

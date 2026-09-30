@@ -69,7 +69,7 @@ TEST(DummyTest, Test)
     {
         std::cout << "Adatper Name = " << ada.getName() << '\n';
         std::cout << "Vendor Name = " << ada.getVendor() << '\n';
-        std::cout << "Vram GB= " << ada.getVramMemoryGb() << '\n';
+        std::cout << "Vram = " << ada.getProperties().memoryLimits.vramMemoryBytes / 1'000'000'000.0 << " GB" << '\n';
         auto features = ada.getFeatures();
         if (!features.empty())
         {
@@ -81,7 +81,6 @@ TEST(DummyTest, Test)
             std::cout << '\n';
         }
     }
-    auto it = std::ranges::max_element(adapters, {}, &TiRHI::Adapter::getVramMemoryGb);
 
     EXPECT_TRUE(rhi.createDevice());
     EXPECT_TRUE(rhi.getUsedAdapter() != nullptr);

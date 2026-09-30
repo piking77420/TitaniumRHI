@@ -11,26 +11,15 @@ namespace TiRHI::Vulkan
 {
     class Instance;
 
-    class Device
+    struct Extension
     {
-    public:
-        Device() = delete;
-        ~Device() = default;
-        Device(const Device&) = delete;
-        Device& operator=(const Device&) = delete;
-        Device(Device&&) noexcept = default;
-        Device& operator=(Device&&) noexcept = default;
-        Device(Instance& instance, std::vector<Adapter>& adapter);
+        Extension() = default;
 
-        struct Extension
+        ~Extension() = default;
+
+        Extension(const std::vector<vk::ExtensionProperties> deviceExtensionProperties)
         {
-            Extension() = default;
-
-            ~Extension() = default;
-
-            Extension(const std::vector<vk::ExtensionProperties> deviceExtensionProperties)
-            {
-                // clang-format off
+            // clang-format off
                 supportsSwapchain = std::ranges::any_of(
                     deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
                     { return std::strcmp(extension.extensionName.data(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; });
@@ -43,29 +32,40 @@ namespace TiRHI::Vulkan
                 supportsMeshShader = std::ranges::any_of(
                     deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
                     { return std::strcmp(extension.extensionName.data(), VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0; });
-                // clang-format on
-            }
+            // clang-format on
+        }
 
-            std::vector<const char*> getExtensionName()
-            {
-                std::vector<const char*> out;
-                if (supportsSwapchain)
-                    out.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-                if (supportsRaytracing)
-                    out.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-                if (supportsMeshShader)
-                    out.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
-                if (supportsMeshShader)
-                    out.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+        std::vector<const char*> getExtensionName()
+        {
+            std::vector<const char*> out;
+            if (supportsSwapchain)
+                out.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+            if (supportsRaytracing)
+                out.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+            if (supportsMeshShader)
+                out.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
+            if (supportsMeshShader)
+                out.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
 
-                return out;
-            }
+            return out;
+        }
 
-            bool supportsSwapchain = false;
-            bool supportsRaytracing = false;
-            bool supportsMultiview = false;
-            bool supportsMeshShader = false;
-        };
+        bool supportsSwapchain = false;
+        bool supportsRaytracing = false;
+        bool supportsMultiview = false;
+        bool supportsMeshShader = false;
+    };
+
+    class Device
+    {
+    public:
+        Device() = delete;
+        ~Device() = default;
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
+        Device(Device&&) noexcept = default;
+        Device& operator=(Device&&) noexcept = default;
+        Device(Instance& instance, std::vector<Adapter>& adapter);
 
         vk::PhysicalDevice getPhysicalDevice() noexcept
         {

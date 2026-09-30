@@ -48,6 +48,21 @@ namespace TiRHI
             }
         };
 
+        struct Properties
+        {
+            struct Limits
+            {
+                uint32_t minUniformBufferOffset;
+            } limits;
+
+            struct MemoryLimits
+            {
+                uint64_t vramMemoryBytes{0ull};
+            } memoryLimits;
+
+            auto operator<=>(const Properties& other) const = default;
+        };
+
         Adapter() = default;
         ~Adapter() = default;
 
@@ -57,7 +72,7 @@ namespace TiRHI
         Adapter& operator=(Adapter&& other) noexcept = default;
         Adapter& operator=(const Adapter& other) = default;
 
-        Adapter(const std::string_view& name, const std::vector<Features>& features, uint64_t vramMemoryGb,
+        Adapter(const std::string_view& name, const std::vector<Features>& features, const Properties& property,
                 uint32_t vendorId);
 
         const std::string_view getName() const noexcept
@@ -70,9 +85,9 @@ namespace TiRHI
             return m_vendor;
         }
 
-        const uint64_t getVramMemoryGb() const noexcept
+        const Properties& getProperties() const noexcept
         {
-            return m_vramMemoryGb;
+            return m_properties;
         }
 
         const std::span<const Features> getFeatures() const noexcept
@@ -93,7 +108,7 @@ namespace TiRHI
 
         std::string m_vendor;
 
-        uint64_t m_vramMemoryGb{0ull};
+        Properties m_properties;
 
         // TODO may use flag
         std::vector<Features> m_features;

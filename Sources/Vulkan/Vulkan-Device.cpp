@@ -8,13 +8,13 @@ namespace TiRHI::Vulkan
 {
     std::vector<Adapter::Features> getDeviceExt(const vk::PhysicalDevice& physicalDevice,
                                                 const vk::PhysicalDeviceProperties& properties,
-                                                Device::Extension& extensionSupported)
+                                                Extension& extensionSupported)
     {
         std::vector<Adapter::Features> result;
         const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
             physicalDevice.enumerateDeviceExtensionProperties();
 
-        extensionSupported = Device::Extension(deviceExtensionProperties);
+        extensionSupported = Extension(deviceExtensionProperties);
 
         if (extensionSupported.supportsRaytracing)
             result.push_back(Adapter::Features::RayTracing);
@@ -25,9 +25,42 @@ namespace TiRHI::Vulkan
         return result;
     }
 
+    Adapter::Properties::Limits getDevicePropertiesLimits(vk::PhysicalDeviceProperties properties)
+    {
+        Adapter::Properties::Limits limits;
+        limits.minUniformBufferOffset = properties.limits.minUniformBufferOffsetAlignment;
+
+        return limits;
+    }
+
+    Adapter::Properties::MemoryLimits
+    getDevicePropertiesMemoryLimits(const vk::PhysicalDeviceMemoryProperties& memoryProperties)
+    {
+        Adapter::Properties::MemoryLimits limits{};
+        limits.vramMemoryBytes = 0;
+        for (size_t i = 0; i < static_cast<size_t>(memoryProperties.memoryHeapCount); i++)
+        {
+            const auto& heap = memoryProperties.memoryHeaps[i];
+
+            if (heap.flags & vk::MemoryHeapFlagBits::eDeviceLocal)
+                limits.vramMemoryBytes += heap.size;
+        }
+
+        return limits;
+    }
+
+    Adapter::Properties getDeviceProperty(vk::PhysicalDevice physicalDevice)
+    {
+        Adapter::Properties rhiProperty{};
+
+        rhiProperty.limits = getDevicePropertiesLimits(physicalDevice.getProperties());
+        rhiProperty.memoryLimits = getDevicePropertiesMemoryLimits(physicalDevice.getMemoryProperties());
+
+        return rhiProperty;
+    }
+
     int getPhyscialDeviceScrore(const vk::PhysicalDevice& physicalDevice,
-                                const vk::PhysicalDeviceProperties& properties,
-                                const Device::Extension& extensionSupported)
+                                const vk::PhysicalDeviceProperties& properties, const Extension& extensionSupported)
     {
         int score = 0;
         // properties.pipelineCacheUUID // TODO take a look at it
@@ -45,9 +78,6 @@ namespace TiRHI::Vulkan
         default:
             break;
         }
-
-        const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
-            physicalDevice.enumerateDeviceExtensionProperties();
 
         score += extensionSupported.supportsSwapchain ? 1000 : -1000;
         score += extensionSupported.supportsRaytracing ? 100 : -100;
@@ -95,8 +125,8 @@ namespace TiRHI::Vulkan
             const std::wstring wideName(name.begin(), name.end());
 
             RHI_LOG_VERBOSE(std::format(L"GPU: {}", wideName), RhiApi::Vulkan);
-            result.emplace_back(
-                Adapter(name, getDeviceExt(physicalDevice, properties, m_extension[i]), 0ull, properties.vendorID));
+            result.emplace_back(Adapter(name, getDeviceExt(physicalDevice, properties, m_extension[i]),
+                                        getDeviceProperty(physicalDevice), properties.vendorID));
         }
 
         return result;
