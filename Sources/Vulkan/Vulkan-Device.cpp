@@ -53,7 +53,29 @@ namespace TiRHI::Vulkan
     {
         Adapter::Properties rhiProperty{};
 
-        rhiProperty.limits = getDevicePropertiesLimits(physicalDevice.getProperties());
+        const vk::PhysicalDeviceProperties& vkPhysicalDeviceProperties = physicalDevice.getProperties();
+        rhiProperty.limits = getDevicePropertiesLimits(vkPhysicalDeviceProperties);
+        rhiProperty.deviceType = [&vkPhysicalDeviceProperties]()
+        {
+            switch (vkPhysicalDeviceProperties.deviceType)
+            {
+            case vk::PhysicalDeviceType::eDiscreteGpu:
+                return Adapter::Properties::Type::DiscreteGpu;
+
+            case vk::PhysicalDeviceType::eIntegratedGpu:
+                return Adapter::Properties::Type::IntegratedGpu;
+
+            case vk::PhysicalDeviceType::eVirtualGpu:
+                return Adapter::Properties::Type::VirtualGpu;
+
+            case vk::PhysicalDeviceType::eCpu:
+                return Adapter::Properties::Type::Cpu;
+
+            case vk::PhysicalDeviceType::eOther:
+            default:
+                return Adapter::Properties::Type::Unknow;
+            }
+        }();
         rhiProperty.memoryLimits = getDevicePropertiesMemoryLimits(physicalDevice.getMemoryProperties());
 
         return rhiProperty;

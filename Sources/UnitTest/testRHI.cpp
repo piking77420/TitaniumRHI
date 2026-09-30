@@ -69,7 +69,9 @@ TEST(DummyTest, Test)
     {
         std::cout << "Adatper Name = " << ada.getName() << '\n';
         std::cout << "Vendor Name = " << ada.getVendor() << '\n';
+        std::cout << "Type = " << TiRHI::Adapter::Properties::toString(ada.getProperties().deviceType) << '\n';
         std::cout << "Vram = " << ada.getProperties().memoryLimits.vramMemoryBytes / 1'000'000'000.0 << " GB" << '\n';
+
         auto features = ada.getFeatures();
         if (!features.empty())
         {

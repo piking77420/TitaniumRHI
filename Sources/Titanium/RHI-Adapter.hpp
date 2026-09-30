@@ -60,6 +60,55 @@ namespace TiRHI
                 uint64_t vramMemoryBytes{0ull};
             } memoryLimits;
 
+            enum struct Type
+            {
+                DiscreteGpu,
+                IntegratedGpu,
+                VirtualGpu,
+                Cpu,
+                Unknow
+            } deviceType;
+
+            static constexpr std::string_view toString(Type type) noexcept
+            {
+                using namespace std::literals;
+
+                switch (type)
+                {
+                case Type::DiscreteGpu:
+                    return "DiscreteGpu"sv;
+                case Type::IntegratedGpu:
+                    return "IntegratedGpu"sv;
+                case Type::VirtualGpu:
+                    return "VirtualGpu"sv;
+                case Type::Cpu:
+                    return "Cpu"sv;
+                case Type::Unknow:
+                default:
+                    return "Unknow"sv;
+                }
+            };
+
+            static constexpr std::wstring_view toWString(Type type) noexcept
+            {
+                using namespace std::literals;
+
+                switch (type)
+                {
+                case Type::DiscreteGpu:
+                    return L"DiscreteGpu"sv;
+                case Type::IntegratedGpu:
+                    return L"IntegratedGpu"sv;
+                case Type::VirtualGpu:
+                    return L"VirtualGpu"sv;
+                case Type::Cpu:
+                    return L"Cpu"sv;
+                case Type::Unknow:
+                default:
+                    return L"Unknow"sv;
+                }
+            };
+
             auto operator<=>(const Properties& other) const = default;
         };
 
