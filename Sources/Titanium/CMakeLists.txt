@@ -8,7 +8,9 @@ target_sources(
         Log.hpp
         RHI-Adapter.cpp
         RHI-Adapter.hpp
-        RHI.hpp
+        RHI-BaseDevice.cpp
+        RHI-BaseDevice.hpp
+        RHI-BaseRHI.hpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp

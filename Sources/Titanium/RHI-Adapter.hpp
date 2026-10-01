@@ -14,7 +14,8 @@ namespace TiRHI
     public:
         enum struct Features
         {
-            RayTracing,
+            RayQuery,
+            RayTracingPipeline,
             MeshShader,
         };
 
@@ -24,8 +25,10 @@ namespace TiRHI
 
             switch (features)
             {
-            case TiRHI::Adapter::Features::RayTracing:
-                return "RayTracing"sv;
+            case TiRHI::Adapter::Features::RayQuery:
+                return "RayQuery"sv;
+            case TiRHI::Adapter::Features::RayTracingPipeline:
+                return "RayTracingPipeline"sv;
             case TiRHI::Adapter::Features::MeshShader:
                 return "MeshShader"sv;
             default:
@@ -39,8 +42,10 @@ namespace TiRHI
 
             switch (features)
             {
-            case TiRHI::Adapter::Features::RayTracing:
-                return L"RayTracing"sv;
+            case TiRHI::Adapter::Features::RayQuery:
+                return L"RayQuery"sv;
+            case TiRHI::Adapter::Features::RayTracingPipeline:
+                return L"RayTracingPipeline"sv;
             case TiRHI::Adapter::Features::MeshShader:
                 return L"MeshShader"sv;
             default:

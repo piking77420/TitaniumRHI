@@ -59,6 +59,7 @@ namespace TiRHI
 
     enum struct RhiApi
     {
+        None,
         DirectX12,
         Metal,
         Vulkan
@@ -70,6 +71,8 @@ namespace TiRHI
 
         switch (rhiApi)
         {
+        case RhiApi::None:
+            return "None"sv;
         case RhiApi::DirectX12:
             return "DirectX12"sv;
         case RhiApi::Metal:
@@ -86,6 +89,8 @@ namespace TiRHI
 
         switch (rhiApi)
         {
+        case RhiApi::None:
+            return L"None"sv;
         case RhiApi::DirectX12:
             return L"DirectX12"sv;
         case RhiApi::Metal:

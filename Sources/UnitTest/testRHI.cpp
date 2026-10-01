@@ -59,7 +59,7 @@ TEST(DummyTest, Test)
 {
     TiRHI::RhiCreate create;
 
-    TiRHI::Rhi rhi({.logCallback = debugCallBack});
+    TiRHI::RHI rhi({.logCallback = debugCallBack});
 
     EXPECT_FALSE(rhi.getAdapters().empty());
 
@@ -84,8 +84,8 @@ TEST(DummyTest, Test)
         }
     }
 
-    EXPECT_TRUE(rhi.createDevice());
-    EXPECT_TRUE(rhi.getUsedAdapter() != nullptr);
+    TiRHI::Device device = rhi.createDevice();
+    EXPECT_TRUE(device.getNativeHandle());
 
     EXPECT_FALSE(error);
 }
