@@ -14,30 +14,27 @@
 #include <DirectX12-Factory.hpp>
 #include <DirectX12-Device.hpp>
 
-#include <Titanium/RHI.hpp>
+#include <Titanium/RHI-BaseRHI.hpp>
 #include <Titanium/RHITypes.hpp>
 
-namespace TiRHI
+namespace TiRHI::DirectX12
 {
-    class DirectX12RHI : public RHI<DirectX12RHI>
+    class RHI : public BaseRHI<RHI>
     {
     public:
-        DirectX12RHI(const RhiCreate& rhiCreate);
-        ~DirectX12RHI() = default;
+        RHI(const RhiCreate& rhiCreate);
+        ~RHI() = default;
 
-        void waitImpl();
+        Device createDevice();
+
+        Device createDevice(size_t adapterIndex);
 
     private:
-        DirectX12::Factory m_factory;
-        DirectX12::Device m_adaptater;
-        MComPtr<ID3D12CommandQueue> m_graphicsQueue;
+        Factory m_factory;
 
-        struct Synchronisation
-        {
-            HANDLE deviceFenceEvent;
-            MComPtr<ID3D12Fence> deviceFence;
-            uint32_t deviceFenceValue = 1u;
-        } m_synchronisation;
+        void enumerateAvailableAdapter();
+
+        std::vector<MComPtr<IDXGIAdapter1>> getAllAdapter();
     };
 }
 

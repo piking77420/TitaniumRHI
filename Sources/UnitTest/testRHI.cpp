@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <ranges>
 
 #include <Titanium/RHITypes.hpp>
 #include <Titanium/TitaniumHeader.hpp>
@@ -56,9 +57,38 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiApi api, TiRHI::RhiMes
 
 TEST(DummyTest, Test)
 {
-    TiRHI::RhiCreate create{.logCallback = debugCallBack};
+    TiRHI::RhiCreate create;
 
-    const TiRHI::Rhi rhi(create);
+    TiRHI::RHI rhi({.logCallback = debugCallBack});
+
+    EXPECT_FALSE(rhi.getAdapters().empty());
+
+    const auto adapters = rhi.getAdapters();
+
+    for (const auto& ada : adapters)
+    {
+        std::cout << "Adatper Name = " << ada.getName() << '\n';
+        std::cout << "Vendor Name = " << ada.getVendor() << '\n';
+        std::cout << "Type = " << TiRHI::Adapter::Properties::toString(ada.getProperties().deviceType) << '\n';
+        std::cout << "Vram = " << ada.getProperties().memoryLimits.vramMemoryBytes / 1'000'000'000.0 << " GB" << '\n';
+
+        auto features = ada.getFeatures();
+        if (!features.empty())
+        {
+            std::cout << "Supported Features : " << '\n';
+            for (const auto& f : ada.getFeatures())
+            {
+                std::cout << TiRHI::Adapter::toString(f) << ", ";
+            }
+            std::cout << '\n';
+        }
+    }
+
+    TiRHI::Device device = rhi.createDevice();
+    EXPECT_TRUE(device.getNativeHandle());
+
+    std::cout << "Selected Adapter " << device.getSourceAdapter(rhi).getName() << '\n';
+
     EXPECT_FALSE(error);
 }
 

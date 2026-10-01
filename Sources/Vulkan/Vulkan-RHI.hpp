@@ -2,24 +2,29 @@
 #define TITANIUM_VULKAN_RHI_H
 
 #include <Titanium/RHITypes.hpp>
-#include <Titanium/RHI.hpp>
+#include <Titanium/RHI-BaseRHI.hpp>
 
 #include <Vulkan-Instance.hpp>
 #include <Vulkan-Device.hpp>
 
-namespace TiRHI
+namespace TiRHI::Vulkan
 {
-    class VulkanRHI : public RHI<VulkanRHI>
+    class RHI : public TiRHI::BaseRHI<RHI>
     {
     public:
-        VulkanRHI(const RhiCreate& rhiCreate);
-        ~VulkanRHI() = default;
+        RHI(const RhiCreate& rhiCreate);
+        ~RHI() = default;
 
-        void waitImpl();
+        Device createDevice();
+
+        Device createDevice(size_t adapterIndex);
 
     private:
-        Vulkan::Instance m_instance;
-        Vulkan::Device m_device;
+        Instance m_instance;
+
+        std::vector<vk::PhysicalDevice> m_physicalDevices;
+
+        void queryPhysicalDeviceAvailable();
     };
 }
 

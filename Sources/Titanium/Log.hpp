@@ -2,7 +2,7 @@
 #define TITANIUM_LOG_H
 
 #include <Titanium/RHITypes.hpp>
-#include <Titanium/RHI.hpp>
+#include <Titanium/RHI-BaseRHI.hpp>
 
 #define RHI_LOG(MESSAGE, API, SEVERITY)                                                                                \
     TiRHI::RHIGlobalState::logCallBack ? TiRHI::RHIGlobalState::logCallBack(MESSAGE, API, SEVERITY) : void(0)

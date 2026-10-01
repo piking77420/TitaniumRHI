@@ -3,85 +3,53 @@
 
 #include <vector>
 
+#include <Titanium/RHI-BaseDevice.hpp>
+#include <Titanium/RHI-Adapter.hpp>
+
 #include <vulkan/vulkan.hpp>
+
+namespace TiRHI::Contract
+{
+    struct DeviceContractAccess;
+
+} // TiRHI::Contract
 
 namespace TiRHI::Vulkan
 {
     class Instance;
 
-    class Device
+    class Device : public BaseDevice
     {
     public:
-        Device(Instance& instance);
-        ~Device();
+        Device() = default;
+        ~Device() = default;
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
+        Device(Device&&) noexcept = default;
+        Device& operator=(Device&&) noexcept = default;
+        Device(Instance& instance, const std::vector<Adapter>& adapters,
+               const std::vector<vk::PhysicalDevice>& devices);
+        Device(Instance& instance, const std::vector<Adapter>& adapters, const std::vector<vk::PhysicalDevice>& devices,
+               size_t index);
 
-        struct Extension
-        {
-            Extension() = default;
+        void wait();
 
-            ~Extension() = default;
-
-            Extension(const std::vector<vk::ExtensionProperties> deviceExtensionProperties)
-            {
-                // clang-format off
-                supportsSwapchain = std::ranges::any_of(
-                    deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-                    { return std::strcmp(extension.extensionName.data(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; });
-                supportsSwapchain = std::ranges::any_of(
-                    deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-                    { return std::strcmp(extension.extensionName.data(), VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0; });
-                supportsMultiview = std::ranges::any_of(
-                    deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-                    { return std::strcmp(extension.extensionName.data(), VK_KHR_MULTIVIEW_EXTENSION_NAME) == 0; });
-                supportsMeshShader = std::ranges::any_of(
-                    deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-                    { return std::strcmp(extension.extensionName.data(), VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0; });
-                // clang-format on
-            }
-
-            std::vector<const char*> getExtensionName()
-            {
-                std::vector<const char*> out;
-                if (supportsSwapchain)
-                    out.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-                if (supportsRaytracing)
-                    out.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-                if (supportsMeshShader)
-                    out.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
-                if (supportsMeshShader)
-                    out.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
-
-                return out;
-            }
-
-            bool supportsSwapchain = false;
-            bool supportsRaytracing = false;
-            bool supportsMultiview = false;
-            bool supportsMeshShader = false;
-        };
-
-        vk::PhysicalDevice getPhysicalDevice() noexcept
-        {
-            return m_physicalDevices[m_currentPhysicalDeviceIndex];
-        }
-
-        vk::Device getDevice() noexcept
+        vk::Device getNativeHandle() noexcept
         {
             return m_device.get();
         }
 
     private:
+        friend Contract::DeviceContractAccess;
+
         std::vector<vk::PhysicalDevice> m_physicalDevices;
-
-        std::vector<Extension> m_extension;
-
-        size_t m_currentPhysicalDeviceIndex = std::numeric_limits<size_t>::max();
 
         vk::UniqueDevice m_device;
 
-        void choosePhysicalDevice(Instance& instance);
+        void choosePhysicalDeviceIndex(Instance& instance, const std::vector<Adapter>& adapters,
+                                       const std::vector<vk::PhysicalDevice>& devices);
 
-        void createDevice();
+        void createLogicalDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter);
     };
 
 } // namespace TiRHI::Vulkan

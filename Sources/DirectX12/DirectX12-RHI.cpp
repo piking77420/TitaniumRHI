@@ -4,85 +4,129 @@
 
 #include <Titanium/Log.hpp>
 
-namespace TiRHI
+namespace TiRHI::DirectX12
 {
-    DirectX12RHI::DirectX12RHI(const RhiCreate& rhiCreate)
-        : RHI<DirectX12RHI>(rhiCreate)
-        , m_factory()
-        , m_adaptater(m_factory.getFactory())
+    std::vector<Adapter::Features> getAdapterFeatures(ID3D12Device* device)
     {
-        // Set up queue
+        std::vector<Adapter::Features> features;
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5{};
+
+        if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5))))
         {
-            // GFX
+            if (options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
             {
-                const D3D12_COMMAND_QUEUE_DESC desc{
-                    .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
-                    .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-                };
-
-                /**
-                 * DX12 can create queue 'on the fly' after device creation.
-                 * No need to specify in advance how many queues will be used by the device object.
-                 */
-                const HRESULT hrGFXCmdQueueCreated =
-                    m_adaptater.getDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_graphicsQueue));
-                if (FAILED(hrGFXCmdQueueCreated))
-                {
-                    RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed!\nError Code: 0x{:08X}",
-                                              static_cast<unsigned long>(hrGFXCmdQueueCreated)),
-                                  RhiApi::DirectX12, RhiMessageSeverity::Error);
-
-                    return;
-                }
-                else
-                {
-                    const LPCWSTR name = L"GraphicsQueue";
-                    m_graphicsQueue->SetName(name);
-                    {
-                        RHI_LOG_INFO(std::format(L"Create Graphics Queue success. Name: {} Address: {}", name,
-                                                 static_cast<void*>(m_graphicsQueue.Get())),
-                                     RhiApi::DirectX12);
-                    }
-                }
-
-                // Sync
-                {
-                    m_synchronisation.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
-                    if (!m_synchronisation.deviceFenceEvent)
-                    {
-                        RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiApi::DirectX12);
-                        return;
-                    }
-                    else
-                    {
-                        RHI_LOG_INFO(L"Create Device Fence Event success.", RhiApi::DirectX12);
-                    }
-
-                    const HRESULT hrDeviceFenceCreated = m_adaptater.getDevice()->CreateFence(
-                        0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronisation.deviceFence));
-                    if (FAILED(hrDeviceFenceCreated))
-                    {
-                        RHI_LOG_ERROR(
-                            std::format(L"Create Device Fence failed! \n Error Code: {}", hrDeviceFenceCreated),
-                            RhiApi::DirectX12);
-
-                        return;
-                    }
-                    else
-                    {
-                        const LPCWSTR name = L"DeviceFence";
-                        m_synchronisation.deviceFence->SetName(name);
-                        RHI_LOG_INFO(
-                            std::format(L"Create Swapchain Fence success. [{}] [{}]", name, hrDeviceFenceCreated),
-                            RhiApi::DirectX12);
-                    }
-                }
+                features.push_back(Adapter::Features::RayTracingPipeline);
             }
+
+            if (options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
+            {
+                features.push_back(Adapter::Features::RayQuery);
+            }
+        }
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7{};
+
+        if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7))))
+        {
+            if (options7.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED)
+            {
+                features.push_back(Adapter::Features::MeshShader);
+            }
+        }
+
+        return features;
+    }
+
+    Adapter::Properties getAdapterProperties(const DXGI_ADAPTER_DESC1& desc, ID3D12Device* device)
+    {
+        Adapter::Properties rhiProperty{};
+        rhiProperty.limits.minUniformBufferOffset = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+
+        rhiProperty.memoryLimits.vramMemoryBytes = static_cast<uint64_t>(desc.DedicatedVideoMemory);
+
+        D3D12_FEATURE_DATA_ARCHITECTURE1 architecture{};
+        architecture.NodeIndex = 0;
+
+        if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE1, &architecture, sizeof(architecture))))
+        {
+            rhiProperty.deviceType =
+                architecture.UMA ? Adapter::Properties::Type::IntegratedGpu : Adapter::Properties::Type::DiscreteGpu;
+        }
+        else
+        {
+            rhiProperty.deviceType = Adapter::Properties::Type::Unknow;
+        }
+
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            rhiProperty.deviceType = Adapter::Properties::Type::Cpu;
+        }
+
+        return rhiProperty;
+    }
+
+    RHI::RHI(const RhiCreate& rhiCreate)
+        : BaseRHI<RHI>(rhiCreate)
+    {
+        enumerateAvailableAdapter();
+    }
+
+    Device RHI::createDevice()
+    {
+        return Device(m_factory, getAllAdapter(), m_adapters);
+    }
+
+    Device RHI::createDevice(size_t adapterIndex)
+    {
+        return Device(m_factory, getAllAdapter(), m_adapters, adapterIndex);
+    }
+
+    void RHI::enumerateAvailableAdapter()
+    {
+        m_adapters.clear();
+        std::vector<MComPtr<IDXGIAdapter1>> dxAdatpers = getAllAdapter();
+        m_adapters.reserve(dxAdatpers.size());
+
+        for (auto& dxAdatper : dxAdatpers)
+        {
+            DXGI_ADAPTER_DESC1 desc{};
+            dxAdatper->GetDesc1(&desc);
+
+            const std::wstring_view wideName = desc.Description;
+            const std::string name(wideName.begin(), wideName.end());
+
+            MComPtr<ID3D12Device> device;
+
+            const bool isSoftware = (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0;
+            if (isSoftware)
+                continue;
+
+            if (FAILED(D3D12CreateDevice(dxAdatper.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device))))
+            {
+                RHI_LOG_ERROR(std::format(L"Failed to Create fake device to check featurs of the adapter {}", wideName),
+                              RhiApi::DirectX12);
+                continue;
+            }
+
+            m_adapters.emplace_back(name, getAdapterFeatures(device.Get()), getAdapterProperties(desc, device.Get()),
+                                    desc.VendorId);
         }
     }
 
-    void DirectX12RHI::waitImpl()
+    std::vector<MComPtr<IDXGIAdapter1>> RHI::getAllAdapter()
     {
-    }
+        std::vector<MComPtr<IDXGIAdapter1>> result;
 
-} // namespace TiRHI
+        for (UINT i = 0;; ++i)
+        {
+            MComPtr<IDXGIAdapter1> adapter1;
+
+            if (m_factory.getFactory()->EnumAdapters1(i, &adapter1) == DXGI_ERROR_NOT_FOUND)
+                break;
+            result.push_back(adapter1);
+        }
+
+        return result;
+    }
+} // namespace TiRHI::DirectX12

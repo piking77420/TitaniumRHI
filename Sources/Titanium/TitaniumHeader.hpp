@@ -7,7 +7,8 @@
 
 namespace TiRHI
 {
-    using Rhi = VulkanRHI;
+    using RHI = Vulkan::RHI;
+    using Device = Vulkan::Device;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -16,7 +17,8 @@ namespace TiRHI
 
 namespace TiRHI
 {
-    using Rhi = DirectX12RHI;
+    using RHI = DirectX12::RHI;
+    using Device = DirectX12::Device;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -31,5 +33,43 @@ namespace TiRHI
 #else
 #error "No TitaniumRHI backend selected"
 #endif
+
+namespace TiRHI::Contract
+{
+    struct RHIContractAccess
+    {
+        template<typename T>
+        static auto createDevice(T& device) -> decltype(device.createDevice())
+        {
+            return device.createDevice();
+        }
+        template<typename T>
+        static auto createDevice(T& device, size_t index) -> decltype(device.createDevice(index))
+        {
+            return device.createDevice(index);
+        }
+    };
+
+    template<typename T>
+    concept RHIContract = requires(T device) {
+        { RHIContractAccess::createDevice(device) } -> std::same_as<Device>;
+    };
+
+    static_assert(RHIContract<RHI>);
+
+    struct DeviceContractAccess
+    {
+        template<typename T>
+        static auto wait(T& device) -> decltype(device.wait());
+    };
+
+    template<typename T>
+    concept DeviceContract = requires(T device) {
+        { DeviceContractAccess::wait(device) } -> std::same_as<void>;
+    };
+
+    static_assert(DeviceContract<Device>);
+
+} // TiRHI::Contracts
 
 #endif // TITANIUM_TITANIUM_HEADER_H

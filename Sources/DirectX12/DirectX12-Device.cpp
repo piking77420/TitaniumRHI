@@ -3,6 +3,7 @@
 #include <format>
 
 #include <Titanium/Log.hpp>
+#include <DirectX12-Factory.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -78,15 +79,49 @@ namespace TiRHI::DirectX12
     }
 #endif
 
-    Device::Device(MComPtr<IDXGIFactory6>& factory)
+    Device::~Device()
+    {
+#if defined(TITANIUM_VALIDATION_LAYER)
+        // Validation Layers (device-level)
+        if (VLayerCallbackCookie)
+        {
+            MComPtr<ID3D12InfoQueue1> infoQueue = nullptr;
+
+            const HRESULT hrQueryInfoQueue = m_device->QueryInterface(IID_PPV_ARGS(&infoQueue));
+            if (SUCCEEDED(hrQueryInfoQueue))
+            {
+                infoQueue->UnregisterMessageCallback(VLayerCallbackCookie);
+                VLayerCallbackCookie = 0;
+            }
+        }
+#endif // defined(TITANIUM_VALIDATION_LAYER)
+
+        m_device = nullptr;
+    }
+
+    Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
+                   const std::vector<Adapter>& adapters)
+    {
+        const size_t index = BaseDevice::getBestAdapter(adapters);
+
+        create(factory.getFactory(), dxAdapters[index]);
+    }
+
+    Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
+                   const std::vector<Adapter>& adapters, size_t index)
+    {
+        MComPtr<IDXGIAdapter3> adapter3;
+        create(factory.getFactory(), dxAdapters[index]);
+    }
+
+    void Device::create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1)
     {
         MComPtr<IDXGIAdapter3> adapter;
-
-        const HRESULT hrQueryGPU =
-            factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));
-        if (FAILED(hrQueryGPU))
+        HRESULT hr = adapter1.As(&adapter);
+        if (FAILED(hr))
         {
-            RHI_LOG_ERROR(std::format(L"Adapter not found! \n Error Code: {}", hrQueryGPU), RhiApi::DirectX12);
+            // IDXGIAdapter1 does not expose IDXGIAdapter3
+            RHI_LOG_ERROR(L"Failed to create an IDXGIAdapter3 from IDXGIAdapter1", RhiApi::DirectX12);
             return;
         }
 
@@ -135,24 +170,10 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_VALIDATION_LAYER)
     }
 
-    Device::~Device()
+    void Device::wait()
     {
-#if defined(TITANIUM_VALIDATION_LAYER)
-        // Validation Layers (device-level)
-        if (VLayerCallbackCookie)
-        {
-            MComPtr<ID3D12InfoQueue1> infoQueue = nullptr;
-
-            const HRESULT hrQueryInfoQueue = m_device->QueryInterface(IID_PPV_ARGS(&infoQueue));
-            if (SUCCEEDED(hrQueryInfoQueue))
-            {
-                infoQueue->UnregisterMessageCallback(VLayerCallbackCookie);
-                VLayerCallbackCookie = 0;
-            }
-        }
-#endif // defined(TITANIUM_VALIDATION_LAYER)
-
-        RHI_LOG_INFO(std::format(L"Destroy Device... "), RhiApi::DirectX12);
-        m_device = nullptr;
+        // TODO
+        RHI_LOG_FATAL(L"TODO IMPLEMENT WAIT", RhiApi::DirectX12);
     }
+
 }

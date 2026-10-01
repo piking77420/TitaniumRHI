@@ -3,10 +3,10 @@
 
 #include <wrl.h>
 
-namespace TiRHI
+namespace TiRHI::DirectX12
 {
     template<typename T>
     using MComPtr = Microsoft::WRL::ComPtr<T>;
-} // namespace TiRHI
+} // namespace TiRHI::DirectX12
 
 #endif // TITANIUM_DIRECTX12_HEADER_H
