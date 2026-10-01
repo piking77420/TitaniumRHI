@@ -75,10 +75,10 @@ TEST(DummyTest, Test)
         auto features = ada.getFeatures();
         if (!features.empty())
         {
-            std::cout << "Supported Featurse : " << '\n';
+            std::cout << "Supported Features : " << '\n';
             for (const auto& f : ada.getFeatures())
             {
-                std::cout << TiRHI::Adapter::toString(f) << ',';
+                std::cout << TiRHI::Adapter::toString(f) << ", ";
             }
             std::cout << '\n';
         }
@@ -86,6 +86,8 @@ TEST(DummyTest, Test)
 
     TiRHI::Device device = rhi.createDevice();
     EXPECT_TRUE(device.getNativeHandle());
+
+    std::cout << "Selected Adapter " << device.getSourceAdapter(rhi).getName() << '\n';
 
     EXPECT_FALSE(error);
 }

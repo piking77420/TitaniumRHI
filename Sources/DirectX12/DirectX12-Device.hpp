@@ -7,41 +7,41 @@
 #include <dxgi1_4.h>
 
 #include <Titanium/RHI-Adapter.hpp>
+#include <Titanium/RHI-BaseDevice.hpp>
 
 #include <DirectX12-Header.hpp>
 
 namespace TiRHI::DirectX12
 {
-    class Device
+    class Factory;
+
+    class Device : public BaseDevice
     {
     public:
-        Device(MComPtr<IDXGIFactory6>& factory, std::vector<Adapter>& adatpers);
+        Device() = default;
         ~Device();
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
+        Device(Device&&) noexcept = default;
+        Device& operator=(Device&&) noexcept = default;
+        Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
+               const std::vector<Adapter>& adapters);
+        Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
+               const std::vector<Adapter>& adapters, size_t index);
 
-        MComPtr<ID3D12Device>& getDevice()
+        void wait();
+
+        MComPtr<ID3D12Device>& getNativeHandle()
         {
             return m_device;
         }
-
-        size_t getSelectPhyscialDeviceIndex() const
-        {
-            return m_selectedDeviceIndex;
-        }
-
-        void createDevice(const std::vector<Adapter>& adapter, MComPtr<IDXGIFactory6>& factory);
-
-        void createDevice(size_t adapterIndex, MComPtr<IDXGIFactory6>& factory);
 
     private:
         MComPtr<ID3D12Device> m_device;
 
         DWORD VLayerCallbackCookie = 0;
 
-        size_t m_selectedDeviceIndex = 0;
-
-        std::vector<Adapter> enumerateAvailableAdapter(MComPtr<IDXGIFactory6>& factory);
-
-        void createFromAdaptater(MComPtr<IDXGIFactory6>& factory, IDXGIAdapter3* adapter);
+        void create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1);
     };
 } // namespace TiRHI::DirectX12
 

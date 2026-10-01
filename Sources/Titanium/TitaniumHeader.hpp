@@ -17,7 +17,8 @@ namespace TiRHI
 
 namespace TiRHI
 {
-    using Rhi = DirectX12RHI;
+    using RHI = DirectX12::RHI;
+    using Device = DirectX12::Device;
 }
 
 #elif defined(TITANIUM_METAL)

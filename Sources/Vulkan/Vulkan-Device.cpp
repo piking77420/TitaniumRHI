@@ -64,13 +64,7 @@ namespace TiRHI::Vulkan
     void Device::choosePhysicalDeviceIndex(Instance& instance, const std::vector<Adapter>& adapters,
                                            const std::vector<vk::PhysicalDevice>& devices)
     {
-        std::vector<int64_t> scores;
-        scores.reserve(adapters.size());
-        for (const auto& adapter : adapters)
-            scores.emplace_back(getAdapterScore(adapter));
-
-        auto it = std::ranges::max_element(scores);
-        const size_t index = std::distance(scores.begin(), it);
+        const size_t index = BaseDevice::getBestAdapter(adapters);
 
         if (index < 0)
         {

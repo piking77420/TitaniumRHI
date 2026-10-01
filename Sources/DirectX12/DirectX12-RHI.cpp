@@ -4,40 +4,129 @@
 
 #include <Titanium/Log.hpp>
 
-namespace TiRHI
+namespace TiRHI::DirectX12
 {
-    DirectX12RHI::DirectX12RHI(const RhiCreate& rhiCreate)
-        : RHI<DirectX12RHI>(rhiCreate)
-        , m_factory()
-        , m_device(m_factory.getFactory(), m_adapters)
+    std::vector<Adapter::Features> getAdapterFeatures(ID3D12Device* device)
     {
+        std::vector<Adapter::Features> features;
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5{};
+
+        if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5))))
+        {
+            if (options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+            {
+                features.push_back(Adapter::Features::RayTracingPipeline);
+            }
+
+            if (options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
+            {
+                features.push_back(Adapter::Features::RayQuery);
+            }
+        }
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7{};
+
+        if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7))))
+        {
+            if (options7.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED)
+            {
+                features.push_back(Adapter::Features::MeshShader);
+            }
+        }
+
+        return features;
     }
 
-    void DirectX12RHI::waitImpl()
+    Adapter::Properties getAdapterProperties(const DXGI_ADAPTER_DESC1& desc, ID3D12Device* device)
     {
+        Adapter::Properties rhiProperty{};
+        rhiProperty.limits.minUniformBufferOffset = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+
+        rhiProperty.memoryLimits.vramMemoryBytes = static_cast<uint64_t>(desc.DedicatedVideoMemory);
+
+        D3D12_FEATURE_DATA_ARCHITECTURE1 architecture{};
+        architecture.NodeIndex = 0;
+
+        if (SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE1, &architecture, sizeof(architecture))))
+        {
+            rhiProperty.deviceType =
+                architecture.UMA ? Adapter::Properties::Type::IntegratedGpu : Adapter::Properties::Type::DiscreteGpu;
+        }
+        else
+        {
+            rhiProperty.deviceType = Adapter::Properties::Type::Unknow;
+        }
+
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            rhiProperty.deviceType = Adapter::Properties::Type::Cpu;
+        }
+
+        return rhiProperty;
     }
 
-    bool DirectX12RHI::createDeviceImpl()
+    RHI::RHI(const RhiCreate& rhiCreate)
+        : BaseRHI<RHI>(rhiCreate)
     {
-        m_device.createDevice(m_device.getSelectPhyscialDeviceIndex(), m_factory.getFactory());
-        return m_device.getDevice() != nullptr;
+        enumerateAvailableAdapter();
     }
 
-    bool DirectX12RHI::createDeviceImpl(size_t adapterIndex)
+    Device RHI::createDevice()
     {
-        m_device.createDevice(adapterIndex, m_factory.getFactory());
-        return m_device.getDevice() != nullptr;
+        return Device(m_factory, getAllAdapter(), m_adapters);
     }
 
-    const Adapter* DirectX12RHI::getUsedAdapterImpl() const
+    Device RHI::createDevice(size_t adapterIndex)
     {
-        const size_t index = m_device.getSelectPhyscialDeviceIndex();
-
-#undef max // :)
-        if (index == std::numeric_limits<size_t>::max() || index >= m_adapters.size())
-            return nullptr;
-
-        return &m_adapters[index];
+        return Device(m_factory, getAllAdapter(), m_adapters, adapterIndex);
     }
 
-} // namespace TiRHI
+    void RHI::enumerateAvailableAdapter()
+    {
+        m_adapters.clear();
+        std::vector<MComPtr<IDXGIAdapter1>> dxAdatpers = getAllAdapter();
+        m_adapters.reserve(dxAdatpers.size());
+
+        for (auto& dxAdatper : dxAdatpers)
+        {
+            DXGI_ADAPTER_DESC1 desc{};
+            dxAdatper->GetDesc1(&desc);
+
+            const std::wstring_view wideName = desc.Description;
+            const std::string name(wideName.begin(), wideName.end());
+
+            MComPtr<ID3D12Device> device;
+
+            const bool isSoftware = (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0;
+            if (isSoftware)
+                continue;
+
+            if (FAILED(D3D12CreateDevice(dxAdatper.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device))))
+            {
+                RHI_LOG_ERROR(std::format(L"Failed to Create fake device to check featurs of the adapter {}", wideName),
+                              RhiApi::DirectX12);
+                continue;
+            }
+
+            m_adapters.emplace_back(name, getAdapterFeatures(device.Get()), getAdapterProperties(desc, device.Get()),
+                                    desc.VendorId);
+        }
+    }
+
+    std::vector<MComPtr<IDXGIAdapter1>> RHI::getAllAdapter()
+    {
+        std::vector<MComPtr<IDXGIAdapter1>> result;
+
+        for (UINT i = 0;; ++i)
+        {
+            MComPtr<IDXGIAdapter1> adapter1;
+
+            if (m_factory.getFactory()->EnumAdapters1(i, &adapter1) == DXGI_ERROR_NOT_FOUND)
+                break;
+            result.push_back(adapter1);
+        }
+
+        return result;
+    }
+} // namespace TiRHI::DirectX12
