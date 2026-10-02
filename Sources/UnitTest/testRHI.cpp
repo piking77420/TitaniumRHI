@@ -61,7 +61,7 @@ TEST(DummyTest, Test)
 {
     TiRHI::RhiCreate create;
 
-    TiRHI::RHI rhi({.logCallback = debugCallBack});
+    TiRHI::RHI rhi({.frameInFlight = 2, .logCallback = debugCallBack});
 
     EXPECT_FALSE(rhi.getAdapters().empty());
 
@@ -91,11 +91,10 @@ TEST(DummyTest, Test)
     device
         .setName("BaseDevice")
         .setFeaturesEnable({})
-        .setFrameInFlight(3)
         .build(rhi, adapters);
     // clang-format on
 
-    EXPECT_TRUE(device.getNativeHandle());
+    EXPECT_TRUE(device.getNativeDevice());
 
     std::cout << "Selected Adapter " << device.getSourceAdapter(rhi).getName() << '\n';
 

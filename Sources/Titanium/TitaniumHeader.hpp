@@ -15,12 +15,14 @@ namespace TiRHI
 
 #include <DirectX12/DirectX12-RHI.hpp>
 #include <DirectX12/DirectX12-SwapChain.hpp>
+#include <DirectX12/DirectX12-CommandList.hpp>
 
 namespace TiRHI
 {
     using RHI = DirectX12::RHI;
     using Device = DirectX12::Device;
     using SwapChain = DirectX12::SwapChain;
+    using CommandList = DirectX12::CommandList;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -62,6 +64,17 @@ namespace TiRHI::Contract
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);
+
+    // CommandList
+
+    template<typename T>
+    concept CommandListContract = requires(T& commandList, Device& device) {
+        { commandList.build(device) } -> std::same_as<bool>;
+        { commandList.beginRecord() } -> std::same_as<bool>;
+        { commandList.endRecord() } -> std::same_as<void>;
+    } && std::derived_from<T, Object<T, RHI>>;
+
+    static_assert(CommandListContract<CommandList>);
 
 } // TiRHI::Contracts
 

@@ -31,9 +31,9 @@ namespace TiRHI::DirectX12
 
         void wait();
 
-        MComPtr<ID3D12Device>& getNativeHandle()
+        ID3D12Device* getNativeDevice()
         {
-            return m_device;
+            return m_device.Get();
         }
 
         MComPtr<ID3D12CommandQueue>& getGraphicQueue()

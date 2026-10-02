@@ -181,7 +181,7 @@ namespace TiRHI::DirectX12
             return false;
         }
 
-        const HRESULT hrSwapChainFenceCreated = device.getNativeHandle()->CreateFence(
+        const HRESULT hrSwapChainFenceCreated = device.getNativeDevice()->CreateFence(
             0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronisation.swapchainFence));
 
         if (FAILED(hrSwapChainFenceCreated))

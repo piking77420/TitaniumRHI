@@ -40,27 +40,10 @@ namespace TiRHI
             return reinterpret_cast<T&>(*this);
         }
 
-        size_t getFrameInFlight() const
-        {
-            return m_framesInFlight;
-        }
-
-        T& setFrameInFlight(size_t frameInFlight)
-        {
-            m_framesInFlight = frameInFlight;
-            return reinterpret_cast<T&>(*this);
-        }
-
     protected:
         size_t m_adapterIndex = 0;
 
         std::vector<Adapter::Features> m_featuresEnable;
-        // Number of frames that may be processed concurrently.
-        //
-        // Explicit APIs such as Vulkan and DirectX12 may use 2 or 3 frames in flight.
-        // Backends that do not currently support multiple frames in flight, such as
-        // the OpenGL backend, may force this value to 1 during device creation.
-        size_t m_framesInFlight = 2;
 
         static int64_t getAdapterScore(const Adapter& adapter)
         {
