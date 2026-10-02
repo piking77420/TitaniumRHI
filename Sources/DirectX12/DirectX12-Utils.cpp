@@ -6,7 +6,7 @@ namespace TiRHI::DirectX12::Internal
     {
         std::vector<MComPtr<IDXGIAdapter1>> result;
 
-        if (factory)
+        if (!factory)
             return result;
 
         for (UINT i = 0;; ++i)
