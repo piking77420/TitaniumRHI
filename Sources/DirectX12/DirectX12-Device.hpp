@@ -43,11 +43,19 @@ namespace TiRHI::DirectX12
 
         MComPtr<ID3D12CommandQueue> m_graphicsQueue;
 
+        struct Synchronization
+        {
+            HANDLE deviceFenceEvent;
+            MComPtr<ID3D12Fence> deviceFence;
+            uint64_t deviceFenceValue = 1u;
+        } m_synchronization;
 
         void create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1);
 
         // handle one queu for now
         void createUniqueQueue();
+
+        void createSynchronisation();
     };
 } // namespace TiRHI::DirectX12
 

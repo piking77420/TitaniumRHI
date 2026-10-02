@@ -170,6 +170,7 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
         createUniqueQueue();
+        createSynchronisation();
     }
 
     void Device::createUniqueQueue()
@@ -182,7 +183,7 @@ namespace TiRHI::DirectX12
         const HRESULT hrGFXCmdQueueCreated = m_device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_graphicsQueue));
         if (FAILED(hrGFXCmdQueueCreated))
         {
-            RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed! Error Code: {}", hrGFXCmdQueueCreated),
+            RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed!\nError Code: {}", hrGFXCmdQueueCreated),
                           RhiApi::DirectX12);
             return;
         }
@@ -194,10 +195,48 @@ namespace TiRHI::DirectX12
         }
     }
 
+    void Device::createSynchronisation()
+    {
+        m_synchronization.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+        if (!m_synchronization.deviceFenceEvent)
+        {
+            RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiApi::DirectX12);
+            return;
+        }
+        else
+        {
+            RHI_LOG_INFO(L"Create Device Fence Event success.", RhiApi::DirectX12);
+        }
+
+        const HRESULT hrDeviceFenceCreated =
+            m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronization.deviceFence));
+        if (FAILED(hrDeviceFenceCreated))
+        {
+            RHI_LOG_ERROR(std::format(L"Create Device Fence failed! \nError Code: {}", hrDeviceFenceCreated),
+                          RhiApi::DirectX12);
+            return;
+        }
+        else
+        {
+            const LPCWSTR name = L"DeviceFence";
+            m_synchronization.deviceFence->SetName(name);
+
+            RHI_LOG_ERROR(L"Create Swapchain Fence success.", RhiApi::DirectX12);
+        }
+    }
+
     void Device::wait()
     {
-        // TODO
-        RHI_LOG_FATAL(L"TODO IMPLEMENT WAIT", RhiApi::DirectX12);
+        // Schedule a Signal command in the queue.
+        m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
+
+        // Wait until the fence has been processed.
+        m_synchronization.deviceFence->SetEventOnCompletion(m_synchronization.deviceFenceValue,
+                                                            m_synchronization.deviceFenceEvent);
+        WaitForSingleObjectEx(m_synchronization.deviceFenceEvent, INFINITE, false);
+
+        // Increment for next use.
+        ++m_synchronization.deviceFenceValue;
     }
 
 }
