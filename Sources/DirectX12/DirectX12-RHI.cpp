@@ -3,6 +3,7 @@
 #include <format>
 
 #include <Titanium/Log.hpp>
+#include <DirectX12/DirectX12-Utils.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -72,20 +73,10 @@ namespace TiRHI::DirectX12
         enumerateAvailableAdapter();
     }
 
-    Device RHI::createDevice()
-    {
-        return Device(m_factory, getAllAdapter(), m_adapters);
-    }
-
-    Device RHI::createDevice(size_t adapterIndex)
-    {
-        return Device(m_factory, getAllAdapter(), m_adapters, adapterIndex);
-    }
-
     void RHI::enumerateAvailableAdapter()
     {
         m_adapters.clear();
-        std::vector<MComPtr<IDXGIAdapter1>> dxAdatpers = getAllAdapter();
+        std::vector<MComPtr<IDXGIAdapter1>> dxAdatpers = Internal::getAllNativeAdapters(getNativeFactory());
         m_adapters.reserve(dxAdatpers.size());
 
         for (auto& dxAdatper : dxAdatpers)
@@ -114,19 +105,19 @@ namespace TiRHI::DirectX12
         }
     }
 
-    std::vector<MComPtr<IDXGIAdapter1>> RHI::getAllAdapter()
+    Device RHI::newDevice()
     {
-        std::vector<MComPtr<IDXGIAdapter1>> result;
-
-        for (UINT i = 0;; ++i)
-        {
-            MComPtr<IDXGIAdapter1> adapter1;
-
-            if (m_factory.getFactory()->EnumAdapters1(i, &adapter1) == DXGI_ERROR_NOT_FOUND)
-                break;
-            result.push_back(adapter1);
-        }
-
-        return result;
+        return Device(*this);
     }
+
+    SwapChain RHI::newSwapChain()
+    {
+        return SwapChain(*this);
+    }
+
+    IDXGIFactory6* RHI::getNativeFactory()
+    {
+        return m_factory.getFactory().Get();
+    }
+
 } // namespace TiRHI::DirectX12

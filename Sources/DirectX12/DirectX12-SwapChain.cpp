@@ -4,10 +4,16 @@
 #include <Titanium/Log.hpp>
 
 #include <DirectX12/DirectX12-Device.hpp>
+#include <DirectX12/DirectX12-RHI.hpp>
 
 namespace TiRHI::DirectX12
 {
-    bool Swapchain::create(Device& device, WindowHandle windowHandle)
+    SwapChain::SwapChain(RHI& rhi)
+        : BaseSwapChain(rhi)
+    {
+    }
+
+    bool SwapChain::build(Device& device, WindowHandle windowHandle)
     {
         if (!createSwapChain(device, windowHandle))
             return false;
@@ -21,7 +27,7 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool Swapchain::beginFrame()
+    bool SwapChain::beginFrame()
     {
         const UINT32 prevFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
 
@@ -51,14 +57,14 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool Swapchain::present(Device& device)
+    bool SwapChain::present(Device& device)
     {
         // Automatically present using internal present queue if possible.
         const HRESULT hrPresent = m_swapchain->Present(1, 0);
 
         if (FAILED(hrPresent))
         {
-            RHI_LOG_ERROR(std::format(L"Swapchain Present failed!\nError Code: {}", hrPresent), RhiApi::DirectX12);
+            RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent), RhiApi::DirectX12);
 
             return false;
         }
@@ -71,7 +77,7 @@ namespace TiRHI::DirectX12
 
         if (FAILED(hrFenceSignal))
         {
-            RHI_LOG_ERROR(std::format(L"Swapchain Fence Signal failed!\nError Code: {}", hrFenceSignal),
+            RHI_LOG_ERROR(std::format(L"SwapChain Fence Signal failed!\nError Code: {}", hrFenceSignal),
                           RhiApi::DirectX12);
 
             return false;
@@ -80,17 +86,17 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool Swapchain::createSwapChain(Device& device, WindowHandle windowHandle)
+    bool SwapChain::createSwapChain(Device& device, WindowHandle windowHandle)
     {
-        if (!device.getFactory())
+        if (!getRHI().getNativeFactory())
         {
-            RHI_LOG_ERROR(L"device.getFactory() was null when Swapchain::create", RhiApi::DirectX12);
+            RHI_LOG_ERROR(L"device.getFactory() was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 
         if (windowHandle == nullptr)
         {
-            RHI_LOG_ERROR(L"windowHandle was null when Swapchain::create", RhiApi::DirectX12);
+            RHI_LOG_ERROR(L"windowHandle was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 
@@ -109,7 +115,7 @@ namespace TiRHI::DirectX12
         };
 
         MComPtr<IDXGISwapChain1> swapchain1;
-        const HRESULT hrSwapChainCreated = device.getFactory()->CreateSwapChainForHwnd(
+        const HRESULT hrSwapChainCreated = getRHI().getNativeFactory()->CreateSwapChainForHwnd(
             device.getGraphicQueue().Get(), reinterpret_cast<HWND>(windowHandle), &desc, nullptr, nullptr, &swapchain1);
 
         std::string_view name = getName();
@@ -118,14 +124,14 @@ namespace TiRHI::DirectX12
 
         if (FAILED(hrSwapChainCreated))
         {
-            RHI_LOG_ERROR(std::format(L"Create Swapchain failed!\nError Code: {}", hrSwapChainCreated),
+            RHI_LOG_ERROR(std::format(L"Create SwapChain failed!\nError Code: {}", hrSwapChainCreated),
                           RhiApi::DirectX12);
 
             return false;
         }
         else
         {
-            RHI_LOG_INFO(std::format(L"Create Swapchain success\nHandle: {}, Name: {}.", hrSwapChainCreated,
+            RHI_LOG_INFO(std::format(L"Create SwapChain success\nHandle: {}, Name: {}.", hrSwapChainCreated,
                                      std::wstring(name.begin(), name.end())),
                          RhiApi::DirectX12);
         }
@@ -133,12 +139,12 @@ namespace TiRHI::DirectX12
         const HRESULT hrSwapChainCast = swapchain1.As(&m_swapchain);
         if (FAILED(hrSwapChainCast))
         {
-            RHI_LOG_ERROR(std::format(L"Swapchain cast failed! \n Error Code: {}", hrSwapChainCast), RhiApi::DirectX12);
+            RHI_LOG_ERROR(std::format(L"SwapChain cast failed! \n Error Code: {}", hrSwapChainCast), RhiApi::DirectX12);
         }
 
         return true;
     }
-    bool Swapchain::queryBuffer()
+    bool SwapChain::queryBuffer()
     {
         for (uint32_t i = 0; i < BufferCount; ++i)
         {
@@ -146,7 +152,7 @@ namespace TiRHI::DirectX12
             if (FAILED(hrSwapChainGetBuffer))
             {
                 RHI_LOG_ERROR(
-                    std::format(L"Get Swapchain Buffer {} failed! \n Error Code: {}", i, hrSwapChainGetBuffer),
+                    std::format(L"Get SwapChain Buffer {} failed! \n Error Code: {}", i, hrSwapChainGetBuffer),
                     RhiApi::DirectX12);
                 return false;
             }
@@ -155,7 +161,7 @@ namespace TiRHI::DirectX12
                 const std::wstring name = L"SwapchainBackBuffer [" + std::to_wstring(i) + L"]";
                 m_images[i]->SetName(name.data());
 
-                RHI_LOG_INFO(std::format(L"Get Swapchain Buffer [%1] success.\n handle: {}, name: {}", i, name,
+                RHI_LOG_INFO(std::format(L"Get SwapChain Buffer [%1] success.\n handle: {}, name: {}", i, name,
                                          static_cast<void*>(m_images[i].Get())),
                              RhiApi::DirectX12);
             }
@@ -164,13 +170,13 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool Swapchain::initSynchronisation(Device& device)
+    bool SwapChain::initSynchronisation(Device& device)
     {
         m_synchronisation.swapchainFenceEvent = CreateEvent(nullptr, false, false, nullptr);
 
         if (!m_synchronisation.swapchainFenceEvent)
         {
-            RHI_LOG_ERROR(L"Create Swapchain Fence Event failed!", RhiApi::DirectX12);
+            RHI_LOG_ERROR(L"Create SwapChain Fence Event failed!", RhiApi::DirectX12);
 
             return false;
         }
@@ -180,7 +186,7 @@ namespace TiRHI::DirectX12
 
         if (FAILED(hrSwapChainFenceCreated))
         {
-            RHI_LOG_ERROR(std::format(L"Create Swapchain Fence failed!\nError Code: {}", hrSwapChainFenceCreated),
+            RHI_LOG_ERROR(std::format(L"Create SwapChain Fence failed!\nError Code: {}", hrSwapChainFenceCreated),
                           RhiApi::DirectX12);
 
             return false;
@@ -190,7 +196,7 @@ namespace TiRHI::DirectX12
 
         m_synchronisation.swapchainFence->SetName(name.data());
 
-        RHI_LOG_INFO(std::format(L"Create Swapchain Fence success.\nHandle: {}, Name: {}",
+        RHI_LOG_INFO(std::format(L"Create SwapChain Fence success.\nHandle: {}, Name: {}",
                                  static_cast<void*>(m_synchronisation.swapchainFence.Get()), name),
                      RhiApi::DirectX12);
 

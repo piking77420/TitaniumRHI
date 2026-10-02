@@ -20,7 +20,7 @@ namespace TiRHI
 {
     using RHI = DirectX12::RHI;
     using Device = DirectX12::Device;
-    using SwapChain = DirectX12::Swapchain;
+    using SwapChain = DirectX12::SwapChain;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -38,48 +38,28 @@ namespace TiRHI
 
 namespace TiRHI::Contract
 {
-    struct RHIContractAccess
-    {
-        template<typename T>
-        static auto createDevice(T& device) -> decltype(device.createDevice())
-        {
-            return device.createDevice();
-        }
-        template<typename T>
-        static auto createDevice(T& device, size_t index) -> decltype(device.createDevice(index))
-        {
-            return device.createDevice(index);
-        }
-    };
-
     template<typename T>
-    concept RHIContract = requires(T device) {
-        { RHIContractAccess::createDevice(device) } -> std::same_as<Device>;
-    };
+    concept RHIContract = std::constructible_from<T, const RhiCreate&>;
 
     static_assert(RHIContract<RHI>);
 
-    struct DeviceContractAccess
-    {
-        template<typename T>
-        static auto wait(T& device) -> decltype(device.wait());
-    };
-
+    // Device
     template<typename T>
-    concept DeviceContract = requires(T device) {
-        { DeviceContractAccess::wait(device) } -> std::same_as<void>;
-    };
+    concept DeviceContract =
+        requires(T device, RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index) {
+            { device.build(rhi, adapters, index) } -> std::same_as<bool>;
+            { device.wait() } -> std::same_as<void>;
+        };
 
     static_assert(DeviceContract<Device>);
 
     // SwapChain
-
     template<typename T>
     concept SwapChainContract = requires(T& swapChain, Device& device, WindowHandle windowHandle) {
-        { swapChain.create(device, windowHandle) } -> std::same_as<bool>;
+        { swapChain.build(device, windowHandle) } -> std::same_as<bool>;
         { swapChain.beginFrame() } -> std::same_as<bool>;
         { swapChain.present(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T>>;
+    } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);
 

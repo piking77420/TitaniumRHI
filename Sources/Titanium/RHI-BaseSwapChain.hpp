@@ -8,14 +8,18 @@
 
 namespace TiRHI
 {
-    template<typename T>
-    class BaseSwapChain : public Object<T>
+    template<typename T, typename TRHI>
+    class BaseSwapChain : public Object<T, TRHI>
     {
     public:
         using _Derived = T;
 
-        BaseSwapChain() = default;
+        BaseSwapChain() = delete;
         ~BaseSwapChain() = default;
+        BaseSwapChain(TRHI& rhi)
+            : Object<T, TRHI>(rhi)
+        {
+        }
 
         bool getVsync() const
         {
@@ -61,9 +65,6 @@ namespace TiRHI
 
         static constexpr size_t BufferCount = 3;
     };
-
-    template<typename T>
-    concept SwapChainDerived = std::derived_from<T, BaseSwapChain<T>>;
 
 } // TiRHI
 

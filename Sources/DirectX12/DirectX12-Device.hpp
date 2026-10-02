@@ -13,21 +13,21 @@
 
 namespace TiRHI::DirectX12
 {
+    class RHI;
     class Factory;
 
-    class Device : public BaseDevice
+    class Device : public BaseDevice<Device, RHI>
     {
     public:
-        Device() = default;
+        Device() = delete;
         ~Device();
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) noexcept = default;
         Device& operator=(Device&&) noexcept = default;
-        Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-               const std::vector<Adapter>& adapters);
-        Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-               const std::vector<Adapter>& adapters, size_t index);
+        Device(RHI& rhi);
+
+        bool build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index = {});
 
         void wait();
 
@@ -41,11 +41,7 @@ namespace TiRHI::DirectX12
             return m_graphicsQueue;
         }
 
-        IDXGIFactory6* getFactory();
-
     private:
-        Factory* m_factory = nullptr;
-
         MComPtr<ID3D12Device> m_device;
 
         DWORD VLayerCallbackCookie = 0;
@@ -59,12 +55,12 @@ namespace TiRHI::DirectX12
             uint64_t deviceFenceValue = 1u;
         } m_synchronization;
 
-        void create(const MComPtr<IDXGIAdapter1>& adapter1);
+        bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
 
         // handle one queu for now
-        void createUniqueQueue();
+        bool createUniqueQueue();
 
-        void createSynchronisation();
+        bool createSynchronisation();
     };
 } // namespace TiRHI::DirectX12
 

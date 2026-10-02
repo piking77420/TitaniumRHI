@@ -12,6 +12,8 @@ target_sources(
         DirectX12-RHI.hpp
         DirectX12-SwapChain.cpp
         DirectX12-SwapChain.hpp
+        DirectX12-Utils.cpp
+        DirectX12-Utils.hpp
 )
 
 target_include_directories(

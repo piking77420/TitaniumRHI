@@ -13,6 +13,7 @@
 #include <DirectX12-Header.hpp>
 #include <DirectX12-Factory.hpp>
 #include <DirectX12-Device.hpp>
+#include <DirectX12-SwapChain.hpp>
 
 #include <Titanium/RHI-BaseRHI.hpp>
 #include <Titanium/RHITypes.hpp>
@@ -25,16 +26,16 @@ namespace TiRHI::DirectX12
         RHI(const RhiCreate& rhiCreate);
         ~RHI() = default;
 
-        Device createDevice();
+        [[nodiscard]] Device newDevice();
 
-        Device createDevice(size_t adapterIndex);
+        [[nodiscard]] SwapChain newSwapChain();
+
+        [[nodiscard]] IDXGIFactory6* getNativeFactory();
 
     private:
         Factory m_factory;
 
         void enumerateAvailableAdapter();
-
-        std::vector<MComPtr<IDXGIAdapter1>> getAllAdapter();
     };
 }
 

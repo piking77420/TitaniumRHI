@@ -11,14 +11,16 @@
 namespace TiRHI::DirectX12
 {
     class Device;
+    class RHI;
 
-    class Swapchain : public BaseSwapChain<Swapchain>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI>
     {
     public:
-        Swapchain() = default;
-        ~Swapchain() = default;
+        SwapChain() = delete;
+        ~SwapChain() = default;
+        SwapChain(RHI& rhi);
 
-        bool create(Device& device, WindowHandle windowHandle);
+        bool build(Device& device, WindowHandle windowHandle);
 
         bool beginFrame();
 

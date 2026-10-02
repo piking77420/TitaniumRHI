@@ -3,7 +3,8 @@
 #include <format>
 
 #include <Titanium/Log.hpp>
-#include <DirectX12-Factory.hpp>
+#include <DirectX12/DirectX12-RHI.hpp>
+#include <DirectX12/DirectX12-Utils.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -79,6 +80,11 @@ namespace TiRHI::DirectX12
     }
 #endif
 
+    Device::Device(RHI& rhi)
+        : BaseDevice(rhi)
+    {
+    }
+
     Device::~Device()
     {
 #if defined(TITANIUM_VALIDATION_LAYER)
@@ -99,37 +105,32 @@ namespace TiRHI::DirectX12
         m_device = nullptr;
     }
 
-    Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-                   const std::vector<Adapter>& adapters)
-        : m_factory(&factory)
+    bool Device::build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index)
     {
-        const size_t index = BaseDevice::getBestAdapter(adapters);
-
-        create(dxAdapters[index]);
-    }
-
-    Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-                   const std::vector<Adapter>& adapters, size_t index)
-        : m_factory(&factory)
-    {
-        MComPtr<IDXGIAdapter3> adapter3;
-        create(dxAdapters[index]);
-    }
-
-    void Device::create(const MComPtr<IDXGIAdapter1>& adapter1)
-    {
-        if (!m_factory)
+        if (IDXGIFactory6* factory = getRHI().getNativeFactory())
         {
-            RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);
-        }
+            const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
 
+            const auto& nativeAdapter = Internal::getAllNativeAdapters(factory);
+#undef min;
+            if (adaptaterIndex >= nativeAdapter.size())
+                return false;
+
+            return createDevice(nativeAdapter[adaptaterIndex]);
+        }
+        RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);
+        return false;
+    }
+
+    bool Device::createDevice(const MComPtr<IDXGIAdapter1>& adapter1)
+    {
         MComPtr<IDXGIAdapter3> adapter;
         HRESULT hr = adapter1.As(&adapter);
         if (FAILED(hr))
         {
             // IDXGIAdapter1 does not expose IDXGIAdapter3
             RHI_LOG_ERROR(L"Failed to create an IDXGIAdapter3 from IDXGIAdapter1", RhiApi::DirectX12);
-            return;
+            return false;
         }
 
         const HRESULT hrDeviceCreated =
@@ -137,12 +138,12 @@ namespace TiRHI::DirectX12
         if (FAILED(hrDeviceCreated))
         {
             RHI_LOG_ERROR(std::format(L"Create Device failed! \n Error Code: {}", hrDeviceCreated), RhiApi::DirectX12);
-            return;
+            return false;
         }
         else
         {
-            const LPCWSTR name = L"Main Device";
-            m_device->SetName(name);
+            const std::wstring_view name = getNameW().empty() ? L"Main Device" : getNameW();
+            m_device->SetName(name.data());
             RHI_LOG_INFO(std::format(L"Create Device Success! Name: {}", name), RhiApi::DirectX12);
         }
 
@@ -176,11 +177,10 @@ namespace TiRHI::DirectX12
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
-        createUniqueQueue();
-        createSynchronisation();
+        return createUniqueQueue() && createSynchronisation();
     }
 
-    void Device::createUniqueQueue()
+    bool Device::createUniqueQueue()
     {
         const D3D12_COMMAND_QUEUE_DESC desc{
             .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -192,7 +192,7 @@ namespace TiRHI::DirectX12
         {
             RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed!\nError Code: {}", hrGFXCmdQueueCreated),
                           RhiApi::DirectX12);
-            return;
+            return false;
         }
         else
         {
@@ -200,15 +200,16 @@ namespace TiRHI::DirectX12
             m_graphicsQueue->SetName(name);
             RHI_LOG_INFO(L"Create Graphics Queue success.", RhiApi::DirectX12);
         }
+        return true;
     }
 
-    void Device::createSynchronisation()
+    bool Device::createSynchronisation()
     {
         m_synchronization.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
         if (!m_synchronization.deviceFenceEvent)
         {
             RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiApi::DirectX12);
-            return;
+            return false;
         }
         else
         {
@@ -221,15 +222,17 @@ namespace TiRHI::DirectX12
         {
             RHI_LOG_ERROR(std::format(L"Create Device Fence failed! \nError Code: {}", hrDeviceFenceCreated),
                           RhiApi::DirectX12);
-            return;
+            return false;
         }
         else
         {
             const LPCWSTR name = L"DeviceFence";
             m_synchronization.deviceFence->SetName(name);
 
-            RHI_LOG_ERROR(L"Create Swapchain Fence success.", RhiApi::DirectX12);
+            RHI_LOG_ERROR(L"Create SwapChain Fence success.", RhiApi::DirectX12);
         }
+
+        return true;
     }
 
     void Device::wait()
@@ -246,8 +249,4 @@ namespace TiRHI::DirectX12
         ++m_synchronization.deviceFenceValue;
     }
 
-    IDXGIFactory6* Device::getFactory()
-    {
-        return m_factory != nullptr ? m_factory->getFactory().Get() : nullptr;
-    }
 }
