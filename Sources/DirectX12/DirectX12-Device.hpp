@@ -41,7 +41,13 @@ namespace TiRHI::DirectX12
 
         DWORD VLayerCallbackCookie = 0;
 
+        MComPtr<ID3D12CommandQueue> m_graphicsQueue;
+
+
         void create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1);
+
+        // handle one queu for now
+        void createUniqueQueue();
     };
 } // namespace TiRHI::DirectX12
 

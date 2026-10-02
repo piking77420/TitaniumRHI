@@ -168,6 +168,30 @@ namespace TiRHI::DirectX12
             }
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
+
+        createUniqueQueue();
+    }
+
+    void Device::createUniqueQueue()
+    {
+        const D3D12_COMMAND_QUEUE_DESC desc{
+            .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+            .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+        };
+
+        const HRESULT hrGFXCmdQueueCreated = m_device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_graphicsQueue));
+        if (FAILED(hrGFXCmdQueueCreated))
+        {
+            RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed! Error Code: {}", hrGFXCmdQueueCreated),
+                          RhiApi::DirectX12);
+            return;
+        }
+        else
+        {
+            const LPCWSTR name = L"GraphicsQueue";
+            m_graphicsQueue->SetName(name);
+            RHI_LOG_INFO(L"Create Graphics Queue success.", RhiApi::DirectX12);
+        }
     }
 
     void Device::wait()
