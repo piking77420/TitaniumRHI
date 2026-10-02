@@ -5,6 +5,7 @@
 #include <Titanium/Log.hpp>
 #include <DirectX12/DirectX12-RHI.hpp>
 #include <DirectX12/DirectX12-Utils.hpp>
+#include <DirectX12/DirectX12-CommandList.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -252,6 +253,13 @@ namespace TiRHI::DirectX12
 
         // Increment for next use.
         ++m_synchronization.deviceFenceValue;
+    }
+
+    void Device::submit(CommandList& CommandList)
+    {
+        ID3D12CommandList* cmdListsArr[] = {CommandList.getCommandListNative()};
+        m_graphicsQueue->ExecuteCommandLists(1, cmdListsArr);
+        m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
     }
 
 }

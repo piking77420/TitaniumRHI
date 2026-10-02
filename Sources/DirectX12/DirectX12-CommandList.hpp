@@ -22,7 +22,12 @@ namespace TiRHI::DirectX12
 
         bool beginRecord();
 
-        void endRecord();
+        bool endRecord();
+
+        ID3D12GraphicsCommandList1* getCommandListNative()
+        {
+            return m_commandList.Get();
+        }
 
     private:
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;

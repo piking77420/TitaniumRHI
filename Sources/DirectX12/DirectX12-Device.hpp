@@ -15,6 +15,7 @@ namespace TiRHI::DirectX12
 {
     class RHI;
     class Factory;
+    class CommandList;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -40,6 +41,8 @@ namespace TiRHI::DirectX12
         {
             return m_graphicsQueue;
         }
+
+        void submit(CommandList& CommandList);
 
     private:
         MComPtr<ID3D12Device> m_device;

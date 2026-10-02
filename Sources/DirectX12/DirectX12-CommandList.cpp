@@ -68,15 +68,34 @@ namespace TiRHI::DirectX12
             return false;
 
         const size_t currentFrame = getRHI().getCurrentFrame();
-        m_commandList->Reset(m_allocators[currentFrame].Get(), nullptr);
+
+        const HRESULT hrAllocator = m_allocators[currentFrame]->Reset();
+
+        if (FAILED(hrAllocator))
+            return false;
+
+        const HRESULT hrCommandList = m_commandList->Reset(m_allocators[currentFrame].Get(), nullptr);
+
+        if (FAILED(hrCommandList))
+            return false;
 
         return true;
     }
 
-    void CommandList::endRecord()
+    bool CommandList::endRecord()
     {
         onEndRecord();
-        m_commandList->Close();
+
+        const HRESULT hr = m_commandList->Close();
+
+        if (FAILED(hr))
+        {
+            RHI_LOG_ERROR(std::format(L"Close Command List failed: {}", hr), RhiApi::DirectX12);
+
+            return false;
+        }
+
+        return true;
     }
 
 }

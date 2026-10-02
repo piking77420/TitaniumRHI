@@ -47,11 +47,12 @@ namespace TiRHI::Contract
 
     // Device
     template<typename T>
-    concept DeviceContract =
-        requires(T device, RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index) {
-            { device.build(rhi, adapters, index) } -> std::same_as<bool>;
-            { device.wait() } -> std::same_as<void>;
-        };
+    concept DeviceContract = requires(T device, RHI& rhi, const std::span<const Adapter>& adapters,
+                                      std::optional<size_t> index, CommandList& cmdList) {
+        { device.build(rhi, adapters, index) } -> std::same_as<bool>;
+        { device.wait() } -> std::same_as<void>;
+        { device.submit(cmdList) } -> std::same_as<void>;
+    };
 
     static_assert(DeviceContract<Device>);
 
@@ -71,7 +72,7 @@ namespace TiRHI::Contract
     concept CommandListContract = requires(T& commandList, Device& device) {
         { commandList.build(device) } -> std::same_as<bool>;
         { commandList.beginRecord() } -> std::same_as<bool>;
-        { commandList.endRecord() } -> std::same_as<void>;
+        { commandList.endRecord() } -> std::same_as<bool>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
