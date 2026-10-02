@@ -17,6 +17,8 @@ target_sources(
         RHI-BaseSwapChain.hpp
         RHI-EnumToString.hpp
         RHI-Object.hpp
+        RHI-Resource.cpp
+        RHI-Resource.hpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp
