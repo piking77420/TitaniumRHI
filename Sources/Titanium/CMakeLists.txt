@@ -10,6 +10,8 @@ target_sources(
         RHI-Adapter.hpp
         RHI-BaseDevice.cpp
         RHI-BaseDevice.hpp
+        RHI-BaseCommandList.cpp
+        RHI-BaseCommandList.hpp
         RHI-BaseRHI.hpp
         RHI-BaseSwapChain.cpp
         RHI-BaseSwapChain.hpp
