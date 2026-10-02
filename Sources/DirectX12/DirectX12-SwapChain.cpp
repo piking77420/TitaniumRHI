@@ -13,6 +13,14 @@ namespace TiRHI::DirectX12
     {
     }
 
+    SwapChain::~SwapChain()
+    {
+        if (m_synchronisation.swapchainFenceEvent)
+        {
+            CloseHandle(m_synchronisation.swapchainFenceEvent);
+        }
+    }
+
     bool SwapChain::build(Device& device, WindowHandle windowHandle)
     {
         if (!createSwapChain(device, windowHandle))

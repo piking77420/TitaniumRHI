@@ -102,6 +102,11 @@ namespace TiRHI::DirectX12
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
+        if (m_synchronization.deviceFenceEvent)
+        {
+            CloseHandle(m_synchronization.deviceFenceEvent);
+        }
+
         m_device = nullptr;
     }
 
@@ -142,7 +147,7 @@ namespace TiRHI::DirectX12
         }
         else
         {
-            const std::wstring_view name = getNameW().empty() ? L"Main Device" : getNameW();
+            const std::wstring name = getNameW().empty() ? L"Main Device" : getNameW();
             m_device->SetName(name.data());
             RHI_LOG_INFO(std::format(L"Create Device Success! Name: {}", name), RhiApi::DirectX12);
         }
@@ -229,7 +234,7 @@ namespace TiRHI::DirectX12
             const LPCWSTR name = L"DeviceFence";
             m_synchronization.deviceFence->SetName(name);
 
-            RHI_LOG_ERROR(L"Create SwapChain Fence success.", RhiApi::DirectX12);
+            RHI_LOG_INFO(L"Create Device Fence success.", RhiApi::DirectX12);
         }
 
         return true;

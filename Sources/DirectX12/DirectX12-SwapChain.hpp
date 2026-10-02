@@ -17,7 +17,7 @@ namespace TiRHI::DirectX12
     {
     public:
         SwapChain() = delete;
-        ~SwapChain() = default;
+        ~SwapChain();
         SwapChain(RHI& rhi);
 
         bool build(Device& device, WindowHandle windowHandle);
