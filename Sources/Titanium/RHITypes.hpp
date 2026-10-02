@@ -109,6 +109,8 @@ namespace TiRHI
         LogCallBackSignature logCallback;
     };
 
+    using WindowHandle = void*;
+
 } // namespace TiRHI
 
 #endif // TITANIUM_RHI_TYPES_H

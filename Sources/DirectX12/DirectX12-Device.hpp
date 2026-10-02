@@ -36,7 +36,16 @@ namespace TiRHI::DirectX12
             return m_device;
         }
 
+        MComPtr<ID3D12CommandQueue>& getGraphicQueue()
+        {
+            return m_graphicsQueue;
+        }
+
+        IDXGIFactory6* getFactory();
+
     private:
+        Factory* m_factory = nullptr;
+
         MComPtr<ID3D12Device> m_device;
 
         DWORD VLayerCallbackCookie = 0;
@@ -50,7 +59,7 @@ namespace TiRHI::DirectX12
             uint64_t deviceFenceValue = 1u;
         } m_synchronization;
 
-        void create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1);
+        void create(const MComPtr<IDXGIAdapter1>& adapter1);
 
         // handle one queu for now
         void createUniqueQueue();

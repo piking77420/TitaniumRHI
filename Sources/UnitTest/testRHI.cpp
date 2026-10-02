@@ -46,6 +46,8 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiApi api, TiRHI::RhiMes
         case TiRHI::RhiMessageSeverity::Fatal:
             return AnsiMagenta;
         }
+
+        return AnsiReset;
     };
 
     std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}]\n", TiRHI::toWstring(api), getColor(), TiRHI::toWstring(severity),

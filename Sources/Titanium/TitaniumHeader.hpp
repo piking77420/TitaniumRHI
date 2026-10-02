@@ -14,11 +14,13 @@ namespace TiRHI
 #elif defined(TITANIUM_DIRECT_X12)
 
 #include <DirectX12/DirectX12-RHI.hpp>
+#include <DirectX12/DirectX12-SwapChain.hpp>
 
 namespace TiRHI
 {
     using RHI = DirectX12::RHI;
     using Device = DirectX12::Device;
+    using SwapChain = DirectX12::Swapchain;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -69,6 +71,17 @@ namespace TiRHI::Contract
     };
 
     static_assert(DeviceContract<Device>);
+
+    // SwapChain
+
+    template<typename T>
+    concept SwapChainContract = requires(T& swapChain, Device& device, WindowHandle windowHandle) {
+        { swapChain.create(device, windowHandle) } -> std::same_as<bool>;
+        { swapChain.beginFrame() } -> std::same_as<bool>;
+        { swapChain.present(device) } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T>>;
+
+    static_assert(SwapChainContract<SwapChain>);
 
 } // TiRHI::Contracts
 

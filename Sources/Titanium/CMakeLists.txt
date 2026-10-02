@@ -11,6 +11,10 @@ target_sources(
         RHI-BaseDevice.cpp
         RHI-BaseDevice.hpp
         RHI-BaseRHI.hpp
+        RHI-BaseSwapChain.cpp
+        RHI-BaseSwapChain.hpp
+        RHI-EnumToString.hpp
+        RHI-Object.hpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp

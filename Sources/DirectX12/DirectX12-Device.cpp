@@ -101,21 +101,28 @@ namespace TiRHI::DirectX12
 
     Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
                    const std::vector<Adapter>& adapters)
+        : m_factory(&factory)
     {
         const size_t index = BaseDevice::getBestAdapter(adapters);
 
-        create(factory.getFactory(), dxAdapters[index]);
+        create(dxAdapters[index]);
     }
 
     Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
                    const std::vector<Adapter>& adapters, size_t index)
+        : m_factory(&factory)
     {
         MComPtr<IDXGIAdapter3> adapter3;
-        create(factory.getFactory(), dxAdapters[index]);
+        create(dxAdapters[index]);
     }
 
-    void Device::create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1)
+    void Device::create(const MComPtr<IDXGIAdapter1>& adapter1)
     {
+        if (!m_factory)
+        {
+            RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);
+        }
+
         MComPtr<IDXGIAdapter3> adapter;
         HRESULT hr = adapter1.As(&adapter);
         if (FAILED(hr))
@@ -239,4 +246,8 @@ namespace TiRHI::DirectX12
         ++m_synchronization.deviceFenceValue;
     }
 
+    IDXGIFactory6* Device::getFactory()
+    {
+        return m_factory != nullptr ? m_factory->getFactory().Get() : nullptr;
+    }
 }
