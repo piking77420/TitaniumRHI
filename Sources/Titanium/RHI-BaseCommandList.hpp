@@ -20,7 +20,7 @@ namespace TiRHI
     protected:
         struct RecordState
         {
-            bool isRecording;
+            bool isRecording = false;
 
             void reset()
             {

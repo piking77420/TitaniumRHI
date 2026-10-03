@@ -27,12 +27,14 @@ namespace TiRHI::DirectX12
 
         bool present(Device& device);
 
+        bool recreateSwapChain(Device& device, Surface& surface);
+
     private:
         MComPtr<IDXGISwapChain3> m_swapchain;
         uint32_t m_swapchainFrameIndex = 0u;
 
-        std::array<MComPtr<ID3D12Resource>, BufferCount> m_images;
-        std::array<uint64_t, BufferCount> swapchainFenceValues{0u};
+        std::vector<MComPtr<ID3D12Resource>> m_images;
+        std::vector<uint64_t> swapchainFenceValues{0u};
 
         struct Synchronisation
         {
@@ -40,7 +42,7 @@ namespace TiRHI::DirectX12
             MComPtr<ID3D12Fence> swapchainFence;
         } m_synchronisation;
 
-        bool createSwapChain(Device& device, WindowHandle windowHandle);
+        bool createSwapChain(Device& device, Surface& surface);
 
         bool queryBuffer();
 

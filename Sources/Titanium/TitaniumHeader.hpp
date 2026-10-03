@@ -4,10 +4,12 @@
 #if defined(TITANIUM_VULKAN)
 
 #include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan/Vulkan-Surface.hpp>
 
 namespace TiRHI
 {
     using RHI = Vulkan::RHI;
+    using Surface = Vulkan::Surface;
     using Device = Vulkan::Device;
 }
 

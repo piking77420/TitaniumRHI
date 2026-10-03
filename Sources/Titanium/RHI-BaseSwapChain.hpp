@@ -34,7 +34,7 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
-        uint32_t width() const
+        uint32_t getWidth() const
         {
             return m_width;
         }
@@ -45,7 +45,7 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
-        uint32_t height() const
+        uint32_t getHeight() const
         {
             return m_height;
         }
@@ -56,6 +56,17 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
+        uint32_t getImageCount() const
+        {
+            return m_imageCount;
+        }
+
+        _Derived& setImageCount(uint32_t newImageCount)
+        {
+            m_imageCount = newImageCount;
+            return static_cast<_Derived&>(*this);
+        }
+
     protected:
         bool m_vsync = false;
 
@@ -63,7 +74,7 @@ namespace TiRHI
 
         uint32_t m_height = 0;
 
-        static constexpr size_t BufferCount = 3;
+        uint32_t m_imageCount = 1;
     };
 
 } // TiRHI

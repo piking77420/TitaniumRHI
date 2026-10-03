@@ -24,16 +24,7 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
-        if (!createSwapChain(device, surface.getWindowHandle()))
-            return false;
-
-        if (!queryBuffer())
-            return false;
-
-        if (!initSynchronisation(device))
-            return false;
-
-        return true;
+        return createSwapChain(device, surface);
     }
 
     bool SwapChain::beginFrame()
@@ -95,7 +86,26 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool SwapChain::createSwapChain(Device& device, WindowHandle windowHandle)
+    bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
+    {
+        m_images.clear();
+
+        const HRESULT hr =
+            m_swapchain->ResizeBuffers(getImageCount(), getWidth(), getHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+
+        if (FAILED(hr))
+        {
+            RHI_LOG_ERROR(std::format(L"ResizeBuffers failed: {}", hr), RhiApi::DirectX12);
+
+            return false;
+        }
+
+        m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
+
+        return queryBuffer();
+    }
+
+    bool SwapChain::createSwapChain(Device& device, Surface& surface)
     {
         if (!getRHI().getNativeFactory())
         {
@@ -103,20 +113,20 @@ namespace TiRHI::DirectX12
             return false;
         }
 
-        if (windowHandle == nullptr)
+        if (surface.getWindowHandle() == nullptr)
         {
             RHI_LOG_ERROR(L"windowHandle was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 
         const DXGI_SWAP_CHAIN_DESC1 desc{
-            .Width = width(),
-            .Height = height(),
+            .Width = getWidth(),
+            .Height = getHeight(),
             .Format = DXGI_FORMAT_R8G8B8A8_UNORM, // TODO ABSTRACT
             .Stereo = false,
             .SampleDesc = {.Count = 1, .Quality = 0},
             .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-            .BufferCount = BufferCount,
+            .BufferCount = getImageCount(),
             .Scaling = DXGI_SCALING_STRETCH,
             .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
             .AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
@@ -125,7 +135,8 @@ namespace TiRHI::DirectX12
 
         MComPtr<IDXGISwapChain1> swapchain1;
         const HRESULT hrSwapChainCreated = getRHI().getNativeFactory()->CreateSwapChainForHwnd(
-            device.getGraphicQueue().Get(), reinterpret_cast<HWND>(windowHandle), &desc, nullptr, nullptr, &swapchain1);
+            device.getGraphicQueue().Get(), reinterpret_cast<HWND>(surface.getWindowHandle()), &desc, nullptr, nullptr,
+            &swapchain1);
 
         std::string_view name = getName();
         if (!name.empty())
@@ -151,11 +162,13 @@ namespace TiRHI::DirectX12
             RHI_LOG_ERROR(std::format(L"SwapChain cast failed! \n Error Code: {}", hrSwapChainCast), RhiApi::DirectX12);
         }
 
-        return true;
+        return queryBuffer() && initSynchronisation(device);
     }
+
     bool SwapChain::queryBuffer()
     {
-        for (uint32_t i = 0; i < BufferCount; ++i)
+        m_images.resize(getImageCount());
+        for (uint32_t i = 0; i < m_images.size(); ++i)
         {
             const HRESULT hrSwapChainGetBuffer = m_swapchain->GetBuffer(i, IID_PPV_ARGS(&m_images[i]));
             if (FAILED(hrSwapChainGetBuffer))
@@ -181,6 +194,7 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::initSynchronisation(Device& device)
     {
+        swapchainFenceValues.resize(m_images.size());
         m_synchronisation.swapchainFenceEvent = CreateEvent(nullptr, false, false, nullptr);
 
         if (!m_synchronisation.swapchainFenceEvent)
