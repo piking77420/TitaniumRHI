@@ -4,6 +4,8 @@
 #include <Titanium/Log.hpp>
 #include <Vulkan-Instance.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan-Header.hpp>
+#include <Vulkan/Vulkan-Surface.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -49,7 +51,8 @@ namespace TiRHI::Vulkan
     {
     }
 
-    bool Device::build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index)
+    bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                       std::optional<size_t> index)
     {
         const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
 
@@ -59,7 +62,7 @@ namespace TiRHI::Vulkan
             return false;
 
         assert(adapters.size() == nativePhysicalDevice.size());
-        return createDevice(nativePhysicalDevice[adaptaterIndex], adapters[adaptaterIndex]);
+        return createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(), adapters[adaptaterIndex]);
     }
 
     void Device::wait()
@@ -67,18 +70,19 @@ namespace TiRHI::Vulkan
         m_device->waitIdle();
     }
 
-    bool Device::createDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter)
+    bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)
     {
-        const std::vector<vk::QueueFamilyProperties> queueFamilyPropertie = physicalDevice.getQueueFamilyProperties();
+        m_physicalDevice = physicalDevice;
+        m_queueProperties = Private::DeviceQueueProperties(physicalDevice, surface);
+        auto properties = m_queueProperties.getQueuProperties();
 
         size_t allPropertiesQueuIndex = std::numeric_limits<size_t>::max();
 
-        for (size_t i = 0; i < queueFamilyPropertie.size(); i++)
+        for (const auto& queueProp : properties)
         {
-            if (queueFamilyPropertie[i].queueFlags &
-                (vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eTransfer))
+            if (queueProp.graphic && queueProp.compute && queueProp.present && queueProp.transfer)
             {
-                allPropertiesQueuIndex = i;
+                allPropertiesQueuIndex = queueProp.index;
                 break;
             }
         }
@@ -122,7 +126,10 @@ namespace TiRHI::Vulkan
                                  }()),
                      RhiApi::Vulkan);
 
-        return true;
+        m_graphicQueue.reset(m_device->getQueue(allPropertiesQueuIndex, 0));
+        m_presentQueue = m_graphicQueue.get();
+
+        return m_graphicQueue.get() && m_presentQueue;
     }
 
 } // namespace TiRHI::Vulkan

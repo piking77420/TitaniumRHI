@@ -22,10 +22,14 @@ namespace TiRHI::Vulkan
             return m_instance.getInstance();
         }
 
+        std::vector<vk::PhysicalDevice> getValidPhysicalDevices();
+
     private:
         Instance m_instance;
 
-        void queryPhysicalDeviceAvailable();
+        void enumerateAvailableAdatper();
+
+        bool isPhysicalDeviceValid(vk::PhysicalDevice physicalDevice);
     };
 }
 

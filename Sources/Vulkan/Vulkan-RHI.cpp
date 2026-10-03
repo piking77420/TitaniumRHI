@@ -4,29 +4,35 @@
 
 namespace TiRHI::Vulkan
 {
+    [[nodiscard]] bool supportExtension(const std::vector<vk::ExtensionProperties>& extensions,
+                                        const char* extensionName)
+    {
+        for (const auto& extension : extensions)
+        {
+            if (std::strcmp(extension.extensionName.data(), extensionName) == 0)
+                return true;
+        }
+
+        return false;
+    }
+
     std::vector<Adapter::Features> getAdapterFeatures(const std::vector<vk::ExtensionProperties>& extensions)
     {
         std::vector<Adapter::Features> result;
 
-        const auto hasExtension = [&](const char* name)
-        {
-            return std::ranges::any_of(extensions, [name](const vk::ExtensionProperties& extension)
-                                       { return std::strcmp(extension.extensionName.data(), name) == 0; });
-        };
+        const bool accelerationStructure = supportExtension(extensions, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
 
-        const bool accelerationStructure = hasExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-
-        if (accelerationStructure && hasExtension(VK_KHR_RAY_QUERY_EXTENSION_NAME))
+        if (accelerationStructure && supportExtension(extensions, VK_KHR_RAY_QUERY_EXTENSION_NAME))
         {
             result.push_back(Adapter::Features::RayQuery);
         }
 
-        if (accelerationStructure && hasExtension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
+        if (accelerationStructure && supportExtension(extensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
         {
             result.push_back(Adapter::Features::RayTracingPipeline);
         }
 
-        if (hasExtension(VK_EXT_MESH_SHADER_EXTENSION_NAME))
+        if (supportExtension(extensions, VK_EXT_MESH_SHADER_EXTENSION_NAME))
         {
             result.push_back(Adapter::Features::MeshShader);
         }
@@ -93,7 +99,7 @@ namespace TiRHI::Vulkan
     RHI::RHI(const TiRHI::RhiCreate& create)
         : TiRHI::BaseRHI<Vulkan::RHI>(create)
     {
-        queryPhysicalDeviceAvailable();
+        enumerateAvailableAdatper();
     }
 
     Device RHI::newDevice()
@@ -101,11 +107,25 @@ namespace TiRHI::Vulkan
         return Device(*this);
     }
 
-    void RHI::queryPhysicalDeviceAvailable()
+    std::vector<vk::PhysicalDevice> RHI::getValidPhysicalDevices()
+    {
+        std::vector<vk::PhysicalDevice> physicalDevices = m_instance.getInstance().enumeratePhysicalDevices();
+        for (auto it = physicalDevices.begin(); it != physicalDevices.end();)
+        {
+            if (!isPhysicalDeviceValid(*it))
+                it = physicalDevices.erase(it);
+            else
+                ++it;
+        }
+
+        return physicalDevices;
+    }
+
+    void RHI::enumerateAvailableAdatper()
     {
         m_adapters.clear();
 
-        std::vector<vk::PhysicalDevice> physicalDevices = m_instance.getInstance().enumeratePhysicalDevices();
+        std::vector<vk::PhysicalDevice> physicalDevices = getValidPhysicalDevices();
         m_adapters.reserve(physicalDevices.size());
 
         for (size_t i = 0; i < physicalDevices.size(); i++)
@@ -128,6 +148,18 @@ namespace TiRHI::Vulkan
         {
             RHI_LOG_ERROR(L"Something went wrong when enumerate adapter", RhiApi::Vulkan);
         }
+    }
+
+    bool RHI::isPhysicalDeviceValid(vk::PhysicalDevice device)
+    {
+        // should be the clean space for current rhi
+        // for exemple check if support compute if compute is mandatory
+
+        const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
+            device.enumerateDeviceExtensionProperties();
+
+        if (!supportExtension(deviceExtensionProperties, VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+            return false;
     }
 
 } // namespace TiRHI::Vulkan

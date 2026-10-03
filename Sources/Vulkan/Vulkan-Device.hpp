@@ -7,6 +7,7 @@
 #include <Titanium/RHI-Adapter.hpp>
 
 #include <vulkan/vulkan.hpp>
+#include <Private/DeviceQueueFamily.hpp>
 
 namespace TiRHI::Contract
 {
@@ -18,6 +19,7 @@ namespace TiRHI::Vulkan
 {
     class Instance;
     class RHI;
+    class Surface;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -30,7 +32,8 @@ namespace TiRHI::Vulkan
         Device& operator=(Device&&) noexcept = default;
         Device(RHI& rhi);
 
-        bool build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index = {});
+        bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                   std::optional<size_t> index = {});
 
         void wait();
 
@@ -39,10 +42,38 @@ namespace TiRHI::Vulkan
             return m_device.get();
         }
 
+        const Private::DeviceQueueProperties& getQueueProperties() const
+        {
+            return m_queueProperties;
+        }
+
+        vk::Queue getNativeGraphicQueue() const
+        {
+            return m_graphicQueue.get();
+        }
+
+        vk::Queue getNativePresentQueue() const
+        {
+            return m_presentQueue;
+        }
+
+        vk::PhysicalDevice getNativePhysicalDevice() const
+        {
+            return m_physicalDevice;
+        }
+
     private:
         vk::UniqueDevice m_device;
 
-        bool createDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter);
+        vk::PhysicalDevice m_physicalDevice;
+
+        Private::DeviceQueueProperties m_queueProperties;
+
+        vk::UniqueQueue m_graphicQueue;
+
+        vk::Queue m_presentQueue;
+
+        bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter);
     };
 
 } // namespace TiRHI::Vulkan
