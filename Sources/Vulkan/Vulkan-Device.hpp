@@ -17,39 +17,32 @@ namespace TiRHI::Contract
 namespace TiRHI::Vulkan
 {
     class Instance;
+    class RHI;
 
-    class Device : public BaseDevice
+    class Device : public BaseDevice<Device, RHI>
     {
     public:
-        Device() = default;
+        Device() = delete;
         ~Device() = default;
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) noexcept = default;
         Device& operator=(Device&&) noexcept = default;
-        Device(Instance& instance, const std::vector<Adapter>& adapters,
-               const std::vector<vk::PhysicalDevice>& devices);
-        Device(Instance& instance, const std::vector<Adapter>& adapters, const std::vector<vk::PhysicalDevice>& devices,
-               size_t index);
+        Device(RHI& rhi);
+
+        bool build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index = {});
 
         void wait();
 
-        vk::Device getNativeHandle() noexcept
+        vk::Device getNativeDevice() noexcept
         {
             return m_device.get();
         }
 
     private:
-        friend Contract::DeviceContractAccess;
-
-        std::vector<vk::PhysicalDevice> m_physicalDevices;
-
         vk::UniqueDevice m_device;
 
-        void choosePhysicalDeviceIndex(Instance& instance, const std::vector<Adapter>& adapters,
-                                       const std::vector<vk::PhysicalDevice>& devices);
-
-        void createLogicalDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter);
+        bool createDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter);
     };
 
 } // namespace TiRHI::Vulkan

@@ -96,40 +96,23 @@ namespace TiRHI::Vulkan
         queryPhysicalDeviceAvailable();
     }
 
-    Device RHI::createDevice()
+    Device RHI::newDevice()
     {
-        return Device(m_instance, m_adapters, m_physicalDevices);
-    }
-
-    Device RHI::createDevice(size_t adapterIndex)
-    {
-        assert(adapterIndex >= 0 && adapterIndex < m_adapters.size());
-
-        return Device(m_instance, m_adapters, m_physicalDevices, adapterIndex);
+        return Device(*this);
     }
 
     void RHI::queryPhysicalDeviceAvailable()
     {
         m_adapters.clear();
 
-        m_physicalDevices = m_instance.getInstance().enumeratePhysicalDevices();
-        m_adapters.reserve(m_physicalDevices.size());
+        std::vector<vk::PhysicalDevice> physicalDevices = m_instance.getInstance().enumeratePhysicalDevices();
+        m_adapters.reserve(physicalDevices.size());
 
-        for (size_t i = 0; i < m_physicalDevices.size(); i++)
+        for (size_t i = 0; i < physicalDevices.size(); i++)
         {
-            const vk::PhysicalDevice& physicalDevice = m_physicalDevices[i];
+            const vk::PhysicalDevice& physicalDevice = physicalDevices[i];
             const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
                 physicalDevice.enumerateDeviceExtensionProperties();
-
-            const bool supportsSwapchain = std::ranges::any_of(
-                deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-                { return std::strcmp(extension.extensionName.data(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; });
-
-            if (!supportsSwapchain)
-            {
-                m_physicalDevices.erase(m_physicalDevices.begin() + i);
-                continue; // support swapchain is mandatory
-            }
 
             const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
             const std::string_view name{properties.deviceName.data()};
@@ -140,8 +123,8 @@ namespace TiRHI::Vulkan
                                             getDeviceProperty(physicalDevice), properties.vendorID));
         }
 
-        assert(m_physicalDevices.size() == m_adapters.size());
-        if (m_physicalDevices.size() != m_adapters.size())
+        assert(physicalDevices.size() == m_adapters.size());
+        if (physicalDevices.size() != m_adapters.size())
         {
             RHI_LOG_ERROR(L"Something went wrong when enumerate adapter", RhiApi::Vulkan);
         }

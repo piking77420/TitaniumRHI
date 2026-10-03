@@ -15,14 +15,15 @@ namespace TiRHI::Vulkan
         RHI(const RhiCreate& rhiCreate);
         ~RHI() = default;
 
-        Device createDevice();
+        Device newDevice();
 
-        Device createDevice(size_t adapterIndex);
+        vk::Instance getNativeInstance()
+        {
+            return m_instance.getInstance();
+        }
 
     private:
         Instance m_instance;
-
-        std::vector<vk::PhysicalDevice> m_physicalDevices;
 
         void queryPhysicalDeviceAvailable();
     };

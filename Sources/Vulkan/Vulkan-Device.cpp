@@ -3,6 +3,7 @@
 #include <string>
 #include <Titanium/Log.hpp>
 #include <Vulkan-Instance.hpp>
+#include <Vulkan/Vulkan-RHI.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -15,6 +16,8 @@ namespace TiRHI::Vulkan
             if (std::ranges::find(out, extension) == out.end())
                 out.push_back(extension);
         };
+
+        addUnique(VK_KHR_SWAPCHAIN_EXTENSION_NAME); // requires
 
         for (const Adapter::Features feature : features)
         {
@@ -41,19 +44,22 @@ namespace TiRHI::Vulkan
         return out;
     }
 
-    Device::Device(Instance& instance, const std::vector<Adapter>& adapters,
-                   const std::vector<vk::PhysicalDevice>& devices)
-        : BaseDevice()
+    Device::Device(RHI& rhi)
+        : BaseDevice<Device, RHI>(rhi)
     {
-        choosePhysicalDeviceIndex(instance, adapters, devices);
-        createLogicalDevice(devices[m_adapterIndex], adapters[m_adapterIndex]);
     }
 
-    Device::Device(Instance& instance, const std::vector<Adapter>& adapters,
-                   const std::vector<vk::PhysicalDevice>& devices, size_t index)
-        : BaseDevice()
+    bool Device::build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index)
     {
-        createLogicalDevice(devices[m_adapterIndex], adapters[m_adapterIndex]);
+        const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
+
+        const std::vector<vk::PhysicalDevice> nativePhysicalDevice = rhi.getNativeInstance().enumeratePhysicalDevices();
+#undef min;
+        if (adaptaterIndex >= nativePhysicalDevice.size())
+            return false;
+
+        assert(adapters.size() == nativePhysicalDevice.size());
+        return createDevice(nativePhysicalDevice[adaptaterIndex], adapters[adaptaterIndex]);
     }
 
     void Device::wait()
@@ -61,24 +67,7 @@ namespace TiRHI::Vulkan
         m_device->waitIdle();
     }
 
-    void Device::choosePhysicalDeviceIndex(Instance& instance, const std::vector<Adapter>& adapters,
-                                           const std::vector<vk::PhysicalDevice>& devices)
-    {
-        const size_t index = BaseDevice::getBestAdapter(adapters);
-
-        if (index < 0)
-        {
-            RHI_LOG_ERROR(L"Failed to choose a physical device", RhiApi::Vulkan);
-            return;
-        }
-
-        const std::wstring name{adapters[index].getName().begin(), adapters[index].getName().end()};
-        RHI_LOG_VERBOSE(std::format(L"PhysicalDevice Choosen: {}", name), RhiApi::Vulkan);
-
-        m_adapterIndex = index;
-    }
-
-    void Device::createLogicalDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter)
+    bool Device::createDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter)
     {
         const std::vector<vk::QueueFamilyProperties> queueFamilyPropertie = physicalDevice.getQueueFamilyProperties();
 
@@ -97,7 +86,7 @@ namespace TiRHI::Vulkan
         if (allPropertiesQueuIndex == std::numeric_limits<size_t>::max())
         {
             RHI_LOG_ERROR(L"Failed to find an valid queu", RhiApi::Vulkan);
-            return;
+            return false;
         }
 
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo = {};
@@ -132,6 +121,8 @@ namespace TiRHI::Vulkan
                                      return std::wstring(name.begin(), name.end());
                                  }()),
                      RhiApi::Vulkan);
+
+        return true;
     }
 
 } // namespace TiRHI::Vulkan
