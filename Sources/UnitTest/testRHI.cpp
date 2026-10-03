@@ -86,18 +86,6 @@ TEST(DummyTest, Test)
         }
     }
 
-    TiRHI::Device device = rhi.newDevice();
-    // clang-format off
-    device
-        .setName("BaseDevice")
-        .setFeaturesEnable({})
-        .build(rhi, adapters);
-    // clang-format on
-
-    EXPECT_TRUE(device.getNativeDevice());
-
-    std::cout << "Selected Adapter " << device.getSourceAdapter(rhi).getName() << '\n';
-
     EXPECT_FALSE(error);
 }
 

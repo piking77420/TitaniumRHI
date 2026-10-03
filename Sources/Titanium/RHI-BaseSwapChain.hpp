@@ -59,9 +59,9 @@ namespace TiRHI
     protected:
         bool m_vsync = false;
 
-        uint32_t m_width;
+        uint32_t m_width = 0;
 
-        uint32_t m_height;
+        uint32_t m_height = 0;
 
         static constexpr size_t BufferCount = 3;
     };

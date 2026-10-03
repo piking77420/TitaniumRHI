@@ -16,6 +16,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Factory;
     class CommandList;
+    class Surface;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -28,7 +29,8 @@ namespace TiRHI::DirectX12
         Device& operator=(Device&&) noexcept = default;
         Device(RHI& rhi);
 
-        bool build(RHI& rhi, const std::span<const Adapter>& adapters, std::optional<size_t> index = {});
+        bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                   std::optional<size_t> index = {});
 
         void wait();
 

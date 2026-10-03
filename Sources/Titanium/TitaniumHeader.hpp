@@ -14,12 +14,14 @@ namespace TiRHI
 #elif defined(TITANIUM_DIRECT_X12)
 
 #include <DirectX12/DirectX12-RHI.hpp>
+#include <DirectX12/DirectX12-Surface.hpp>
 #include <DirectX12/DirectX12-SwapChain.hpp>
 #include <DirectX12/DirectX12-CommandList.hpp>
 
 namespace TiRHI
 {
     using RHI = DirectX12::RHI;
+    using Surface = DirectX12::Surface;
     using Device = DirectX12::Device;
     using SwapChain = DirectX12::SwapChain;
     using CommandList = DirectX12::CommandList;
@@ -47,11 +49,17 @@ namespace TiRHI::Contract
 
     static_assert(RHIContract<RHI>);
 
+    // Surface
+    template<typename T>
+    concept SurfaceContract = requires(T surface, WindowHandle windowHandle) {
+        { surface.build(windowHandle) } -> std::same_as<bool>;
+    };
+    static_assert(SurfaceContract<Surface>);
     // Device
     template<typename T>
-    concept DeviceContract = requires(T device, RHI& rhi, const std::span<const Adapter>& adapters,
+    concept DeviceContract = requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                                       std::optional<size_t> index, CommandList& cmdList) {
-        { device.build(rhi, adapters, index) } -> std::same_as<bool>;
+        { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
         { device.wait() } -> std::same_as<void>;
         { device.submit(cmdList) } -> std::same_as<void>;
     };
@@ -60,8 +68,8 @@ namespace TiRHI::Contract
 
     // SwapChain
     template<typename T>
-    concept SwapChainContract = requires(T& swapChain, Device& device, WindowHandle windowHandle) {
-        { swapChain.build(device, windowHandle) } -> std::same_as<bool>;
+    concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle) {
+        { swapChain.build(device, surface) } -> std::same_as<bool>;
         { swapChain.beginFrame() } -> std::same_as<bool>;
         { swapChain.present(device) } -> std::same_as<bool>;
     } && std::derived_from<T, Object<T, RHI>>;

@@ -5,6 +5,7 @@
 
 #include <DirectX12/DirectX12-Device.hpp>
 #include <DirectX12/DirectX12-RHI.hpp>
+#include <DirectX12/DirectX12-Surface.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -21,9 +22,9 @@ namespace TiRHI::DirectX12
         }
     }
 
-    bool SwapChain::build(Device& device, WindowHandle windowHandle)
+    bool SwapChain::build(Device& device, Surface& surface)
     {
-        if (!createSwapChain(device, windowHandle))
+        if (!createSwapChain(device, surface.getWindowHandle()))
             return false;
 
         if (!queryBuffer())
@@ -68,7 +69,7 @@ namespace TiRHI::DirectX12
     bool SwapChain::present(Device& device)
     {
         // Automatically present using internal present queue if possible.
-        const HRESULT hrPresent = m_swapchain->Present(1, 0);
+        const HRESULT hrPresent = m_swapchain->Present(m_vsync ? 1 : 0, 0);
 
         if (FAILED(hrPresent))
         {

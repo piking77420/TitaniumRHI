@@ -12,6 +12,7 @@ namespace TiRHI::DirectX12
 {
     class Device;
     class RHI;
+    class Surface;
 
     class SwapChain : public BaseSwapChain<SwapChain, RHI>
     {
@@ -20,7 +21,7 @@ namespace TiRHI::DirectX12
         ~SwapChain();
         SwapChain(RHI& rhi);
 
-        bool build(Device& device, WindowHandle windowHandle);
+        bool build(Device& device, Surface& surface);
 
         bool beginFrame();
 

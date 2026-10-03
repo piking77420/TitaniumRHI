@@ -1,7 +1,10 @@
 #ifndef TITANIUM_DIRECTX12_HEADER_H
 #define TITANIUM_DIRECTX12_HEADER_H
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <wrl.h>
+#include <Windows.h>
 
 namespace TiRHI::DirectX12
 {
