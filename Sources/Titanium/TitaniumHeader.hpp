@@ -41,7 +41,9 @@ namespace TiRHI
 namespace TiRHI::Contract
 {
     template<typename T>
-    concept RHIContract = std::constructible_from<T, const RhiCreate&>;
+    concept RHIContract = requires(T& rhi) {
+        { rhi.newDevice() } -> std::same_as<Device>;
+    } && std::constructible_from<T, const RhiCreate&>;
 
     static_assert(RHIContract<RHI>);
 
