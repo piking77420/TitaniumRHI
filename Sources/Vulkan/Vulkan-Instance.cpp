@@ -1,3 +1,7 @@
+#include <Volk/volk.h>
+#include <vulkan/vulkan.hpp>
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
 #include <Vulkan-Instance.hpp>
 
 #include <vector>
@@ -143,6 +147,17 @@ namespace TiRHI::Vulkan
 
     Instance::Instance()
     {
+        RHI_LOG_VERBOSE(L"volkInitialize", RhiApi::Vulkan);
+        const vk::Result volkInitResult = static_cast<vk::Result>(volk::volkInitialize());
+
+        if (volkInitResult != vk::Result::eSuccess)
+        {
+            RHI_LOG_ERROR(L"Failed to volkInitialize", RhiApi::Vulkan);
+            return;
+        }
+        // init global Function Dispatch
+        VULKAN_HPP_DEFAULT_DISPATCHER.init(volk::vkGetInstanceProcAddr);
+
         std::vector<const char*> extensions = {
             VK_KHR_SURFACE_EXTENSION_NAME,
 #if defined(_WIN32)
@@ -222,17 +237,16 @@ namespace TiRHI::Vulkan
             RHI_LOG_ERROR(L"Vulkan Instance creation failed", RhiApi::Vulkan);
         }
 
-        queryVulkanFunctions();
+        volk::volkLoadInstance(static_cast<VkInstance>(m_instance));
+        // init instance function dispact
+        VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance);
 
 #if defined(TITANIUM_VALIDATION_LAYER)
-        const PFN_vkCreateDebugUtilsMessengerEXT createMessenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
-            vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT"));
-
         VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
 
-        const VkResult result = createMessenger(static_cast<VkInstance>(m_instance),
-                                                reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(&debugInfo),
-                                                nullptr, &messenger);
+        const VkResult result = vkCreateDebugUtilsMessengerEXT(
+            static_cast<VkInstance>(m_instance),
+            reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(&debugInfo), nullptr, &messenger);
 
         if (static_cast<vk::Result>(result) != vk::Result::eSuccess)
             RHI_LOG_FATAL(L"Failed to create Vulkan DebugUtilsMessenger", RhiApi::Vulkan);
@@ -244,47 +258,22 @@ namespace TiRHI::Vulkan
     Instance::~Instance()
     {
 #if defined(TITANIUM_VALIDATION_LAYER)
-        const PFN_vkDestroyDebugUtilsMessengerEXT destroyMessenger =
-            reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
-                vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT"));
-        if (!destroyMessenger)
-            RHI_LOG_ERROR(L"Failed to query vkDestroyDebugUtilsMessengerEXT CallAddr", RhiApi::Metal);
 
-        if (m_debugUtilsMessenger && destroyMessenger)
+        if (m_debugUtilsMessenger)
         {
-            destroyMessenger(static_cast<VkInstance>(m_instance),
-                             static_cast<VkDebugUtilsMessengerEXT>(m_debugUtilsMessenger), nullptr);
+            vkDestroyDebugUtilsMessengerEXT(static_cast<VkInstance>(m_instance),
+                                            static_cast<VkDebugUtilsMessengerEXT>(m_debugUtilsMessenger), nullptr);
 
             RHI_LOG_INFO(L"Destroying Vulkan DebugUtilsMessengerEXT", RhiApi::Vulkan);
             m_debugUtilsMessenger = nullptr;
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
-        m_instance.destroy();
-        RHI_LOG_INFO(L"Destroying Vulkan Instance", RhiApi::Vulkan);
-        m_instance = nullptr;
-    }
-
-    void Instance::queryVulkanFunctions()
-    {
-        m_vulkanFunctions.beginDebugLabel = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
-            vkGetInstanceProcAddr(m_instance, "vkCmdBeginDebugUtilsLabelEXT"));
-        if (!m_vulkanFunctions.beginDebugLabel)
-            RHI_LOG_ERROR(L"Failed to query vkCmdBeginDebugUtilsLabelEXT callAddr", RhiApi::Vulkan);
-
-        m_vulkanFunctions.endDebugLabel = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
-            vkGetInstanceProcAddr(m_instance, "vkCmdEndDebugUtilsLabelEXT"));
-        if (!m_vulkanFunctions.endDebugLabel)
-            RHI_LOG_ERROR(L"Failed to query vkCmdInsertDebugUtilsLabelEXT callAddr", RhiApi::Vulkan);
-
-        m_vulkanFunctions.insertDebugLabel = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(
-            vkGetInstanceProcAddr(m_instance, "vkCmdInsertDebugUtilsLabelEXT"));
-        if (!m_vulkanFunctions.insertDebugLabel)
-            RHI_LOG_ERROR(L"Failed to query vkCmdInsertDebugUtilsLabelEXT callAddr", RhiApi::Vulkan);
-
-        m_vulkanFunctions.setObjectName = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
-            vkGetInstanceProcAddr(m_instance, "vkSetDebugUtilsObjectNameEXT"));
-        if (!m_vulkanFunctions.setObjectName)
-            RHI_LOG_ERROR(L"Failed to query vkSetDebugUtilsObjectNameEXT callAddr", RhiApi::Vulkan);
+        if (m_instance)
+        {
+            RHI_LOG_INFO(L"Destroying Vulkan Instance", RhiApi::Vulkan);
+            volk::vkDestroyInstance(static_cast<VkInstance>(m_instance), nullptr);
+            m_instance = nullptr;
+        }
     }
 
 } // namespace TiRHI::Vulkan
