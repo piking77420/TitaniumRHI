@@ -7,7 +7,6 @@
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Vulkan-SwapChain.hpp>
 #include <Vulkan/Vulkan-CommandList.hpp>
-#include <Vulkan-DebugScope.hpp>
 
 namespace TiRHI
 {
@@ -17,7 +16,6 @@ namespace TiRHI
     using SwapChain = Vulkan::SwapChain;
     using AcquiredFrame = Vulkan::AcquiredFrame;
     using CommandList = Vulkan::CommandList;
-    using DebugScope = Vulkan::DebugScope;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -102,12 +100,6 @@ namespace TiRHI::Contract
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
-
-    // DebugScope
-    template<typename T>
-    concept DebugScopeContract =
-        std::constructible_from<T, CommandList&, std::string_view, std::span<const float, 4>> &&
-        std::constructible_from<T, CommandList&, std::string_view>;
 
 } // TiRHI::Contracts
 

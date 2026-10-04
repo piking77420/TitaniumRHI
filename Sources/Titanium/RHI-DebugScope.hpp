@@ -1,13 +1,12 @@
-#ifndef TITANIUM_VULKAN_DEBUG_SCOPE_H
-#define TITANIUM_VULKAN_DEBUG_SCOPE_H
+#ifndef TITANIUM_DEBUG_SCOPE_H
+#define TITANIUM_DEBUG_SCOPE_H
 
 #include <span>
 #include <string_view>
+#include <Titanium/TitaniumHeader.hpp>
 
-namespace TiRHI::Vulkan
+namespace TiRHI
 {
-    class CommandList;
-
     class DebugScope
     {
     public:
@@ -19,6 +18,6 @@ namespace TiRHI::Vulkan
         CommandList& m_commandList;
     };
 
-} // amespace TiRHI::Vulkan
+} // amespace TiRHI
 
 #endif // TITANIUM_VULKAN_DEBUG_SCOPE_H

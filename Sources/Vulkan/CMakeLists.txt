@@ -9,8 +9,6 @@ target_sources(
         Vulkan-AcquiredFrame.hpp
         Vulkan-CommandList.cpp
         Vulkan-CommandList.hpp
-        Vulkan-DebugScope.cpp
-        Vulkan-DebugScope.hpp
         Vulkan-Device.cpp
         Vulkan-Device.hpp
         Vulkan-Instance.cpp

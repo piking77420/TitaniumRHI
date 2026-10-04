@@ -1,7 +1,6 @@
-#include <Vulkan-DebugScope.hpp>
-#include <Vulkan/Vulkan-CommandList.hpp>
+#include <Titanium/RHI-DebugScope.hpp>
 
-namespace TiRHI::Vulkan
+namespace TiRHI
 {
     DebugScope::DebugScope(CommandList& commandList, std::string_view name, std::span<const float, 4> color)
         : m_commandList(commandList)
@@ -19,4 +18,4 @@ namespace TiRHI::Vulkan
     {
         m_commandList.endDebugLabel();
     }
-} // amespace TiRHI::Vulkan
+} // amespace TiRHI
