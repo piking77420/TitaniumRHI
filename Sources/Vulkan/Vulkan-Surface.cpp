@@ -6,6 +6,7 @@
 #include <Titanium/Log.hpp>
 #include <Vulkan-RHI.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Volk/volk.h>
 
 #ifdef _WIN32
 
@@ -48,7 +49,7 @@ namespace TiRHI::Vulkan
         createInfo.hinstance = GetModuleHandle(nullptr);
 
         isSurfaceOk = VulkanCheckErrorStatus(
-            vkCreateWin32SurfaceKHR(getRHI().getNativeInstance(), &createInfo, nullptr, &surface));
+            volk::vkCreateWin32SurfaceKHR(getRHI().getNativeInstance(), &createInfo, nullptr, &surface));
 
 #endif // _WIN32
 
