@@ -47,6 +47,11 @@ namespace TiRHI
 
         void nextFrame();
 
+        bool getUseDebugLabel() const
+        {
+            return m_useDebugLabel;
+        }
+
     protected:
         // Number of frames that may be processed concurrently.
         //
@@ -58,6 +63,8 @@ namespace TiRHI
         std::vector<Adapter> m_adapters;
 
         size_t m_currentFrame = 0;
+
+        bool m_useDebugLabel = false;
     };
 #ifdef max
 #undef max
@@ -65,6 +72,7 @@ namespace TiRHI
     template<typename Derived>
     inline BaseRHI<Derived>::BaseRHI(const RhiCreate& rhiCreate)
         : m_framesInFlight(std::max(3uz, rhiCreate.frameInFlight))
+        , m_useDebugLabel(rhiCreate.useDebugLabel)
     {
         static_assert(std::derived_from<Derived, BaseRHI<Derived>>, "Derived must inherit from RHI<Derived>");
 

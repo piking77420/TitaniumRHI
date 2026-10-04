@@ -46,7 +46,7 @@ namespace TiRHI::Vulkan
             return isValid();
         }
 
-        vk::Device getNativeDevice() noexcept
+        vk::Device getNativeDevice() const noexcept
         {
             return m_device.get();
         }
@@ -112,7 +112,10 @@ namespace TiRHI::Vulkan
 
         VolkDeviceTable m_dispatch{};
 
-        bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter);
+        bool checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures);
+
+        bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter,
+                          const std::vector<Adapter::Features>& featuresToEnable);
 
         bool createSynchronisationPrimitives();
 
