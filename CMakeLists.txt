@@ -37,6 +37,12 @@ endif()
 
 add_subdirectory(Sources/Titanium)
 
+if(WIN32)
+    target_compile_definitions(TitaniumRHI PRIVATE
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN)
+endif()
+
 ## Choose wich backend
 ## TODO add guard for os
 if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
@@ -45,6 +51,28 @@ if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
     add_subdirectory(ThirdParty/VulkanMemoryAllocator)
     add_subdirectory(ThirdParty/Vulkan-Headers)
 
+# Volk
+set(VOLK_NAMESPACE ON) ## idk why but it's work with it
+target_compile_definitions(TitaniumRHI PUBLIC
+    VOLK_NAMESPACE
+    VK_NO_PROTOTYPES
+)
+if(WIN32)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+
+elseif(ANDROID)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_ANDROID_KHR)
+elseif(APPLE)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_METAL_EXT)
+elseif(UNIX)
+    # Pick what your Linux surface backend actually uses
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WAYLAND_KHR) ## TODO handle all backend
+endif()
+
+add_subdirectory(ThirdParty/volk)
+
+target_link_libraries(TitaniumRHI PRIVATE volk)
+##
     set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
     add_subdirectory(Sources/Vulkan)
 
