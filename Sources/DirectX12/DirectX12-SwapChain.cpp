@@ -102,7 +102,12 @@ namespace TiRHI::DirectX12
 
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
 
-        return queryBuffer();
+        return queryBuffer() && createRenderTarget(device);
+    }
+
+    ID3D12Resource* SwapChain::getNativeCurrentBackBuffer() const
+    {
+        return m_images[m_swapchainFrameIndex].Get();
     }
 
     bool SwapChain::createSwapChain(Device& device, Surface& surface)
@@ -162,7 +167,7 @@ namespace TiRHI::DirectX12
             RHI_LOG_ERROR(std::format(L"SwapChain cast failed! \n Error Code: {}", hrSwapChainCast), RhiApi::DirectX12);
         }
 
-        return queryBuffer() && initSynchronisation(device);
+        return queryBuffer() && initSynchronisation(device) && createRenderTarget(device);
     }
 
     bool SwapChain::queryBuffer()
@@ -225,4 +230,44 @@ namespace TiRHI::DirectX12
 
         return true;
     }
+
+    bool SwapChain::createRenderTarget(Device& device)
+    {
+        m_rtvHeap.Reset();
+        ID3D12Device* d3d12Device = device.getNativeDevice();
+
+        D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
+        heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        heapDesc.NumDescriptors = static_cast<UINT>(m_images.size());
+        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+        const HRESULT result = d3d12Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_rtvHeap));
+
+        if (FAILED(result))
+        {
+            RHI_LOG_ERROR(L"Failed to create swapChain descriptor heap", RhiApi::DirectX12);
+            return false;
+        }
+
+        m_rtvDescriptorSize = d3d12Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+        for (UINT i = 0; i < heapDesc.NumDescriptors; ++i)
+        {
+            if (FAILED(m_swapchain->GetBuffer(i, IID_PPV_ARGS(&m_images[i]))))
+            {
+                RHI_LOG_ERROR(L"Failed to get buffer of swapChain image", RhiApi::DirectX12);
+
+                return false;
+            }
+
+            d3d12Device->CreateRenderTargetView(m_images[i].Get(), nullptr, rtvHandle);
+
+            rtvHandle.ptr += m_rtvDescriptorSize;
+        }
+
+        return true;
+    }
+
 } // namespace TiRHI::DirectX12

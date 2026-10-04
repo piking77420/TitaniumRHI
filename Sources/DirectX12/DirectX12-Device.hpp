@@ -1,11 +1,6 @@
 #ifndef TITANIUM_DIRECTX12_DEVICE_H
 #define TITANIUM_DIRECTX12_DEVICE_H
 
-#include <d3d12.h>
-#include <dxgidebug.h>
-#include <dxgi1_6.h>
-#include <dxgi1_4.h>
-
 #include <Titanium/RHI-Adapter.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 

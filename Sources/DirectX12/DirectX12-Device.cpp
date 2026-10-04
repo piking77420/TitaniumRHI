@@ -182,6 +182,17 @@ namespace TiRHI::DirectX12
                     RhiApi::DirectX12);
             }
         }
+
+#if 0
+        TiRHI::DirectX12::MComPtr<ID3D12InfoQueue> infoQueue;
+
+        if (SUCCEEDED(m_device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
+        {
+            // if infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true) it should break
+            infoQueue->AddApplicationMessage(D3D12_MESSAGE_SEVERITY_ERROR, "TitaniumRHI test D3D12 error");
+        }
+#endif
+
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
         return createUniqueQueue() && createSynchronisation();

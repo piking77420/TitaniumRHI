@@ -29,12 +29,27 @@ namespace TiRHI::DirectX12
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
+        // TODO TO DELTE
+        ID3D12Resource* getNativeCurrentBackBuffer() const;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE getRtv() const
+        {
+            D3D12_CPU_DESCRIPTOR_HANDLE rtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+            rtv.ptr += m_swapchainFrameIndex * m_rtvDescriptorSize;
+
+            return rtv;
+        }
+        //
     private:
         MComPtr<IDXGISwapChain3> m_swapchain;
         uint32_t m_swapchainFrameIndex = 0u;
 
         std::vector<MComPtr<ID3D12Resource>> m_images;
         std::vector<uint64_t> swapchainFenceValues{0u};
+
+        MComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+        UINT m_rtvDescriptorSize = 0;
 
         struct Synchronisation
         {
@@ -47,6 +62,8 @@ namespace TiRHI::DirectX12
         bool queryBuffer();
 
         bool initSynchronisation(Device& device);
+
+        bool createRenderTarget(Device& device);
     };
 
 } // namespace TiRHI::DirectX12
