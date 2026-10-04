@@ -66,13 +66,17 @@ namespace TiRHI::Contract
     static_assert(SurfaceContract<Surface>);
     // Device
     template<typename T>
-    concept DeviceContract =
-        requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
-                 std::optional<size_t> index, const AcquiredFrame& acquiredFrame, CommandList& cmdList) {
-            { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
-            { device.wait() } -> std::same_as<void>;
-            { device.submit(acquiredFrame, cmdList) } -> std::same_as<void>;
-        };
+    concept DeviceContract = requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                                      std::optional<size_t> index, std::span<const AcquiredFrame> acquiredFrames,
+                                      std::span<CommandList*> cmdLists) {
+        { device.beginFrame() } -> std::same_as<void>;
+        { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
+        { device.wait() } -> std::same_as<void>;
+        { device.submit(acquiredFrames, cmdLists) } -> std::same_as<void>;
+
+        { device.isValid() } -> std::same_as<bool>;
+        { device() } -> std::same_as<bool>;
+    };
 
     static_assert(DeviceContract<Device>);
 
@@ -80,7 +84,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
-        { swapChain.beginFrame() } -> std::same_as<AcquiredFrame>;
+        { swapChain.acquireNextImage() } -> std::same_as<AcquiredFrame>;
         { swapChain.present() } -> std::same_as<bool>;
     } && std::derived_from<T, Object<T, RHI>>;
 

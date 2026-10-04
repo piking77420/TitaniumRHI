@@ -21,7 +21,7 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device, Surface& surface);
 
-        AcquiredFrame beginFrame();
+        AcquiredFrame acquireNextImage();
 
         bool present();
 
@@ -35,8 +35,6 @@ namespace TiRHI::Vulkan
         vk::Semaphore getNativeImageAvailableSemaphore() const;
 
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
-
-        vk::Fence getNativeInFlightFence() const;
 
         // TODO DELTE
         vk::RenderPass getNativeRenderPass() const
@@ -74,7 +72,6 @@ namespace TiRHI::Vulkan
         {
             vk::UniqueSemaphore imageAvailableSemaphore;
             vk::UniqueSemaphore renderFinishedSemaphore;
-            vk::UniqueFence inFlightFence;
         };
 
         std::vector<Synchronisation> m_synchronisations;
