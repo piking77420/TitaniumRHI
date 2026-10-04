@@ -109,6 +109,11 @@ namespace TiRHI::DirectX12
             CloseHandle(m_synchronization.deviceFenceEvent);
         }
 
+        if (m_synchronization.frameFenceEvent)
+        {
+            CloseHandle(m_synchronization.frameFenceEvent);
+        }
+
         m_device = nullptr;
     }
 
@@ -251,6 +256,37 @@ namespace TiRHI::DirectX12
             RHI_LOG_INFO(L"Create Device Fence success.", RhiApi::DirectX12);
         }
 
+        {
+            m_synchronization.frameFenceValue.resize(getRHI().getFrameInFlight());
+            m_synchronization.frameFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+
+            if (!m_synchronization.frameFenceEvent)
+            {
+                RHI_LOG_ERROR(L"Create SwapChain Fence Event failed!", RhiApi::DirectX12);
+
+                return false;
+            }
+
+            const HRESULT hrSwapChainFenceCreated =
+                m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronization.frameFence));
+
+            if (FAILED(hrSwapChainFenceCreated))
+            {
+                RHI_LOG_ERROR(std::format(L"Create SwapChain Fence failed!\nError Code: {}", hrSwapChainFenceCreated),
+                              RhiApi::DirectX12);
+
+                return false;
+            }
+
+            constexpr std::wstring_view name = L"SwapchainFence";
+
+            m_synchronization.deviceFence->SetName(name.data());
+
+            RHI_LOG_INFO(std::format(L"Create SwapChain Fence success.\nHandle: {}, Name: {}",
+                                     static_cast<void*>(m_synchronization.deviceFence.Get()), name),
+                         RhiApi::DirectX12);
+        }
+
         return true;
     }
 
@@ -268,11 +304,54 @@ namespace TiRHI::DirectX12
         ++m_synchronization.deviceFenceValue;
     }
 
-    void Device::submit([[maybe_unused]] const AcquiredFrame& acquiredFrame, CommandList& commandList)
+    void Device::submit([[maybe_unused]] std::span<const AcquiredFrame> acquiredFrame,
+                        std::span<CommandList*> commandList)
     {
-        ID3D12CommandList* cmdListsArr[] = {commandList.getCommandListNative()};
-        m_graphicsQueue->ExecuteCommandLists(1, cmdListsArr);
+        std::vector<ID3D12CommandList*> cmdListsArr;
+        cmdListsArr.reserve(commandList.size());
+
+        for (auto& cml : commandList)
+            cmdListsArr.emplace_back(cml->getCommandListNative());
+
+        m_graphicsQueue->ExecuteCommandLists(static_cast<UINT>(cmdListsArr.size()), cmdListsArr.data());
         m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
+
+        const UINT64 currFenceValue = m_synchronization.frameFenceValue[getRHI().getCurrentFrame()];
+
+        const HRESULT hrFenceSignal = m_graphicsQueue->Signal(m_synchronization.frameFence.Get(), currFenceValue);
+
+        if (FAILED(hrFenceSignal))
+        {
+            RHI_LOG_ERROR(std::format(L"SwapChain Fence Signal failed!\nError Code: {}", hrFenceSignal),
+                          RhiApi::DirectX12);
+        }
+    }
+
+    void Device::beginFrame()
+    {
+        const size_t currentFrame = getRHI().getCurrentFrame();
+
+        const UINT32 prevFenceValue = m_synchronization.frameFenceValue[currentFrame];
+
+        const UINT32 currFenceValue = m_synchronization.frameFenceValue[currentFrame];
+
+        // If the next frame is not ready to be rendered yet, wait until it is ready.
+        if (m_synchronization.frameFence->GetCompletedValue() < currFenceValue)
+        {
+            const HRESULT hrSetEvent =
+                m_synchronization.frameFence->SetEventOnCompletion(currFenceValue, m_synchronization.frameFenceEvent);
+            if (FAILED(hrSetEvent))
+            {
+                RHI_LOG_ERROR(std::format(L"Fence SetEventOnCompletion failed.\nError Code: {}", hrSetEvent),
+                              RhiApi::DirectX12);
+                return;
+            }
+
+            WaitForSingleObjectEx(m_synchronization.frameFenceEvent, INFINITE, FALSE);
+        }
+
+        // Set the fence value for the next frame.
+        m_synchronization.frameFenceValue[currentFrame] = prevFenceValue + 1;
     }
 
 }

@@ -16,51 +16,18 @@ namespace TiRHI::DirectX12
 
     SwapChain::~SwapChain()
     {
-        if (m_synchronisation.swapchainFenceEvent)
-        {
-            CloseHandle(m_synchronisation.swapchainFenceEvent);
-        }
     }
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
-        m_presentQueue = device.getNativeGraphicQueue().Get();
-
-        if (!m_presentQueue)
-        {
-            RHI_LOG_ERROR(L"Failed to query present queue from device", RhiApi::DirectX12);
-            return false;
-        }
-
         return createSwapChain(device, surface);
     }
 
-    AcquiredFrame SwapChain::beginFrame()
+    AcquiredFrame SwapChain::acquireNextImage()
     {
-        const UINT32 prevFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
 
         // Update frame index.
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
-
-        const UINT32 currFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
-
-        // If the next frame is not ready to be rendered yet, wait until it is ready.
-        if (m_synchronisation.swapchainFence->GetCompletedValue() < currFenceValue)
-        {
-            const HRESULT hrSetEvent = m_synchronisation.swapchainFence->SetEventOnCompletion(
-                currFenceValue, m_synchronisation.swapchainFenceEvent);
-            if (FAILED(hrSetEvent))
-            {
-                RHI_LOG_ERROR(std::format(L"Fence SetEventOnCompletion failed.\nError Code: {}", hrSetEvent),
-                              RhiApi::DirectX12);
-                return AcquiredFrame(false);
-            }
-
-            WaitForSingleObjectEx(m_synchronisation.swapchainFenceEvent, INFINITE, FALSE);
-        }
-
-        // Set the fence value for the next frame.
-        swapchainFenceValues[m_swapchainFrameIndex] = prevFenceValue + 1;
 
         AcquiredFrame acquire(true);
 
@@ -77,25 +44,6 @@ namespace TiRHI::DirectX12
         if (FAILED(hrPresent))
         {
             RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent), RhiApi::DirectX12);
-            return false;
-        }
-
-        if (!m_presentQueue)
-        {
-            RHI_LOG_ERROR(std::format(L"SwapChain({}) Present Queue invalid", getNameW()), RhiApi::DirectX12);
-            return false;
-        }
-
-        // Schedule a Signal command in the queue.
-        const UINT64 currFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
-
-        const HRESULT hrFenceSignal = m_presentQueue->Signal(m_synchronisation.swapchainFence.Get(), currFenceValue);
-
-        if (FAILED(hrFenceSignal))
-        {
-            RHI_LOG_ERROR(std::format(L"SwapChain Fence Signal failed!\nError Code: {}", hrFenceSignal),
-                          RhiApi::DirectX12);
-
             return false;
         }
 
@@ -215,34 +163,6 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::initSynchronisation(Device& device)
     {
-        swapchainFenceValues.resize(m_images.size());
-        m_synchronisation.swapchainFenceEvent = CreateEvent(nullptr, false, false, nullptr);
-
-        if (!m_synchronisation.swapchainFenceEvent)
-        {
-            RHI_LOG_ERROR(L"Create SwapChain Fence Event failed!", RhiApi::DirectX12);
-
-            return false;
-        }
-
-        const HRESULT hrSwapChainFenceCreated = device.getNativeDevice()->CreateFence(
-            0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronisation.swapchainFence));
-
-        if (FAILED(hrSwapChainFenceCreated))
-        {
-            RHI_LOG_ERROR(std::format(L"Create SwapChain Fence failed!\nError Code: {}", hrSwapChainFenceCreated),
-                          RhiApi::DirectX12);
-
-            return false;
-        }
-
-        constexpr std::wstring_view name = L"SwapchainFence";
-
-        m_synchronisation.swapchainFence->SetName(name.data());
-
-        RHI_LOG_INFO(std::format(L"Create SwapChain Fence success.\nHandle: {}, Name: {}",
-                                 static_cast<void*>(m_synchronisation.swapchainFence.Get()), name),
-                     RhiApi::DirectX12);
 
         return true;
     }

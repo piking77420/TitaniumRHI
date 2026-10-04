@@ -30,6 +30,10 @@ namespace TiRHI::DirectX12
 
         void wait();
 
+        void submit(std::span<const AcquiredFrame> acquiredFrame, std::span<CommandList*> commandList);
+
+        void beginFrame();
+
         ID3D12Device* getNativeDevice()
         {
             return m_device.Get();
@@ -40,7 +44,15 @@ namespace TiRHI::DirectX12
             return m_graphicsQueue;
         }
 
-        void submit(const AcquiredFrame& AcquiredFrame, CommandList& commandList);
+        bool isValid() const
+        {
+            return m_device;
+        }
+
+        bool operator()() const
+        {
+            return isValid();
+        }
 
     private:
         MComPtr<ID3D12Device> m_device;
@@ -54,6 +66,11 @@ namespace TiRHI::DirectX12
             HANDLE deviceFenceEvent;
             MComPtr<ID3D12Fence> deviceFence;
             uint64_t deviceFenceValue = 1u;
+
+            HANDLE frameFenceEvent = nullptr;
+            MComPtr<ID3D12Fence> frameFence;
+            std::vector<uint64_t> frameFenceValue{0u};
+
         } m_synchronization;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);

@@ -24,7 +24,7 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device, Surface& surface);
 
-        AcquiredFrame beginFrame();
+        AcquiredFrame acquireNextImage();
 
         bool present();
 
@@ -47,18 +47,9 @@ namespace TiRHI::DirectX12
         uint32_t m_swapchainFrameIndex = 0u;
 
         std::vector<MComPtr<ID3D12Resource>> m_images;
-        std::vector<uint64_t> swapchainFenceValues{0u};
 
         MComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         UINT m_rtvDescriptorSize = 0;
-
-        struct Synchronisation
-        {
-            HANDLE swapchainFenceEvent = nullptr;
-            MComPtr<ID3D12Fence> swapchainFence;
-        } m_synchronisation;
-
-        ID3D12CommandQueue* m_presentQueue;
 
         bool createSwapChain(Device& device, Surface& surface);
 
