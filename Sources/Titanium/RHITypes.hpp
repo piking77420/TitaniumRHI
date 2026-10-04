@@ -1,8 +1,9 @@
 #ifndef TITANIUM_RHI_TYPES_H
 #define TITANIUM_RHI_TYPES_H
 
-#include <string>
 #include <functional>
+
+#include <Titanium/RHI-EnumToString.hpp>
 
 namespace TiRHI
 {
@@ -57,56 +58,59 @@ namespace TiRHI
         return L"Unknown"sv;
     }
 
+#define RHI_API_LIST(X)                                                                                                \
+    X(None)                                                                                                            \
+    X(DirectX12)                                                                                                       \
+    X(Metal)                                                                                                           \
+    X(Vulkan)
+
     enum struct RhiApi
     {
-        None,
-        DirectX12,
-        Metal,
-        Vulkan
+#define X(name) name,
+        RHI_API_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(RhiApi, RHI_API_LIST)
+
+#define RHI_FORMAT_LIST(X)                                                                                             \
+    X(R8_UNorm)                                                                                                        \
+    X(R8G8_UNorm)                                                                                                      \
+    X(R8G8B8A8_UNorm)                                                                                                  \
+    X(R8G8B8A8_UNorm_SRGB)                                                                                             \
+    X(B8G8R8A8_UNorm)                                                                                                  \
+    X(B8G8R8A8_UNorm_SRGB)                                                                                             \
+    X(R16_Float)                                                                                                       \
+    X(R16G16_Float)                                                                                                    \
+    X(R16G16B16A16_Float)                                                                                              \
+    X(R32_Float)                                                                                                       \
+    X(R32G32_Float)                                                                                                    \
+    X(R32G32B32A32_Float)                                                                                              \
+    X(R32_UInt)                                                                                                        \
+    X(R32G32_UInt)                                                                                                     \
+    X(R32G32B32A32_UInt)                                                                                               \
+    X(D16_UNorm)                                                                                                       \
+    X(D24_UNorm_S8_UInt)                                                                                               \
+    X(D32_Float)                                                                                                       \
+    X(D32_Float_S8_UInt)
+
+    enum struct Format
+    {
+#define X(name) name,
+        RHI_FORMAT_LIST(X)
+#undef X
     };
 
-    constexpr std::string_view toString(RhiApi rhiApi)
-    {
-        using namespace std::literals;
-
-        switch (rhiApi)
-        {
-        case RhiApi::None:
-            return "None"sv;
-        case RhiApi::DirectX12:
-            return "DirectX12"sv;
-        case RhiApi::Metal:
-            return "Metal"sv;
-        case RhiApi::Vulkan:
-            return "Vulkan"sv;
-        }
-        return "Unknown"sv;
-    }
-
-    constexpr std::wstring_view toWstring(RhiApi rhiApi)
-    {
-        using namespace std::literals;
-
-        switch (rhiApi)
-        {
-        case RhiApi::None:
-            return L"None"sv;
-        case RhiApi::DirectX12:
-            return L"DirectX12"sv;
-        case RhiApi::Metal:
-            return L"Metal"sv;
-        case RhiApi::Vulkan:
-            return L"Vulkan"sv;
-        }
-        return L"Unknown"sv;
-    }
+    IMPLEMENT_TO_STRING_TITANIUM(Format, RHI_FORMAT_LIST)
 
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate
     {
+        size_t frameInFlight;
         LogCallBackSignature logCallback;
     };
+
+    using WindowHandle = void*;
 
 } // namespace TiRHI
 

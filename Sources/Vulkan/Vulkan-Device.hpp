@@ -7,49 +7,85 @@
 #include <Titanium/RHI-Adapter.hpp>
 
 #include <vulkan/vulkan.hpp>
-
-namespace TiRHI::Contract
-{
-    struct DeviceContractAccess;
-
-} // TiRHI::Contract
+#include <Private/DeviceQueueFamily.hpp>
 
 namespace TiRHI::Vulkan
 {
     class Instance;
+    class RHI;
+    class Surface;
+    class CommandList;
+    class AcquiredFrame;
 
-    class Device : public BaseDevice
+    class Device : public BaseDevice<Device, RHI>
     {
     public:
-        Device() = default;
+        Device() = delete;
         ~Device() = default;
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) noexcept = default;
         Device& operator=(Device&&) noexcept = default;
-        Device(Instance& instance, const std::vector<Adapter>& adapters,
-               const std::vector<vk::PhysicalDevice>& devices);
-        Device(Instance& instance, const std::vector<Adapter>& adapters, const std::vector<vk::PhysicalDevice>& devices,
-               size_t index);
+        Device(RHI& rhi);
+
+        bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                   std::optional<size_t> index = {});
 
         void wait();
 
-        vk::Device getNativeHandle() noexcept
+        void submit(const AcquiredFrame& acquiredFrame, CommandList& commandList);
+
+        vk::Device getNativeDevice() noexcept
         {
             return m_device.get();
         }
 
+        const Private::DeviceQueueProperties& getQueueProperties() const
+        {
+            return m_queueProperties;
+        }
+
+        vk::Queue getNativeGraphicQueue() const
+        {
+            return m_graphicQueue;
+        }
+
+        uint32_t getNativeGraphicQueueIndex() const
+        {
+            return m_graphicQueueIndex;
+        }
+
+        vk::Queue getNativePresentQueue() const
+        {
+            return m_presentQueue;
+        }
+
+        uint32_t getNativePresentQueueIndex() const
+        {
+            return m_presentQueueIndex;
+        }
+
+        vk::PhysicalDevice getNativePhysicalDevice() const
+        {
+            return m_physicalDevice;
+        }
+
     private:
-        friend Contract::DeviceContractAccess;
-
-        std::vector<vk::PhysicalDevice> m_physicalDevices;
-
         vk::UniqueDevice m_device;
 
-        void choosePhysicalDeviceIndex(Instance& instance, const std::vector<Adapter>& adapters,
-                                       const std::vector<vk::PhysicalDevice>& devices);
+        vk::PhysicalDevice m_physicalDevice;
 
-        void createLogicalDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter);
+        Private::DeviceQueueProperties m_queueProperties;
+
+        vk::Queue m_graphicQueue;
+
+        uint32_t m_graphicQueueIndex = 0;
+
+        vk::Queue m_presentQueue;
+
+        uint32_t m_presentQueueIndex = 0;
+
+        bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter);
     };
 
 } // namespace TiRHI::Vulkan

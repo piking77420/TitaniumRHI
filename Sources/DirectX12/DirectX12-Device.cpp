@@ -3,7 +3,10 @@
 #include <format>
 
 #include <Titanium/Log.hpp>
-#include <DirectX12-Factory.hpp>
+#include <DirectX12/DirectX12-RHI.hpp>
+#include <DirectX12/DirectX12-Utils.hpp>
+#include <DirectX12/DirectX12-CommandList.hpp>
+#include <DirectX12/DirectX12-AcquireFrame.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -79,6 +82,11 @@ namespace TiRHI::DirectX12
     }
 #endif
 
+    Device::Device(RHI& rhi)
+        : BaseDevice(rhi)
+    {
+    }
+
     Device::~Device()
     {
 #if defined(TITANIUM_VALIDATION_LAYER)
@@ -96,25 +104,33 @@ namespace TiRHI::DirectX12
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
+        if (m_synchronization.deviceFenceEvent)
+        {
+            CloseHandle(m_synchronization.deviceFenceEvent);
+        }
+
         m_device = nullptr;
     }
 
-    Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-                   const std::vector<Adapter>& adapters)
+    bool Device::build(RHI& rhi, [[maybe_unused]] Surface& surface, const std::span<const Adapter>& adapters,
+                       std::optional<size_t> index)
     {
-        const size_t index = BaseDevice::getBestAdapter(adapters);
+        if (IDXGIFactory6* factory = getRHI().getNativeFactory())
+        {
+            const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
 
-        create(factory.getFactory(), dxAdapters[index]);
+            const auto& nativeAdapter = Internal::getAllNativeAdapters(factory);
+#undef min;
+            if (adaptaterIndex >= nativeAdapter.size())
+                return false;
+
+            return createDevice(nativeAdapter[adaptaterIndex]);
+        }
+        RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);
+        return false;
     }
 
-    Device::Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-                   const std::vector<Adapter>& adapters, size_t index)
-    {
-        MComPtr<IDXGIAdapter3> adapter3;
-        create(factory.getFactory(), dxAdapters[index]);
-    }
-
-    void Device::create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1)
+    bool Device::createDevice(const MComPtr<IDXGIAdapter1>& adapter1)
     {
         MComPtr<IDXGIAdapter3> adapter;
         HRESULT hr = adapter1.As(&adapter);
@@ -122,7 +138,7 @@ namespace TiRHI::DirectX12
         {
             // IDXGIAdapter1 does not expose IDXGIAdapter3
             RHI_LOG_ERROR(L"Failed to create an IDXGIAdapter3 from IDXGIAdapter1", RhiApi::DirectX12);
-            return;
+            return false;
         }
 
         const HRESULT hrDeviceCreated =
@@ -130,12 +146,12 @@ namespace TiRHI::DirectX12
         if (FAILED(hrDeviceCreated))
         {
             RHI_LOG_ERROR(std::format(L"Create Device failed! \n Error Code: {}", hrDeviceCreated), RhiApi::DirectX12);
-            return;
+            return false;
         }
         else
         {
-            const LPCWSTR name = L"Main Device";
-            m_device->SetName(name);
+            const std::wstring name = getNameW().empty() ? L"Main Device" : getNameW();
+            m_device->SetName(name.data());
             RHI_LOG_INFO(std::format(L"Create Device Success! Name: {}", name), RhiApi::DirectX12);
         }
 
@@ -167,13 +183,96 @@ namespace TiRHI::DirectX12
                     RhiApi::DirectX12);
             }
         }
+
+#if 0
+        TiRHI::DirectX12::MComPtr<ID3D12InfoQueue> infoQueue;
+
+        if (SUCCEEDED(m_device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
+        {
+            // if infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true) it should break
+            infoQueue->AddApplicationMessage(D3D12_MESSAGE_SEVERITY_ERROR, "TitaniumRHI test D3D12 error");
+        }
+#endif
+
 #endif // defined(TITANIUM_VALIDATION_LAYER)
+
+        return createUniqueQueue() && createSynchronisation();
+    }
+
+    bool Device::createUniqueQueue()
+    {
+        const D3D12_COMMAND_QUEUE_DESC desc{
+            .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+            .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+        };
+
+        const HRESULT hrGFXCmdQueueCreated = m_device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_graphicsQueue));
+        if (FAILED(hrGFXCmdQueueCreated))
+        {
+            RHI_LOG_ERROR(std::format(L"Create Graphics Queue failed!\nError Code: {}", hrGFXCmdQueueCreated),
+                          RhiApi::DirectX12);
+            return false;
+        }
+        else
+        {
+            const LPCWSTR name = L"GraphicsQueue";
+            m_graphicsQueue->SetName(name);
+            RHI_LOG_INFO(L"Create Graphics Queue success.", RhiApi::DirectX12);
+        }
+        return true;
+    }
+
+    bool Device::createSynchronisation()
+    {
+        m_synchronization.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+        if (!m_synchronization.deviceFenceEvent)
+        {
+            RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiApi::DirectX12);
+            return false;
+        }
+        else
+        {
+            RHI_LOG_INFO(L"Create Device Fence Event success.", RhiApi::DirectX12);
+        }
+
+        const HRESULT hrDeviceFenceCreated =
+            m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronization.deviceFence));
+        if (FAILED(hrDeviceFenceCreated))
+        {
+            RHI_LOG_ERROR(std::format(L"Create Device Fence failed! \nError Code: {}", hrDeviceFenceCreated),
+                          RhiApi::DirectX12);
+            return false;
+        }
+        else
+        {
+            const LPCWSTR name = L"DeviceFence";
+            m_synchronization.deviceFence->SetName(name);
+
+            RHI_LOG_INFO(L"Create Device Fence success.", RhiApi::DirectX12);
+        }
+
+        return true;
     }
 
     void Device::wait()
     {
-        // TODO
-        RHI_LOG_FATAL(L"TODO IMPLEMENT WAIT", RhiApi::DirectX12);
+        // Schedule a Signal command in the queue.
+        m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
+
+        // Wait until the fence has been processed.
+        m_synchronization.deviceFence->SetEventOnCompletion(m_synchronization.deviceFenceValue,
+                                                            m_synchronization.deviceFenceEvent);
+        WaitForSingleObjectEx(m_synchronization.deviceFenceEvent, INFINITE, false);
+
+        // Increment for next use.
+        ++m_synchronization.deviceFenceValue;
+    }
+
+    void Device::submit([[maybe_unused]] const AcquiredFrame& acquiredFrame, CommandList& commandList)
+    {
+        ID3D12CommandList* cmdListsArr[] = {commandList.getCommandListNative()};
+        m_graphicsQueue->ExecuteCommandLists(1, cmdListsArr);
+        m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
     }
 
 }

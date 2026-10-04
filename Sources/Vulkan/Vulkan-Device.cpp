@@ -3,6 +3,12 @@
 #include <string>
 #include <Titanium/Log.hpp>
 #include <Vulkan-Instance.hpp>
+#include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan-Header.hpp>
+#include <Vulkan/Vulkan-Surface.hpp>
+#include <Vulkan/Vulkan-SwapChain.hpp>
+#include <Vulkan/Vulkan-CommandList.hpp>
+#include <vulkan/Vulkan-AcquiredFrame.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -15,6 +21,8 @@ namespace TiRHI::Vulkan
             if (std::ranges::find(out, extension) == out.end())
                 out.push_back(extension);
         };
+
+        addUnique(VK_KHR_SWAPCHAIN_EXTENSION_NAME); // requires
 
         for (const Adapter::Features feature : features)
         {
@@ -41,19 +49,23 @@ namespace TiRHI::Vulkan
         return out;
     }
 
-    Device::Device(Instance& instance, const std::vector<Adapter>& adapters,
-                   const std::vector<vk::PhysicalDevice>& devices)
-        : BaseDevice()
+    Device::Device(RHI& rhi)
+        : BaseDevice<Device, RHI>(rhi)
     {
-        choosePhysicalDeviceIndex(instance, adapters, devices);
-        createLogicalDevice(devices[m_adapterIndex], adapters[m_adapterIndex]);
     }
 
-    Device::Device(Instance& instance, const std::vector<Adapter>& adapters,
-                   const std::vector<vk::PhysicalDevice>& devices, size_t index)
-        : BaseDevice()
+    bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                       std::optional<size_t> index)
     {
-        createLogicalDevice(devices[m_adapterIndex], adapters[m_adapterIndex]);
+        const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
+
+        const std::vector<vk::PhysicalDevice> nativePhysicalDevice = rhi.getNativeInstance().enumeratePhysicalDevices();
+#undef min;
+        if (adaptaterIndex >= nativePhysicalDevice.size())
+            return false;
+
+        assert(adapters.size() == nativePhysicalDevice.size());
+        return createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(), adapters[adaptaterIndex]);
     }
 
     void Device::wait()
@@ -61,43 +73,48 @@ namespace TiRHI::Vulkan
         m_device->waitIdle();
     }
 
-    void Device::choosePhysicalDeviceIndex(Instance& instance, const std::vector<Adapter>& adapters,
-                                           const std::vector<vk::PhysicalDevice>& devices)
+    void Device::submit(const AcquiredFrame& acquiredFrame, CommandList& commandList)
     {
-        const size_t index = BaseDevice::getBestAdapter(adapters);
+        vk::SubmitInfo submitInfo{};
 
-        if (index < 0)
-        {
-            RHI_LOG_ERROR(L"Failed to choose a physical device", RhiApi::Vulkan);
-            return;
-        }
+        std::array waitSemaphore = {acquiredFrame.getImageAvailableSemaphore()};
+        std::array waitStage = {static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput)};
+        std::array commandBuffers = {commandList.getcurrentFrameCmb()};
+        std::array signalSemaphore = {acquiredFrame.getRenderFinishSemaphore()};
 
-        const std::wstring name{adapters[index].getName().begin(), adapters[index].getName().end()};
-        RHI_LOG_VERBOSE(std::format(L"PhysicalDevice Choosen: {}", name), RhiApi::Vulkan);
+        // clang-format off
+        submitInfo
+            .setWaitSemaphoreCount(static_cast<uint32_t>(waitSemaphore.size()))
+            .setPWaitSemaphores(waitSemaphore.data())
+            .setWaitDstStageMask(waitStage)
+            .setCommandBuffers(commandBuffers)
+            .setSignalSemaphores(signalSemaphore);
+        // clang-format on
 
-        m_adapterIndex = index;
+        getNativeGraphicQueue().submit(submitInfo, acquiredFrame.getInFlightFence());
     }
 
-    void Device::createLogicalDevice(vk::PhysicalDevice physicalDevice, const Adapter& adapter)
+    bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)
     {
-        const std::vector<vk::QueueFamilyProperties> queueFamilyPropertie = physicalDevice.getQueueFamilyProperties();
+        m_physicalDevice = physicalDevice;
+        m_queueProperties = Private::DeviceQueueProperties(physicalDevice, surface);
+        auto properties = m_queueProperties.getQueuProperties();
 
         size_t allPropertiesQueuIndex = std::numeric_limits<size_t>::max();
 
-        for (size_t i = 0; i < queueFamilyPropertie.size(); i++)
+        for (const auto& queueProp : properties)
         {
-            if (queueFamilyPropertie[i].queueFlags &
-                (vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eTransfer))
+            if (queueProp.graphic && queueProp.compute && queueProp.present && queueProp.transfer)
             {
-                allPropertiesQueuIndex = i;
+                allPropertiesQueuIndex = queueProp.index;
                 break;
             }
         }
 
         if (allPropertiesQueuIndex == std::numeric_limits<size_t>::max())
         {
-            RHI_LOG_ERROR(L"Failed to find an valid queu", RhiApi::Vulkan);
-            return;
+            RHI_LOG_ERROR(L"Failed to find an valid queue", RhiApi::Vulkan);
+            return false;
         }
 
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo = {};
@@ -132,6 +149,13 @@ namespace TiRHI::Vulkan
                                      return std::wstring(name.begin(), name.end());
                                  }()),
                      RhiApi::Vulkan);
+
+        m_graphicQueue = m_device->getQueue(allPropertiesQueuIndex, 0);
+        m_graphicQueueIndex = allPropertiesQueuIndex;
+        m_presentQueue = m_graphicQueue;
+        m_presentQueueIndex = m_graphicQueueIndex;
+
+        return m_graphicQueue && m_presentQueue;
     }
 
 } // namespace TiRHI::Vulkan

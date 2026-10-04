@@ -1,11 +1,6 @@
 #ifndef TITANIUM_DIRECTX12_DEVICE_H
 #define TITANIUM_DIRECTX12_DEVICE_H
 
-#include <d3d12.h>
-#include <dxgidebug.h>
-#include <dxgi1_6.h>
-#include <dxgi1_4.h>
-
 #include <Titanium/RHI-Adapter.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 
@@ -13,35 +8,60 @@
 
 namespace TiRHI::DirectX12
 {
+    class RHI;
     class Factory;
+    class CommandList;
+    class Surface;
+    class AcquiredFrame;
 
-    class Device : public BaseDevice
+    class Device : public BaseDevice<Device, RHI>
     {
     public:
-        Device() = default;
+        Device() = delete;
         ~Device();
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) noexcept = default;
         Device& operator=(Device&&) noexcept = default;
-        Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-               const std::vector<Adapter>& adapters);
-        Device(Factory& factory, const std::vector<MComPtr<IDXGIAdapter1>>& dxAdapters,
-               const std::vector<Adapter>& adapters, size_t index);
+        Device(RHI& rhi);
+
+        bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                   std::optional<size_t> index = {});
 
         void wait();
 
-        MComPtr<ID3D12Device>& getNativeHandle()
+        ID3D12Device* getNativeDevice()
         {
-            return m_device;
+            return m_device.Get();
         }
+
+        MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue()
+        {
+            return m_graphicsQueue;
+        }
+
+        void submit(const AcquiredFrame& AcquiredFrame, CommandList& commandList);
 
     private:
         MComPtr<ID3D12Device> m_device;
 
         DWORD VLayerCallbackCookie = 0;
 
-        void create(MComPtr<IDXGIFactory6>& factory, const MComPtr<IDXGIAdapter1>& adapter1);
+        MComPtr<ID3D12CommandQueue> m_graphicsQueue;
+
+        struct Synchronization
+        {
+            HANDLE deviceFenceEvent;
+            MComPtr<ID3D12Fence> deviceFence;
+            uint64_t deviceFenceValue = 1u;
+        } m_synchronization;
+
+        bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
+
+        // handle one queu for now
+        bool createUniqueQueue();
+
+        bool createSynchronisation();
     };
 } // namespace TiRHI::DirectX12
 

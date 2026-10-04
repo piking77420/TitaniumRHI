@@ -46,6 +46,8 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiApi api, TiRHI::RhiMes
         case TiRHI::RhiMessageSeverity::Fatal:
             return AnsiMagenta;
         }
+
+        return AnsiReset;
     };
 
     std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}]\n", TiRHI::toWstring(api), getColor(), TiRHI::toWstring(severity),
@@ -59,7 +61,7 @@ TEST(DummyTest, Test)
 {
     TiRHI::RhiCreate create;
 
-    TiRHI::RHI rhi({.logCallback = debugCallBack});
+    TiRHI::RHI rhi({.frameInFlight = 2, .logCallback = debugCallBack});
 
     EXPECT_FALSE(rhi.getAdapters().empty());
 
@@ -83,11 +85,6 @@ TEST(DummyTest, Test)
             std::cout << '\n';
         }
     }
-
-    TiRHI::Device device = rhi.createDevice();
-    EXPECT_TRUE(device.getNativeHandle());
-
-    std::cout << "Selected Adapter " << device.getSourceAdapter(rhi).getName() << '\n';
 
     EXPECT_FALSE(error);
 }

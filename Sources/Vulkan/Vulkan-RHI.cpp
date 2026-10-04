@@ -4,29 +4,35 @@
 
 namespace TiRHI::Vulkan
 {
+    [[nodiscard]] bool supportExtension(const std::vector<vk::ExtensionProperties>& extensions,
+                                        const char* extensionName)
+    {
+        for (const auto& extension : extensions)
+        {
+            if (std::strcmp(extension.extensionName.data(), extensionName) == 0)
+                return true;
+        }
+
+        return false;
+    }
+
     std::vector<Adapter::Features> getAdapterFeatures(const std::vector<vk::ExtensionProperties>& extensions)
     {
         std::vector<Adapter::Features> result;
 
-        const auto hasExtension = [&](const char* name)
-        {
-            return std::ranges::any_of(extensions, [name](const vk::ExtensionProperties& extension)
-                                       { return std::strcmp(extension.extensionName.data(), name) == 0; });
-        };
+        const bool accelerationStructure = supportExtension(extensions, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
 
-        const bool accelerationStructure = hasExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-
-        if (accelerationStructure && hasExtension(VK_KHR_RAY_QUERY_EXTENSION_NAME))
+        if (accelerationStructure && supportExtension(extensions, VK_KHR_RAY_QUERY_EXTENSION_NAME))
         {
             result.push_back(Adapter::Features::RayQuery);
         }
 
-        if (accelerationStructure && hasExtension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
+        if (accelerationStructure && supportExtension(extensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
         {
             result.push_back(Adapter::Features::RayTracingPipeline);
         }
 
-        if (hasExtension(VK_EXT_MESH_SHADER_EXTENSION_NAME))
+        if (supportExtension(extensions, VK_EXT_MESH_SHADER_EXTENSION_NAME))
         {
             result.push_back(Adapter::Features::MeshShader);
         }
@@ -93,43 +99,40 @@ namespace TiRHI::Vulkan
     RHI::RHI(const TiRHI::RhiCreate& create)
         : TiRHI::BaseRHI<Vulkan::RHI>(create)
     {
-        queryPhysicalDeviceAvailable();
+        enumerateAvailableAdatper();
     }
 
-    Device RHI::createDevice()
+    Device RHI::newDevice()
     {
-        return Device(m_instance, m_adapters, m_physicalDevices);
+        return Device(*this);
     }
 
-    Device RHI::createDevice(size_t adapterIndex)
+    std::vector<vk::PhysicalDevice> RHI::getValidPhysicalDevices()
     {
-        assert(adapterIndex >= 0 && adapterIndex < m_adapters.size());
+        std::vector<vk::PhysicalDevice> physicalDevices = m_instance.getInstance().enumeratePhysicalDevices();
+        for (auto it = physicalDevices.begin(); it != physicalDevices.end();)
+        {
+            if (!isPhysicalDeviceValid(*it))
+                it = physicalDevices.erase(it);
+            else
+                ++it;
+        }
 
-        return Device(m_instance, m_adapters, m_physicalDevices, adapterIndex);
+        return physicalDevices;
     }
 
-    void RHI::queryPhysicalDeviceAvailable()
+    void RHI::enumerateAvailableAdatper()
     {
         m_adapters.clear();
 
-        m_physicalDevices = m_instance.getInstance().enumeratePhysicalDevices();
-        m_adapters.reserve(m_physicalDevices.size());
+        std::vector<vk::PhysicalDevice> physicalDevices = getValidPhysicalDevices();
+        m_adapters.reserve(physicalDevices.size());
 
-        for (size_t i = 0; i < m_physicalDevices.size(); i++)
+        for (size_t i = 0; i < physicalDevices.size(); i++)
         {
-            const vk::PhysicalDevice& physicalDevice = m_physicalDevices[i];
+            const vk::PhysicalDevice& physicalDevice = physicalDevices[i];
             const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
                 physicalDevice.enumerateDeviceExtensionProperties();
-
-            const bool supportsSwapchain = std::ranges::any_of(
-                deviceExtensionProperties, [](const vk::ExtensionProperties& extension)
-                { return std::strcmp(extension.extensionName.data(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0; });
-
-            if (!supportsSwapchain)
-            {
-                m_physicalDevices.erase(m_physicalDevices.begin() + i);
-                continue; // support swapchain is mandatory
-            }
 
             const vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
             const std::string_view name{properties.deviceName.data()};
@@ -140,11 +143,23 @@ namespace TiRHI::Vulkan
                                             getDeviceProperty(physicalDevice), properties.vendorID));
         }
 
-        assert(m_physicalDevices.size() == m_adapters.size());
-        if (m_physicalDevices.size() != m_adapters.size())
+        assert(physicalDevices.size() == m_adapters.size());
+        if (physicalDevices.size() != m_adapters.size())
         {
             RHI_LOG_ERROR(L"Something went wrong when enumerate adapter", RhiApi::Vulkan);
         }
+    }
+
+    bool RHI::isPhysicalDeviceValid(vk::PhysicalDevice device)
+    {
+        // should be the clean space for current rhi
+        // for exemple check if support compute if compute is mandatory
+
+        const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
+            device.enumerateDeviceExtensionProperties();
+
+        if (!supportExtension(deviceExtensionProperties, VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+            return false;
     }
 
 } // namespace TiRHI::Vulkan

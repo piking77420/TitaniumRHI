@@ -3,6 +3,12 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/DeviceQueueFamily.cpp
+        Private/DeviceQueueFamily.hpp
+        Vulkan-AcquiredFrame.cpp
+        Vulkan-AcquiredFrame.hpp
+        Vulkan-CommandList.cpp
+        Vulkan-CommandList.hpp
         Vulkan-Device.cpp
         Vulkan-Device.hpp
         Vulkan-Functions.hpp
@@ -10,6 +16,10 @@ target_sources(
         Vulkan-Instance.hpp
         Vulkan-RHI.cpp
         Vulkan-RHI.hpp
+        Vulkan-Surface.cpp
+        Vulkan-Surface.hpp
+        Vulkan-SwapChain.cpp
+        Vulkan-SwapChain.hpp
 )
 
 target_include_directories(

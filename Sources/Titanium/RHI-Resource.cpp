@@ -1,4 +1,4 @@
-#include <Titanium/RHI-BaseDevice.hpp>
+#include <Titanium/RHI-Resource.hpp>
 
 namespace TiRHI
 {
