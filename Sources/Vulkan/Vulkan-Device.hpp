@@ -33,7 +33,19 @@ namespace TiRHI::Vulkan
 
         void wait();
 
-        void submit(const AcquiredFrame& acquiredFrame, CommandList& commandList);
+        void submit(std::span<const AcquiredFrame> acquiredFrame, std::span<CommandList*> commandList);
+
+        void beginFrame();
+
+        bool isValid() const
+        {
+            return m_device.get() != VK_NULL_HANDLE;
+        }
+
+        bool operator()() const
+        {
+            return isValid();
+        }
 
         vk::Device getNativeDevice() noexcept
         {
@@ -70,6 +82,8 @@ namespace TiRHI::Vulkan
             return m_physicalDevice;
         }
 
+        vk::Fence getNativeInFlightFence() const;
+
     private:
         vk::UniqueDevice m_device;
 
@@ -85,7 +99,16 @@ namespace TiRHI::Vulkan
 
         uint32_t m_presentQueueIndex = 0;
 
+        struct Synchronisation
+        {
+            vk::UniqueFence inFlightFence;
+        };
+
+        std::vector<Synchronisation> m_synchronisations;
+
         bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter);
+
+        bool createSynchronisationPrimitives();
     };
 
 } // namespace TiRHI::Vulkan

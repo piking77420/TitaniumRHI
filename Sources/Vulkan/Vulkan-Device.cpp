@@ -65,7 +65,9 @@ namespace TiRHI::Vulkan
             return false;
 
         assert(adapters.size() == nativePhysicalDevice.size());
-        return createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(), adapters[adaptaterIndex]);
+        return createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(),
+                            adapters[adaptaterIndex]) &&
+               createSynchronisationPrimitives();
     }
 
     void Device::wait()
@@ -73,25 +75,56 @@ namespace TiRHI::Vulkan
         m_device->waitIdle();
     }
 
-    void Device::submit(const AcquiredFrame& acquiredFrame, CommandList& commandList)
+    void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> commandLists)
     {
+        if (acquiredFrames.size() != commandLists.size())
+        {
+            RHI_LOG_ERROR(L"acquiredFrames and command list are not the same size", RhiApi::Vulkan);
+        }
+
+        const uint32_t minSubmit =
+            std::min(static_cast<uint32_t>(acquiredFrames.size()), static_cast<uint32_t>(commandLists.size()));
+
         vk::SubmitInfo submitInfo{};
 
-        std::array waitSemaphore = {acquiredFrame.getImageAvailableSemaphore()};
-        std::array waitStage = {static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput)};
-        std::array commandBuffers = {commandList.getcurrentFrameCmb()};
-        std::array signalSemaphore = {acquiredFrame.getRenderFinishSemaphore()};
+        std::vector<vk::Semaphore> waitSemaphores;
+        waitSemaphores.reserve(minSubmit);
 
+        std::vector<vk::PipelineStageFlags> waitStages;
+        waitStages.reserve(minSubmit);
+
+        std::vector<vk::CommandBuffer> commandBuffers;
+        commandBuffers.reserve(minSubmit);
+
+        std::vector<vk::Semaphore> signalSemaphores;
+        signalSemaphores.reserve(minSubmit);
+
+        for (size_t i = 0; i < minSubmit; i++)
+        {
+            const auto& ac = acquiredFrames[i];
+            waitSemaphores.emplace_back(ac.getImageAvailableSemaphore());
+            // TODO track command list last output
+            waitStages.emplace_back(
+                static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput));
+            commandBuffers.emplace_back(commandLists[i] ? commandLists[i]->getcurrentFrameCmb() : VK_NULL_HANDLE);
+            signalSemaphores.emplace_back(ac.getRenderFinishSemaphore());
+        }
         // clang-format off
         submitInfo
-            .setWaitSemaphoreCount(static_cast<uint32_t>(waitSemaphore.size()))
-            .setPWaitSemaphores(waitSemaphore.data())
-            .setWaitDstStageMask(waitStage)
+            .setWaitSemaphores(waitSemaphores)
+            .setWaitDstStageMask(waitStages)
             .setCommandBuffers(commandBuffers)
-            .setSignalSemaphores(signalSemaphore);
+            .setSignalSemaphores(signalSemaphores);
         // clang-format on
 
-        getNativeGraphicQueue().submit(submitInfo, acquiredFrame.getInFlightFence());
+        getNativeGraphicQueue().submit(submitInfo, getNativeInFlightFence());
+    }
+
+    void Device::beginFrame()
+    {
+        std::array fences = {getNativeInFlightFence()};
+        m_device->waitForFences(fences, 1, std::numeric_limits<uint64_t>::max());
+        m_device->resetFences(fences);
     }
 
     bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)
@@ -156,6 +189,28 @@ namespace TiRHI::Vulkan
         m_presentQueueIndex = m_graphicQueueIndex;
 
         return m_graphicQueue && m_presentQueue;
+    }
+
+    bool Device::createSynchronisationPrimitives()
+    {
+        m_synchronisations.resize(getRHI().getFrameInFlight());
+        vk::FenceCreateInfo fenceCreateInfo{};
+        fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+
+        bool isOk = true;
+        for (size_t i = 0; i < m_synchronisations.size(); i++)
+        {
+            Synchronisation& s = m_synchronisations[i];
+            s.inFlightFence = m_device->createFenceUnique(fenceCreateInfo);
+            isOk &= s.inFlightFence.get() != VK_NULL_HANDLE;
+        }
+
+        return isOk;
+    }
+
+    vk::Fence Device::getNativeInFlightFence() const
+    {
+        return *m_synchronisations[getRHI().getCurrentFrame()].inFlightFence;
     }
 
 } // namespace TiRHI::Vulkan

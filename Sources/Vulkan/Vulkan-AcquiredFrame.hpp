@@ -38,17 +38,6 @@ namespace TiRHI::Vulkan
             return *this;
         }
 
-        vk::Fence getInFlightFence() const
-        {
-            return m_inFlightFence;
-        }
-
-        AcquiredFrame& setInFlightFence(vk::Fence fence)
-        {
-            m_inFlightFence = fence;
-            return *this;
-        }
-
         uint32_t getSwapChainImageIndex() const
         {
             return m_swapChainImageIndex;
@@ -69,8 +58,6 @@ namespace TiRHI::Vulkan
         vk::Semaphore m_renderFinishSemaphore;
 
         vk::Semaphore m_imageAvailabe;
-
-        vk::Fence m_inFlightFence;
 
         uint32_t m_swapChainImageIndex = 0;
     };
