@@ -37,17 +37,59 @@ endif()
 
 add_subdirectory(Sources/Titanium)
 
+if(WIN32)
+    target_compile_definitions(TitaniumRHI PRIVATE
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN)
+endif()
+
 ## Choose wich backend
 ## TODO add guard for os
 if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
-    message(STATUS "RHI Backend: Vulkan")
     target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_VULKAN=1)
+    message(STATUS "RHI Backend: Vulkan")
+
+if(WIN32)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+
+    target_compile_definitions(TitaniumRHI PUBLIC
+        VK_USE_PLATFORM_WIN32_KHR
+    )
+
+elseif(ANDROID)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_ANDROID_KHR)
+
+    target_compile_definitions(TitaniumRHI PUBLIC
+        VK_USE_PLATFORM_ANDROID_KHR
+    )
+
+elseif(APPLE)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_METAL_EXT)
+
+    target_compile_definitions(TitaniumRHI PUBLIC
+        VK_USE_PLATFORM_METAL_EXT
+    )
+
+elseif(UNIX)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WAYLAND_KHR)
+
+    target_compile_definitions(TitaniumRHI PUBLIC
+        VK_USE_PLATFORM_WAYLAND_KHR
+    )
+endif()
+
+    target_compile_definitions(TitaniumRHI PUBLIC
+        VK_NO_PROTOTYPES
+    )
+
+    find_package(Vulkan REQUIRED COMPONENTS volk)
+    target_link_libraries(TitaniumRHI
+        PUBLIC
+            Vulkan::volk
+    )
+
     add_subdirectory(ThirdParty/VulkanMemoryAllocator)
-    add_subdirectory(ThirdParty/Vulkan-Headers)
-
-    set(VMA_INCLUDE "${CMAKE_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include")
     add_subdirectory(Sources/Vulkan)
-
 elseif(TITANIUM_RHI_BACKEND STREQUAL "DirectX12")
     message(STATUS "RHI Backend: DirectX12")
     target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_DIRECT_X12=1)

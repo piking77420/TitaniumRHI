@@ -2,11 +2,10 @@
 #define TITANIUM_VULKAN_DEVICE_H
 
 #include <vector>
-
+#include <vulkan/vulkan.hpp>
+#include <Volk/volk.h>
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Titanium/RHI-Adapter.hpp>
-
-#include <vulkan/vulkan.hpp>
 #include <Private/DeviceQueueFamily.hpp>
 
 namespace TiRHI::Vulkan
@@ -84,6 +83,11 @@ namespace TiRHI::Vulkan
 
         vk::Fence getNativeInFlightFence() const;
 
+        const VolkDeviceTable& getVolkTable() const
+        {
+            return m_dispatch;
+        }
+
     private:
         vk::UniqueDevice m_device;
 
@@ -106,9 +110,13 @@ namespace TiRHI::Vulkan
 
         std::vector<Synchronisation> m_synchronisations;
 
+        VolkDeviceTable m_dispatch{};
+
         bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter);
 
         bool createSynchronisationPrimitives();
+
+        bool initVolkTable();
     };
 
 } // namespace TiRHI::Vulkan

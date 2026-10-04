@@ -6,6 +6,7 @@
 #include <Titanium/Log.hpp>
 #include <Vulkan-RHI.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Volk/volk.h>
 
 #ifdef _WIN32
 

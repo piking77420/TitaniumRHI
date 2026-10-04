@@ -67,12 +67,12 @@ namespace TiRHI::Vulkan
         assert(adapters.size() == nativePhysicalDevice.size());
         return createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(),
                             adapters[adaptaterIndex]) &&
-               createSynchronisationPrimitives();
+               initVolkTable() && createSynchronisationPrimitives();
     }
 
     void Device::wait()
     {
-        m_device->waitIdle();
+        m_dispatch.vkDeviceWaitIdle(static_cast<VkDevice>(m_device.get()));
     }
 
     void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> commandLists)
@@ -123,8 +123,12 @@ namespace TiRHI::Vulkan
     void Device::beginFrame()
     {
         std::array fences = {getNativeInFlightFence()};
-        m_device->waitForFences(fences, 1, std::numeric_limits<uint64_t>::max());
-        m_device->resetFences(fences);
+        const VkFence* vkFences = reinterpret_cast<const VkFence*>(fences.data());
+        const uint32_t fencesCount = static_cast<uint32_t>(fences.size());
+
+        m_dispatch.vkWaitForFences(m_device.get(), fencesCount, vkFences, vk::True,
+                                   std::numeric_limits<uint64_t>::max());
+        m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
     }
 
     bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)
@@ -211,6 +215,16 @@ namespace TiRHI::Vulkan
     vk::Fence Device::getNativeInFlightFence() const
     {
         return *m_synchronisations[getRHI().getCurrentFrame()].inFlightFence;
+    }
+
+    bool Device::initVolkTable()
+    {
+        if (!m_device)
+            return false;
+
+        volkLoadDeviceTable(&m_dispatch, m_device.get());
+
+        return true;
     }
 
 } // namespace TiRHI::Vulkan

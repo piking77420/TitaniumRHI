@@ -11,7 +11,6 @@ target_sources(
         Vulkan-CommandList.hpp
         Vulkan-Device.cpp
         Vulkan-Device.hpp
-        Vulkan-Functions.hpp
         Vulkan-Instance.cpp
         Vulkan-Instance.hpp
         Vulkan-RHI.cpp
