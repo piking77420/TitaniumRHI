@@ -13,7 +13,7 @@ namespace TiRHI::Vulkan
     {
     public:
         Surface() = delete;
-        ~Surface() = default;
+        ~Surface();
         Surface(RHI& rhi)
             : BaseSurface(rhi)
         {
@@ -24,7 +24,7 @@ namespace TiRHI::Vulkan
         vk::SurfaceKHR getSurfaceNative() const;
 
     private:
-        vk::UniqueSurfaceKHR m_surface;
+        vk::SurfaceKHR m_surface = VK_NULL_HANDLE;
     };
 } // namespace TiRHI::Vulkan
 

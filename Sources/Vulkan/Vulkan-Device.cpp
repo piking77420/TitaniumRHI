@@ -149,12 +149,12 @@ namespace TiRHI::Vulkan
                                  }()),
                      RhiApi::Vulkan);
 
-        m_graphicQueue.reset(m_device->getQueue(allPropertiesQueuIndex, 0));
+        m_graphicQueue = m_device->getQueue(allPropertiesQueuIndex, 0);
         m_graphicQueueIndex = allPropertiesQueuIndex;
-        m_presentQueue = m_graphicQueue.get();
+        m_presentQueue = m_graphicQueue;
         m_presentQueueIndex = m_graphicQueueIndex;
 
-        return m_graphicQueue.get() && m_presentQueue;
+        return m_graphicQueue && m_presentQueue;
     }
 
 } // namespace TiRHI::Vulkan

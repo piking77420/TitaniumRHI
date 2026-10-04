@@ -24,6 +24,12 @@
 
 namespace TiRHI::Vulkan
 {
+    Surface::~Surface()
+    {
+        if (m_surface)
+            getRHI().getNativeInstance().destroySurfaceKHR(m_surface);
+    }
+
     bool Surface::build(WindowHandle windowHandle)
     {
         if (!windowHandle)
@@ -35,6 +41,7 @@ namespace TiRHI::Vulkan
         VkSurfaceKHR surface;
         bool isSurfaceOk = false;
 #ifdef _WIN32
+
         VkWin32SurfaceCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         createInfo.hwnd = static_cast<decltype(VkWin32SurfaceCreateInfoKHR::hwnd)>(windowHandle);
@@ -45,14 +52,14 @@ namespace TiRHI::Vulkan
 
 #endif // _WIN32
 
-        m_surface.reset(surface);
+        m_surface = surface;
 
         return isSurfaceOk;
     }
 
     vk::SurfaceKHR Surface::getSurfaceNative() const
     {
-        return m_surface.get();
+        return m_surface;
     }
 
 } // namespace TiRHI::Vulkan

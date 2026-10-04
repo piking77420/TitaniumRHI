@@ -47,7 +47,7 @@ namespace TiRHI::Vulkan
 
         vk::Queue getNativeGraphicQueue() const
         {
-            return m_graphicQueue.get();
+            return m_graphicQueue;
         }
 
         uint32_t getNativeGraphicQueueIndex() const
@@ -77,7 +77,7 @@ namespace TiRHI::Vulkan
 
         Private::DeviceQueueProperties m_queueProperties;
 
-        vk::UniqueQueue m_graphicQueue;
+        vk::Queue m_graphicQueue;
 
         uint32_t m_graphicQueueIndex = 0;
 

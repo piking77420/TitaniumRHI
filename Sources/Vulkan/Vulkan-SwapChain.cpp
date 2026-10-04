@@ -14,8 +14,7 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
-        return recreateSwapChain(device, surface) && createFrameBuffer(device.getNativeDevice()) &&
-               createSyncObjects(device.getNativeDevice());
+        return recreateSwapChain(device, surface) && createSyncObjects(device.getNativeDevice());
     }
 
     bool SwapChain::beginFrame(Device& device)
@@ -133,6 +132,14 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
     {
+        /// keep previous one
+        vk::UniqueSwapchainKHR oldSwapchain = std::move(m_swapchain);
+
+        // Destroy resources referencing old swapchain images FIRST
+        m_frameBuffers.clear();
+        m_imageViews.clear();
+        m_images.clear();
+
         vk::Device vkDevice = device.getNativeDevice();
         vk::PhysicalDevice physicalDevice = device.getNativePhysicalDevice();
         vk::SurfaceKHR vkSurface = surface.getSurfaceNative();
@@ -156,8 +163,9 @@ namespace TiRHI::Vulkan
         }
 
         vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(device, surface);
+        createInfo.setOldSwapchain(oldSwapchain ? oldSwapchain.get() : VK_NULL_HANDLE);
 
-        m_swapchain.reset(vkDevice.createSwapchainKHR(createInfo));
+        m_swapchain = vkDevice.createSwapchainKHRUnique(createInfo);
 
         if (!m_swapchain)
         {
@@ -182,7 +190,7 @@ namespace TiRHI::Vulkan
             m_imageViews.push_back(vkDevice.createImageViewUnique(viewInfo));
         }
 
-        return true;
+        return createFrameBuffer(vkDevice);
     }
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
@@ -202,7 +210,7 @@ namespace TiRHI::Vulkan
 
     vk::Framebuffer SwapChain::getNativeFrameBuffer() const
     {
-        return m_frameBuffers[getRHI().getCurrentFrame()].get();
+        return m_frameBuffers[m_imageIndex].get();
     }
 
     vk::SurfaceFormatKHR SwapChain::getSurfaceFormat() const noexcept
@@ -285,9 +293,9 @@ namespace TiRHI::Vulkan
         for (size_t i = 0; i < m_synchronisations.size(); i++)
         {
             Synchronisation& s = m_synchronisations[i];
-            s.imageAvailableSemaphore.reset(device.createSemaphore(semaphoreCreateInfo));
-            s.renderFinishedSemaphore.reset(device.createSemaphore(semaphoreCreateInfo));
-            s.inFlightFence.reset(device.createFence(fenceCreateInfo));
+            s.imageAvailableSemaphore = device.createSemaphoreUnique(semaphoreCreateInfo);
+            s.renderFinishedSemaphore = device.createSemaphoreUnique(semaphoreCreateInfo);
+            s.inFlightFence = device.createFenceUnique(fenceCreateInfo);
             isOK = s.imageAvailableSemaphore && s.renderFinishedSemaphore && s.inFlightFence;
         }
 
