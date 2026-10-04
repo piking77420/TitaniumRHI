@@ -14,6 +14,7 @@ namespace TiRHI
     using Surface = Vulkan::Surface;
     using Device = Vulkan::Device;
     using SwapChain = Vulkan::SwapChain;
+    using AcquiredFrame = Vulkan::AcquiredFrame;
     using CommandList = Vulkan::CommandList;
 }
 
@@ -23,6 +24,7 @@ namespace TiRHI
 #include <DirectX12/DirectX12-Surface.hpp>
 #include <DirectX12/DirectX12-SwapChain.hpp>
 #include <DirectX12/DirectX12-CommandList.hpp>
+#include <DirectX12/DirectX12-AcquireFrame.hpp>
 
 namespace TiRHI
 {
@@ -30,6 +32,7 @@ namespace TiRHI
     using Surface = DirectX12::Surface;
     using Device = DirectX12::Device;
     using SwapChain = DirectX12::SwapChain;
+    using AcquiredFrame = DirectX12::AcquiredFrame;
     using CommandList = DirectX12::CommandList;
 }
 
@@ -63,12 +66,13 @@ namespace TiRHI::Contract
     static_assert(SurfaceContract<Surface>);
     // Device
     template<typename T>
-    concept DeviceContract = requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
-                                      std::optional<size_t> index, SwapChain& swapChain, CommandList& cmdList) {
-        { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
-        { device.wait() } -> std::same_as<void>;
-        { device.submit(swapChain, cmdList) } -> std::same_as<void>;
-    };
+    concept DeviceContract =
+        requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                 std::optional<size_t> index, const AcquiredFrame& acquiredFrame, CommandList& cmdList) {
+            { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
+            { device.wait() } -> std::same_as<void>;
+            { device.submit(acquiredFrame, cmdList) } -> std::same_as<void>;
+        };
 
     static_assert(DeviceContract<Device>);
 
@@ -76,8 +80,8 @@ namespace TiRHI::Contract
     template<typename T>
     concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
-        { swapChain.beginFrame(device) } -> std::same_as<bool>;
-        { swapChain.present(device) } -> std::same_as<bool>;
+        { swapChain.beginFrame() } -> std::same_as<AcquiredFrame>;
+        { swapChain.present() } -> std::same_as<bool>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);

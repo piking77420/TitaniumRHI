@@ -14,32 +14,57 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
+        m_device = device.getNativeDevice();
+        if (m_device == VK_NULL_HANDLE)
+        {
+            RHI_LOG_ERROR(L"Failed to retreive vkDevice ", RhiApi::Vulkan);
+            return false;
+        }
+
+        m_presentQueue = device.getNativePresentQueue();
+        if (m_presentQueue == VK_NULL_HANDLE)
+        {
+            RHI_LOG_ERROR(L"Failed to retreive device present queue", RhiApi::Vulkan);
+            return false;
+        }
+
         return recreateSwapChain(device, surface) && createSyncObjects(device.getNativeDevice());
     }
 
-    bool SwapChain::beginFrame(Device& device)
+    AcquiredFrame SwapChain::beginFrame()
     {
-        vk::Device vkDevice = device.getNativeDevice();
+        if (m_device == VK_NULL_HANDLE)
+            return AcquiredFrame(false);
+
         {
-            std::array fences = {getNativeImageInFlightFence()};
-            vkDevice.waitForFences(fences, 1, std::numeric_limits<uint64_t>::max());
-            vkDevice.resetFences(fences);
+            std::array fences = {getNativeInFlightFence()};
+            m_device.waitForFences(fences, 1, std::numeric_limits<uint64_t>::max());
+            m_device.resetFences(fences);
         }
 
         {
-            const vk::ResultValue<uint32_t> result = vkDevice.acquireNextImageKHR(
+            const vk::ResultValue<uint32_t> result = m_device.acquireNextImageKHR(
                 m_swapchain.get(), std::numeric_limits<uint64_t>::max(), getNativeImageAvailableSemaphore());
 
             VulkanCheckErrorStatus(result.result);
             m_imageIndex = result.value;
             if (result.result != vk::Result::eSuccess)
-                return false;
+                return AcquiredFrame(false);
         }
 
-        return true;
+        AcquiredFrame acquiredFrame(true);
+
+        // clang-format off
+        acquiredFrame
+            .setImageAvailableSemaphore(getNativeImageAvailableSemaphore())
+            .setInFlightFence(getNativeInFlightFence())
+            .setRenderFinishSemaphore(getNativeRenderFinishedSemaphore())
+            .setSwapChainImageIndex(m_imageIndex);
+        // clang-format on
+        return acquiredFrame;
     }
 
-    bool SwapChain::present(Device& device)
+    bool SwapChain::present()
     {
         std::array waitSemaphore = {getNativeRenderFinishedSemaphore()};
         std::array swapChains = {m_swapchain.get()};
@@ -54,7 +79,7 @@ namespace TiRHI::Vulkan
             .setPResults(nullptr); // opt
         // clang-format on
 
-        const vk::Result result = device.getNativePresentQueue().presentKHR(presentInfo);
+        const vk::Result result = m_presentQueue.presentKHR(presentInfo);
         VulkanCheckErrorStatus(result);
 
         return result == vk::Result::eSuccess;
@@ -203,7 +228,7 @@ namespace TiRHI::Vulkan
         return m_synchronisations[getRHI().getCurrentFrame()].renderFinishedSemaphore.get();
     }
 
-    vk::Fence SwapChain::getNativeImageInFlightFence() const
+    vk::Fence SwapChain::getNativeInFlightFence() const
     {
         return m_synchronisations[getRHI().getCurrentFrame()].inFlightFence.get();
     }

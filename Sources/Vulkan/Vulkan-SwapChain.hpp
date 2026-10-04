@@ -3,6 +3,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseSwapChain.hpp>
+#include <Vulkan/Vulkan-AcquiredFrame.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -20,9 +21,9 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device, Surface& surface);
 
-        bool beginFrame(Device& device);
+        AcquiredFrame beginFrame();
 
-        bool present(Device& device);
+        bool present();
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
@@ -35,7 +36,7 @@ namespace TiRHI::Vulkan
 
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
 
-        vk::Fence getNativeImageInFlightFence() const;
+        vk::Fence getNativeInFlightFence() const;
 
         // TODO DELTE
         vk::RenderPass getNativeRenderPass() const
@@ -79,6 +80,10 @@ namespace TiRHI::Vulkan
         std::vector<Synchronisation> m_synchronisations;
 
         uint32_t m_imageIndex = 0;
+
+        vk::Queue m_presentQueue = VK_NULL_HANDLE;
+
+        vk::Device m_device = VK_NULL_HANDLE;
 
         vk::SurfaceFormatKHR getSurfaceFormat() const noexcept;
 

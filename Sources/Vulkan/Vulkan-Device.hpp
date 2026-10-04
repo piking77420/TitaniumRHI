@@ -14,8 +14,8 @@ namespace TiRHI::Vulkan
     class Instance;
     class RHI;
     class Surface;
-    class SwapChain;
     class CommandList;
+    class AcquiredFrame;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -33,7 +33,7 @@ namespace TiRHI::Vulkan
 
         void wait();
 
-        void submit(SwapChain& swapChain, CommandList& commandList);
+        void submit(const AcquiredFrame& acquiredFrame, CommandList& commandList);
 
         vk::Device getNativeDevice() noexcept
         {

@@ -12,7 +12,7 @@ namespace TiRHI::DirectX12
     class Factory;
     class CommandList;
     class Surface;
-    class SwapChain;
+    class AcquiredFrame;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -35,12 +35,12 @@ namespace TiRHI::DirectX12
             return m_device.Get();
         }
 
-        MComPtr<ID3D12CommandQueue>& getGraphicQueue()
+        MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue()
         {
             return m_graphicsQueue;
         }
 
-        void submit(SwapChain& swapChain, CommandList& commandList);
+        void submit(const AcquiredFrame& AcquiredFrame, CommandList& commandList);
 
     private:
         MComPtr<ID3D12Device> m_device;

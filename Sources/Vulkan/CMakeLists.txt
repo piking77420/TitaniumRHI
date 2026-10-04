@@ -5,6 +5,8 @@ target_sources(
     PRIVATE
         Private/DeviceQueueFamily.cpp
         Private/DeviceQueueFamily.hpp
+        Vulkan-AcquiredFrame.cpp
+        Vulkan-AcquiredFrame.hpp
         Vulkan-CommandList.cpp
         Vulkan-CommandList.hpp
         Vulkan-Device.cpp

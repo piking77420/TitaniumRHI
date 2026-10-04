@@ -6,6 +6,7 @@
 #include <DirectX12/DirectX12-RHI.hpp>
 #include <DirectX12/DirectX12-Utils.hpp>
 #include <DirectX12/DirectX12-CommandList.hpp>
+#include <DirectX12/DirectX12-AcquireFrame.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -267,7 +268,7 @@ namespace TiRHI::DirectX12
         ++m_synchronization.deviceFenceValue;
     }
 
-    void Device::submit([[maybe_unused]] SwapChain& swapChain, CommandList& commandList)
+    void Device::submit([[maybe_unused]] const AcquiredFrame& acquiredFrame, CommandList& commandList)
     {
         ID3D12CommandList* cmdListsArr[] = {commandList.getCommandListNative()};
         m_graphicsQueue->ExecuteCommandLists(1, cmdListsArr);

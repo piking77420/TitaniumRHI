@@ -7,6 +7,7 @@
 #include <dxgi1_4.h>
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
+#include <DirectX12/DirectX12-AcquireFrame.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -23,9 +24,9 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device, Surface& surface);
 
-        bool beginFrame(Device& device);
+        AcquiredFrame beginFrame();
 
-        bool present(Device& device);
+        bool present();
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
@@ -56,6 +57,8 @@ namespace TiRHI::DirectX12
             HANDLE swapchainFenceEvent = nullptr;
             MComPtr<ID3D12Fence> swapchainFence;
         } m_synchronisation;
+
+        ID3D12CommandQueue* m_presentQueue;
 
         bool createSwapChain(Device& device, Surface& surface);
 

@@ -8,6 +8,7 @@
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Vulkan-SwapChain.hpp>
 #include <Vulkan/Vulkan-CommandList.hpp>
+#include <vulkan/Vulkan-AcquiredFrame.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -72,14 +73,14 @@ namespace TiRHI::Vulkan
         m_device->waitIdle();
     }
 
-    void Device::submit(SwapChain& swapChain, CommandList& commandList)
+    void Device::submit(const AcquiredFrame& acquiredFrame, CommandList& commandList)
     {
         vk::SubmitInfo submitInfo{};
 
-        std::array waitSemaphore = {swapChain.getNativeImageAvailableSemaphore()};
+        std::array waitSemaphore = {acquiredFrame.getImageAvailableSemaphore()};
         std::array waitStage = {static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput)};
         std::array commandBuffers = {commandList.getcurrentFrameCmb()};
-        std::array signalSemaphore = {swapChain.getNativeRenderFinishedSemaphore()};
+        std::array signalSemaphore = {acquiredFrame.getRenderFinishSemaphore()};
 
         // clang-format off
         submitInfo
@@ -90,7 +91,7 @@ namespace TiRHI::Vulkan
             .setSignalSemaphores(signalSemaphore);
         // clang-format on
 
-        getNativeGraphicQueue().submit(submitInfo, swapChain.getNativeImageInFlightFence());
+        getNativeGraphicQueue().submit(submitInfo, acquiredFrame.getInFlightFence());
     }
 
     bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)

@@ -6,6 +6,8 @@ target_sources(
     TitaniumRHIInterface
     INTERFACE
         Log.hpp
+        RHI-BaseAcquiredFrame.cpp
+        RHI-BaseAcquiredFrame.hpp
         RHI-Adapter.cpp
         RHI-Adapter.hpp
         RHI-BaseDevice.cpp

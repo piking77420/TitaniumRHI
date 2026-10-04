@@ -24,10 +24,18 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
+        m_presentQueue = device.getNativeGraphicQueue().Get();
+
+        if (!m_presentQueue)
+        {
+            RHI_LOG_ERROR(L"Failed to query present queue from device", RhiApi::DirectX12);
+            return false;
+        }
+
         return createSwapChain(device, surface);
     }
 
-    bool SwapChain::beginFrame([[maybe_unused]] Device& device)
+    AcquiredFrame SwapChain::beginFrame()
     {
         const UINT32 prevFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
 
@@ -45,7 +53,7 @@ namespace TiRHI::DirectX12
             {
                 RHI_LOG_ERROR(std::format(L"Fence SetEventOnCompletion failed.\nError Code: {}", hrSetEvent),
                               RhiApi::DirectX12);
-                return false;
+                return AcquiredFrame(false);
             }
 
             WaitForSingleObjectEx(m_synchronisation.swapchainFenceEvent, INFINITE, FALSE);
@@ -54,10 +62,14 @@ namespace TiRHI::DirectX12
         // Set the fence value for the next frame.
         swapchainFenceValues[m_swapchainFrameIndex] = prevFenceValue + 1;
 
-        return true;
+        AcquiredFrame acquire(true);
+
+        acquire.setSwapChainImageIndex(m_swapchainFrameIndex);
+
+        return acquire;
     }
 
-    bool SwapChain::present(Device& device)
+    bool SwapChain::present()
     {
         // Automatically present using internal present queue if possible.
         const HRESULT hrPresent = m_swapchain->Present(m_vsync ? 1 : 0, 0);
@@ -65,15 +77,19 @@ namespace TiRHI::DirectX12
         if (FAILED(hrPresent))
         {
             RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent), RhiApi::DirectX12);
+            return false;
+        }
 
+        if (!m_presentQueue)
+        {
+            RHI_LOG_ERROR(std::format(L"SwapChain({}) Present Queue invalid", getNameW()), RhiApi::DirectX12);
             return false;
         }
 
         // Schedule a Signal command in the queue.
         const UINT64 currFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
 
-        const HRESULT hrFenceSignal =
-            device.getGraphicQueue()->Signal(m_synchronisation.swapchainFence.Get(), currFenceValue);
+        const HRESULT hrFenceSignal = m_presentQueue->Signal(m_synchronisation.swapchainFence.Get(), currFenceValue);
 
         if (FAILED(hrFenceSignal))
         {
@@ -140,8 +156,8 @@ namespace TiRHI::DirectX12
 
         MComPtr<IDXGISwapChain1> swapchain1;
         const HRESULT hrSwapChainCreated = getRHI().getNativeFactory()->CreateSwapChainForHwnd(
-            device.getGraphicQueue().Get(), reinterpret_cast<HWND>(surface.getWindowHandle()), &desc, nullptr, nullptr,
-            &swapchain1);
+            device.getNativeGraphicQueue().Get(), reinterpret_cast<HWND>(surface.getWindowHandle()), &desc, nullptr,
+            nullptr, &swapchain1);
 
         std::string_view name = getName();
         if (!name.empty())
