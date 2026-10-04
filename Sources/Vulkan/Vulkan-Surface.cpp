@@ -49,7 +49,7 @@ namespace TiRHI::Vulkan
         createInfo.hinstance = GetModuleHandle(nullptr);
 
         isSurfaceOk = VulkanCheckErrorStatus(
-            volk::vkCreateWin32SurfaceKHR(getRHI().getNativeInstance(), &createInfo, nullptr, &surface));
+            vkCreateWin32SurfaceKHR(getRHI().getNativeInstance(), &createInfo, nullptr, &surface));
 
 #endif // _WIN32
 

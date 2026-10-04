@@ -148,7 +148,7 @@ namespace TiRHI::Vulkan
     Instance::Instance()
     {
         RHI_LOG_VERBOSE(L"volkInitialize", RhiApi::Vulkan);
-        const vk::Result volkInitResult = static_cast<vk::Result>(volk::volkInitialize());
+        const vk::Result volkInitResult = static_cast<vk::Result>(volkInitialize());
 
         if (volkInitResult != vk::Result::eSuccess)
         {
@@ -156,7 +156,7 @@ namespace TiRHI::Vulkan
             return;
         }
         // init global Function Dispatch
-        VULKAN_HPP_DEFAULT_DISPATCHER.init(volk::vkGetInstanceProcAddr);
+        VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
 
         std::vector<const char*> extensions = {
             VK_KHR_SURFACE_EXTENSION_NAME,
@@ -237,7 +237,7 @@ namespace TiRHI::Vulkan
             RHI_LOG_ERROR(L"Vulkan Instance creation failed", RhiApi::Vulkan);
         }
 
-        volk::volkLoadInstance(static_cast<VkInstance>(m_instance));
+        volkLoadInstance(static_cast<VkInstance>(m_instance));
         // init instance function dispact
         VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance);
 
@@ -271,7 +271,7 @@ namespace TiRHI::Vulkan
         if (m_instance)
         {
             RHI_LOG_INFO(L"Destroying Vulkan Instance", RhiApi::Vulkan);
-            volk::vkDestroyInstance(static_cast<VkInstance>(m_instance), nullptr);
+            vkDestroyInstance(static_cast<VkInstance>(m_instance), nullptr);
             m_instance = nullptr;
         }
     }
