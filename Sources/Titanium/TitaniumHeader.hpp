@@ -5,12 +5,16 @@
 
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <Vulkan/Vulkan-Surface.hpp>
+#include <Vulkan/Vulkan-SwapChain.hpp>
+#include <vulkan/Vulkan-CommandList.hpp>
 
 namespace TiRHI
 {
     using RHI = Vulkan::RHI;
     using Surface = Vulkan::Surface;
     using Device = Vulkan::Device;
+    using SwapChain = Vulkan::SwapChain;
+    using CommandList = Vulkan::CommandList;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -60,10 +64,10 @@ namespace TiRHI::Contract
     // Device
     template<typename T>
     concept DeviceContract = requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
-                                      std::optional<size_t> index, CommandList& cmdList) {
+                                      std::optional<size_t> index, SwapChain& swapChain, CommandList& cmdList) {
         { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
         { device.wait() } -> std::same_as<void>;
-        { device.submit(cmdList) } -> std::same_as<void>;
+        { device.submit(swapChain, cmdList) } -> std::same_as<void>;
     };
 
     static_assert(DeviceContract<Device>);
@@ -72,7 +76,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
-        { swapChain.beginFrame() } -> std::same_as<bool>;
+        { swapChain.beginFrame(device) } -> std::same_as<bool>;
         { swapChain.present(device) } -> std::same_as<bool>;
     } && std::derived_from<T, Object<T, RHI>>;
 

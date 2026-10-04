@@ -14,15 +14,51 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
-        return recreateSwapChain(device, surface) && createFrameBuffer(device.getNativeDevice());
+        return recreateSwapChain(device, surface) && createFrameBuffer(device.getNativeDevice()) &&
+               createSyncObjects(device.getNativeDevice());
     }
 
-    bool SwapChain::beginFrame()
+    bool SwapChain::beginFrame(Device& device)
     {
+        vk::Device vkDevice = device.getNativeDevice();
+        {
+            std::array fences = {getNativeImageInFlightFence()};
+            vkDevice.waitForFences(fences, 1, std::numeric_limits<uint64_t>::max());
+            vkDevice.resetFences(fences);
+        }
+
+        {
+            const vk::ResultValue<uint32_t> result = vkDevice.acquireNextImageKHR(
+                m_swapchain.get(), std::numeric_limits<uint64_t>::max(), getNativeImageAvailableSemaphore());
+
+            VulkanCheckErrorStatus(result.result);
+            m_imageIndex = result.value;
+            if (result.result != vk::Result::eSuccess)
+                return false;
+        }
+
+        return true;
     }
 
     bool SwapChain::present(Device& device)
     {
+        std::array waitSemaphore = {getNativeRenderFinishedSemaphore()};
+        std::array swapChains = {m_swapchain.get()};
+        std::array swapImageIndicies = {m_imageIndex};
+
+        vk::PresentInfoKHR presentInfo{};
+        // clang-format off
+        presentInfo
+            .setWaitSemaphores(waitSemaphore)
+            .setSwapchains(swapChains)
+            .setImageIndices(swapImageIndicies)
+            .setPResults(nullptr); // opt
+        // clang-format on
+
+        const vk::Result result = device.getNativePresentQueue().presentKHR(presentInfo);
+        VulkanCheckErrorStatus(result);
+
+        return result == vk::Result::eSuccess;
     }
 
     vk::SwapchainCreateInfoKHR SwapChain::getSwapChainCreateInfo(Device& device, Surface& surface) const
@@ -31,19 +67,17 @@ namespace TiRHI::Vulkan
         vk::PhysicalDevice physicalDevice = device.getNativePhysicalDevice();
         vk::SurfaceKHR vkSurface = surface.getSurfaceNative();
 
-        vk::SurfaceFormatKHR format = getSurfaceFormat();
         vk::PresentModeKHR presentMode = getPresentMode();
         vk::Extent2D getExtend = getExtent2D();
 
         vk::SwapchainCreateInfoKHR vkSwapChainCreateInfo{};
-        vkSwapChainCreateInfo.sType = vk::StructureType::eSwapchainCreateInfoKHR;
         // clang-format off
         vkSwapChainCreateInfo
             .setSurface(vkSurface)
             .setMinImageCount(m_imageCount)
-            .setImageFormat(format.format)
-            .setImageColorSpace(format.colorSpace)
-            .setImageExtent(1)
+            .setImageExtent(getExtend)
+            .setImageFormat(m_currentFormat.format)
+            .setImageColorSpace(m_currentFormat.colorSpace)
             .setImageArrayLayers(1)
             .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
             .setImageSharingMode(
@@ -113,6 +147,7 @@ namespace TiRHI::Vulkan
         {
             m_imageCount = std::min(m_imageCount, m_swapChainSupportDetails.capabilities.maxImageCount);
         }
+        m_currentFormat = getSurfaceFormat();
 
         if (m_renderPassState.currentFormat != m_currentFormat)
         {
@@ -121,7 +156,6 @@ namespace TiRHI::Vulkan
         }
 
         vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(device, surface);
-        vk::Device vkDevice = device.getNativeDevice();
 
         m_swapchain.reset(vkDevice.createSwapchainKHR(createInfo));
 
@@ -151,6 +185,26 @@ namespace TiRHI::Vulkan
         return true;
     }
 
+    vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
+    {
+        return m_synchronisations[getRHI().getCurrentFrame()].imageAvailableSemaphore.get();
+    }
+
+    vk::Semaphore SwapChain::getNativeRenderFinishedSemaphore() const
+    {
+        return m_synchronisations[getRHI().getCurrentFrame()].renderFinishedSemaphore.get();
+    }
+
+    vk::Fence SwapChain::getNativeImageInFlightFence() const
+    {
+        return m_synchronisations[getRHI().getCurrentFrame()].inFlightFence.get();
+    }
+
+    vk::Framebuffer SwapChain::getNativeFrameBuffer() const
+    {
+        return m_frameBuffers[getRHI().getCurrentFrame()].get();
+    }
+
     vk::SurfaceFormatKHR SwapChain::getSurfaceFormat() const noexcept
     {
         for (const auto& availableFormat : m_swapChainSupportDetails.formats)
@@ -178,13 +232,20 @@ namespace TiRHI::Vulkan
 
     vk::Extent2D SwapChain::getExtent2D() const noexcept
     {
-        vk::Extent2D ext;
+        const auto& capabilities = m_swapChainSupportDetails.capabilities;
 
-        ext.width = std::clamp(getWidth(), m_swapChainSupportDetails.capabilities.minImageExtent.width,
-                               m_swapChainSupportDetails.capabilities.maxImageExtent.width);
-        ext.height = std::clamp(getHeight(), m_swapChainSupportDetails.capabilities.minImageExtent.height,
-                                m_swapChainSupportDetails.capabilities.maxImageExtent.height);
-        return ext;
+        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+            return capabilities.currentExtent;
+
+        vk::Extent2D extent{};
+
+        extent.width = std::clamp(static_cast<uint32_t>(getWidth()), capabilities.minImageExtent.width,
+                                  capabilities.maxImageExtent.width);
+
+        extent.height = std::clamp(static_cast<uint32_t>(getHeight()), capabilities.minImageExtent.height,
+                                   capabilities.maxImageExtent.height);
+
+        return extent;
     }
 
     bool SwapChain::createFrameBuffer(vk::Device device)
@@ -198,7 +259,8 @@ namespace TiRHI::Vulkan
                 .setAttachments(m_imageViews[i].get())
                 .setWidth(ext.width)
                 .setHeight(ext.height)
-                .setLayers(1);
+                .setLayers(1)
+                .setRenderPass(m_renderPassState.renderPass.get());
             auto& frameBuffer = m_frameBuffers.emplace_back(device.createFramebufferUnique(framebufferInfo));
 
             if (!frameBuffer)
@@ -209,6 +271,27 @@ namespace TiRHI::Vulkan
         }
 
         return true;
+    }
+
+    bool SwapChain::createSyncObjects(vk::Device device)
+    {
+        m_synchronisations.resize(getRHI().getFrameInFlight());
+
+        vk::SemaphoreCreateInfo semaphoreCreateInfo{};
+        vk::FenceCreateInfo fenceCreateInfo{};
+        fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+
+        bool isOK = true;
+        for (size_t i = 0; i < m_synchronisations.size(); i++)
+        {
+            Synchronisation& s = m_synchronisations[i];
+            s.imageAvailableSemaphore.reset(device.createSemaphore(semaphoreCreateInfo));
+            s.renderFinishedSemaphore.reset(device.createSemaphore(semaphoreCreateInfo));
+            s.inFlightFence.reset(device.createFence(fenceCreateInfo));
+            isOK = s.imageAvailableSemaphore && s.renderFinishedSemaphore && s.inFlightFence;
+        }
+
+        return isOK;
     }
 
 } // TiRHI::Vulkan

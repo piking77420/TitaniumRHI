@@ -6,6 +6,8 @@
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <Vulkan-Header.hpp>
 #include <Vulkan/Vulkan-Surface.hpp>
+#include <Vulkan/Vulkan-SwapChain.hpp>
+#include <Vulkan/Vulkan-CommandList.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -70,6 +72,27 @@ namespace TiRHI::Vulkan
         m_device->waitIdle();
     }
 
+    void Device::submit(SwapChain& swapChain, CommandList& commandList)
+    {
+        vk::SubmitInfo submitInfo{};
+
+        std::array waitSemaphore = {swapChain.getNativeImageAvailableSemaphore()};
+        std::array waitStage = {static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput)};
+        std::array commandBuffers = {commandList.getcurrentFrameCmb()};
+        std::array signalSemaphore = {swapChain.getNativeRenderFinishedSemaphore()};
+
+        // clang-format off
+        submitInfo
+            .setWaitSemaphoreCount(static_cast<uint32_t>(waitSemaphore.size()))
+            .setPWaitSemaphores(waitSemaphore.data())
+            .setWaitDstStageMask(waitStage)
+            .setCommandBuffers(commandBuffers)
+            .setSignalSemaphores(signalSemaphore);
+        // clang-format on
+
+        getNativeGraphicQueue().submit(submitInfo, swapChain.getNativeImageInFlightFence());
+    }
+
     bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)
     {
         m_physicalDevice = physicalDevice;
@@ -89,7 +112,7 @@ namespace TiRHI::Vulkan
 
         if (allPropertiesQueuIndex == std::numeric_limits<size_t>::max())
         {
-            RHI_LOG_ERROR(L"Failed to find an valid queu", RhiApi::Vulkan);
+            RHI_LOG_ERROR(L"Failed to find an valid queue", RhiApi::Vulkan);
             return false;
         }
 
@@ -127,7 +150,9 @@ namespace TiRHI::Vulkan
                      RhiApi::Vulkan);
 
         m_graphicQueue.reset(m_device->getQueue(allPropertiesQueuIndex, 0));
+        m_graphicQueueIndex = allPropertiesQueuIndex;
         m_presentQueue = m_graphicQueue.get();
+        m_presentQueueIndex = m_graphicQueueIndex;
 
         return m_graphicQueue.get() && m_presentQueue;
     }

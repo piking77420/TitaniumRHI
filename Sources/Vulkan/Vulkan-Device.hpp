@@ -9,17 +9,13 @@
 #include <vulkan/vulkan.hpp>
 #include <Private/DeviceQueueFamily.hpp>
 
-namespace TiRHI::Contract
-{
-    struct DeviceContractAccess;
-
-} // TiRHI::Contract
-
 namespace TiRHI::Vulkan
 {
     class Instance;
     class RHI;
     class Surface;
+    class SwapChain;
+    class CommandList;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -37,6 +33,8 @@ namespace TiRHI::Vulkan
 
         void wait();
 
+        void submit(SwapChain& swapChain, CommandList& commandList);
+
         vk::Device getNativeDevice() noexcept
         {
             return m_device.get();
@@ -52,9 +50,19 @@ namespace TiRHI::Vulkan
             return m_graphicQueue.get();
         }
 
+        uint32_t getNativeGraphicQueueIndex() const
+        {
+            return m_graphicQueueIndex;
+        }
+
         vk::Queue getNativePresentQueue() const
         {
             return m_presentQueue;
+        }
+
+        uint32_t getNativePresentQueueIndex() const
+        {
+            return m_presentQueueIndex;
         }
 
         vk::PhysicalDevice getNativePhysicalDevice() const
@@ -71,7 +79,11 @@ namespace TiRHI::Vulkan
 
         vk::UniqueQueue m_graphicQueue;
 
+        uint32_t m_graphicQueueIndex = 0;
+
         vk::Queue m_presentQueue;
+
+        uint32_t m_presentQueueIndex = 0;
 
         bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter);
     };

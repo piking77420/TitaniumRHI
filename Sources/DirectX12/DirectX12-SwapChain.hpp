@@ -23,7 +23,7 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device, Surface& surface);
 
-        bool beginFrame();
+        bool beginFrame(Device& device);
 
         bool present(Device& device);
 

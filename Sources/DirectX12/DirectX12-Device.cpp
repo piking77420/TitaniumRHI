@@ -256,9 +256,9 @@ namespace TiRHI::DirectX12
         ++m_synchronization.deviceFenceValue;
     }
 
-    void Device::submit(CommandList& CommandList)
+    void Device::submit([[maybe_unused]] SwapChain& swapChain, CommandList& commandList)
     {
-        ID3D12CommandList* cmdListsArr[] = {CommandList.getCommandListNative()};
+        ID3D12CommandList* cmdListsArr[] = {commandList.getCommandListNative()};
         m_graphicsQueue->ExecuteCommandLists(1, cmdListsArr);
         m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
     }

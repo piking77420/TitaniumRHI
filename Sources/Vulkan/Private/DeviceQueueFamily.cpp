@@ -11,7 +11,7 @@ namespace TiRHI::Vulkan::Private
         {
             auto& q = queues.emplace_back();
             q.count = queueFamilies[i].queueCount;
-            q.graphic == static_cast<bool>(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
+            q.graphic = static_cast<bool>(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
             q.present = physicalDevice.getSurfaceSupportKHR(i, surface);
             q.compute = static_cast<bool>(queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute);
             q.transfer = static_cast<bool>(queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer);

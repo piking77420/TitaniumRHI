@@ -33,20 +33,21 @@ namespace TiRHI::Vulkan
         }
 
         VkSurfaceKHR surface;
+        bool isSurfaceOk = false;
 #ifdef _WIN32
         VkWin32SurfaceCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         createInfo.hwnd = static_cast<decltype(VkWin32SurfaceCreateInfoKHR::hwnd)>(windowHandle);
         createInfo.hinstance = GetModuleHandle(nullptr);
 
-        const bool surface = VulkanCheckErrorStatus(
+        isSurfaceOk = VulkanCheckErrorStatus(
             vkCreateWin32SurfaceKHR(getRHI().getNativeInstance(), &createInfo, nullptr, &surface));
 
 #endif // _WIN32
 
         m_surface.reset(surface);
 
-        return true;
+        return isSurfaceOk;
     }
 
     vk::SurfaceKHR Surface::getSurfaceNative() const

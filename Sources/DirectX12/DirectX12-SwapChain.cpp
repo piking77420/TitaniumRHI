@@ -27,7 +27,7 @@ namespace TiRHI::DirectX12
         return createSwapChain(device, surface);
     }
 
-    bool SwapChain::beginFrame()
+    bool SwapChain::beginFrame([[maybe_unused]] Device& device)
     {
         const UINT32 prevFenceValue = swapchainFenceValues[m_swapchainFrameIndex];
 

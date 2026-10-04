@@ -84,8 +84,6 @@ namespace TiRHI::DirectX12
 
     bool CommandList::endRecord()
     {
-        onEndRecord();
-
         const HRESULT hr = m_commandList->Close();
 
         if (FAILED(hr))
@@ -94,6 +92,8 @@ namespace TiRHI::DirectX12
 
             return false;
         }
+
+        onEndRecord();
 
         return true;
     }

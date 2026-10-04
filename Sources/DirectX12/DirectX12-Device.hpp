@@ -17,6 +17,7 @@ namespace TiRHI::DirectX12
     class Factory;
     class CommandList;
     class Surface;
+    class SwapChain;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -44,7 +45,7 @@ namespace TiRHI::DirectX12
             return m_graphicsQueue;
         }
 
-        void submit(CommandList& CommandList);
+        void submit(SwapChain& swapChain, CommandList& commandList);
 
     private:
         MComPtr<ID3D12Device> m_device;

@@ -20,12 +20,31 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device, Surface& surface);
 
-        bool beginFrame();
+        bool beginFrame(Device& device);
 
         bool present(Device& device);
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
+        uint32_t getImageIndex() const
+        {
+            return m_imageIndex;
+        }
+
+        vk::Semaphore getNativeImageAvailableSemaphore() const;
+
+        vk::Semaphore getNativeRenderFinishedSemaphore() const;
+
+        vk::Fence getNativeImageInFlightFence() const;
+
+        // TODO DELTE
+        vk::RenderPass getNativeRenderPass() const
+        {
+            return m_renderPassState.renderPass.get();
+        }
+
+        vk::Framebuffer getNativeFrameBuffer() const;
+        //
     private:
         vk::UniqueSwapchainKHR m_swapchain;
 
@@ -50,6 +69,17 @@ namespace TiRHI::Vulkan
             std::vector<vk::PresentModeKHR> presentModes;
         } m_swapChainSupportDetails;
 
+        struct Synchronisation
+        {
+            vk::UniqueSemaphore imageAvailableSemaphore;
+            vk::UniqueSemaphore renderFinishedSemaphore;
+            vk::UniqueFence inFlightFence;
+        };
+
+        std::vector<Synchronisation> m_synchronisations;
+
+        uint32_t m_imageIndex = 0;
+
         vk::SurfaceFormatKHR getSurfaceFormat() const noexcept;
 
         vk::PresentModeKHR getPresentMode() const noexcept;
@@ -61,6 +91,8 @@ namespace TiRHI::Vulkan
         bool createRenderPass(vk::Device device);
 
         bool createFrameBuffer(vk::Device device);
+
+        bool createSyncObjects(vk::Device device);
     };
 
 } // TiRHI::Vulkan

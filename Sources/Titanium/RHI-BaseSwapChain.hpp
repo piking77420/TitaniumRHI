@@ -19,12 +19,11 @@ namespace TiRHI
         BaseSwapChain(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
+            static_assert(std::derived_from<T, BaseSwapChain<T, TRHI>>);
         }
 
         bool getVsync() const
         {
-            static_assert(std::derived_from<T, BaseSwapChain<T>>);
-
             return m_vsync;
         }
 
