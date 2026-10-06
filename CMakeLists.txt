@@ -52,41 +52,30 @@ if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
 if(WIN32)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_WIN32_KHR
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_WIN32_KHR)
 
 elseif(ANDROID)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_ANDROID_KHR)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_ANDROID_KHR
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_ANDROID_KHR)
 
 elseif(APPLE)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_METAL_EXT)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_METAL_EXT
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_METAL_EXT)
 
 elseif(UNIX)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WAYLAND_KHR)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_WAYLAND_KHR
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_WAYLAND_KHR)
 endif()
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_NO_PROTOTYPES
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_NO_PROTOTYPES)
 
     find_package(Vulkan REQUIRED COMPONENTS volk)
     target_link_libraries(TitaniumRHI
         PUBLIC
-            Vulkan::volk
-    )
+            Vulkan::volk)
 
     add_subdirectory(ThirdParty/VulkanMemoryAllocator)
     add_subdirectory(Sources/Vulkan)
@@ -99,8 +88,9 @@ if(TITANIUM_USE_PIX)
 
     include(FetchContent)
     FetchContent_GetProperties(
-    WinPixEventRuntime
-    SOURCE_DIR PIX_SOURCE_DIR)
+        WinPixEventRuntime
+        SOURCE_DIR 
+    P   IX_SOURCE_DIR)
 
     set(PIX_VERSION "1.0.240308001")
 
