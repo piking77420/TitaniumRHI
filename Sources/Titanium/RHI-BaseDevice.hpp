@@ -29,12 +29,12 @@ namespace TiRHI
             return rhi.getAdapters()[m_adapterIndex];
         }
 
-        std::span<const Adapter::Features> getFeaturesToEnable() const
+        std::span<const Adapter::Features> getFeaturesEnable() const
         {
             return m_featuresEnable;
         }
 
-        T& getFeaturesToEnable(const std::span<const Adapter::Features>& features)
+        T& setFeaturesEnable(const std::span<const Adapter::Features>& features)
         {
             m_featuresEnable.insert(m_featuresEnable.end(), features.begin(), features.end());
             return reinterpret_cast<T&>(*this);

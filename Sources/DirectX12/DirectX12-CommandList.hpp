@@ -1,7 +1,6 @@
 #ifndef TITANIUM_DIRECTX12_COMMAND_LIST_H
 #define TITANIUM_DIRECTX12_COMMAND_LIST_H
 
-#include <optional>
 #include <vector>
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
@@ -24,10 +23,6 @@ namespace TiRHI::DirectX12
         bool beginRecord();
 
         bool endRecord();
-
-        void beginDebugLabel(std::string_view name, std::optional<std::span<const float, 4>> color = {});
-
-        void endDebugLabel();
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {

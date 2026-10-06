@@ -10,12 +10,10 @@
 
 namespace TiRHI::Vulkan
 {
-    class RHI;
-
     class Instance
     {
     public:
-        Instance(const RHI& rhi);
+        Instance();
         ~Instance();
 
         vk::Instance getInstance() noexcept

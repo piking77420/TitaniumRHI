@@ -104,9 +104,9 @@ namespace TiRHI::DirectX12
         }
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
-        if (m_synchronization.waitFenceEvent)
+        if (m_synchronization.deviceFenceEvent)
         {
-            CloseHandle(m_synchronization.waitFenceEvent);
+            CloseHandle(m_synchronization.deviceFenceEvent);
         }
 
         if (m_synchronization.frameFenceEvent)
@@ -229,8 +229,8 @@ namespace TiRHI::DirectX12
 
     bool Device::createSynchronisation()
     {
-        m_synchronization.waitFenceEvent = CreateEvent(nullptr, false, false, nullptr);
-        if (!m_synchronization.waitFenceEvent)
+        m_synchronization.deviceFenceEvent = CreateEvent(nullptr, false, false, nullptr);
+        if (!m_synchronization.deviceFenceEvent)
         {
             RHI_LOG_ERROR(L"Create Device Fence Event failed!", RhiApi::DirectX12);
             return false;
@@ -241,7 +241,7 @@ namespace TiRHI::DirectX12
         }
 
         const HRESULT hrDeviceFenceCreated =
-            m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronization.waitFence));
+            m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_synchronization.deviceFence));
         if (FAILED(hrDeviceFenceCreated))
         {
             RHI_LOG_ERROR(std::format(L"Create Device Fence failed! \nError Code: {}", hrDeviceFenceCreated),
@@ -251,7 +251,7 @@ namespace TiRHI::DirectX12
         else
         {
             const LPCWSTR name = L"DeviceFence";
-            m_synchronization.waitFence->SetName(name);
+            m_synchronization.deviceFence->SetName(name);
 
             RHI_LOG_INFO(L"Create Device Fence success.", RhiApi::DirectX12);
         }
@@ -280,10 +280,10 @@ namespace TiRHI::DirectX12
 
             constexpr std::wstring_view name = L"SwapchainFence";
 
-            m_synchronization.waitFence->SetName(name.data());
+            m_synchronization.deviceFence->SetName(name.data());
 
             RHI_LOG_INFO(std::format(L"Create SwapChain Fence success.\nHandle: {}, Name: {}",
-                                     static_cast<void*>(m_synchronization.waitFence.Get()), name),
+                                     static_cast<void*>(m_synchronization.deviceFence.Get()), name),
                          RhiApi::DirectX12);
         }
 
@@ -293,27 +293,51 @@ namespace TiRHI::DirectX12
     void Device::wait()
     {
         // Schedule a Signal command in the queue.
-        m_graphicsQueue->Signal(m_synchronization.waitFence.Get(), m_synchronization.waitFenceValue);
+        m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
 
         // Wait until the fence has been processed.
-        m_synchronization.waitFence->SetEventOnCompletion(m_synchronization.waitFenceValue,
-                                                          m_synchronization.waitFenceEvent);
-        WaitForSingleObjectEx(m_synchronization.waitFenceEvent, INFINITE, false);
+        m_synchronization.deviceFence->SetEventOnCompletion(m_synchronization.deviceFenceValue,
+                                                            m_synchronization.deviceFenceEvent);
+        WaitForSingleObjectEx(m_synchronization.deviceFenceEvent, INFINITE, false);
 
         // Increment for next use.
-        ++m_synchronization.waitFenceValue;
+        ++m_synchronization.deviceFenceValue;
+    }
+
+    void Device::submit([[maybe_unused]] std::span<const AcquiredFrame> acquiredFrame,
+                        std::span<CommandList*> commandList)
+    {
+        std::vector<ID3D12CommandList*> cmdListsArr;
+        cmdListsArr.reserve(commandList.size());
+
+        for (auto& cml : commandList)
+            cmdListsArr.emplace_back(cml->getCommandListNative());
+
+        m_graphicsQueue->ExecuteCommandLists(static_cast<UINT>(cmdListsArr.size()), cmdListsArr.data());
+        m_graphicsQueue->Signal(m_synchronization.deviceFence.Get(), m_synchronization.deviceFenceValue);
+
+        const UINT64 currFenceValue = m_synchronization.frameFenceValue[getRHI().getCurrentFrame()];
+
+        const HRESULT hrFenceSignal = m_graphicsQueue->Signal(m_synchronization.frameFence.Get(), currFenceValue);
+
+        if (FAILED(hrFenceSignal))
+        {
+            RHI_LOG_ERROR(std::format(L"SwapChain Fence Signal failed!\nError Code: {}", hrFenceSignal),
+                          RhiApi::DirectX12);
+        }
     }
 
     void Device::beginFrame()
     {
         const size_t currentFrame = getRHI().getCurrentFrame();
 
-        const UINT64 currFenceValue = m_synchronization.frameFenceValue[currentFrame];
-        const UINT64 completedValue = m_synchronization.frameFence->GetCompletedValue();
+        const UINT32 prevFenceValue = m_synchronization.frameFenceValue[currentFrame];
+
+        const UINT32 currFenceValue = m_synchronization.frameFenceValue[currentFrame];
+
         // If the next frame is not ready to be rendered yet, wait until it is ready.
-        if (completedValue < currFenceValue)
+        if (m_synchronization.frameFence->GetCompletedValue() < currFenceValue)
         {
-            // on finish gpu job set this value
             const HRESULT hrSetEvent =
                 m_synchronization.frameFence->SetEventOnCompletion(currFenceValue, m_synchronization.frameFenceEvent);
             if (FAILED(hrSetEvent))
@@ -323,35 +347,11 @@ namespace TiRHI::DirectX12
                 return;
             }
 
-            // wait
             WaitForSingleObjectEx(m_synchronization.frameFenceEvent, INFINITE, FALSE);
         }
+
+        // Set the fence value for the next frame.
+        m_synchronization.frameFenceValue[currentFrame] = prevFenceValue + 1;
     }
 
-    void Device::submit([[maybe_unused]] std::span<const AcquiredFrame> acquiredFrame,
-                        std::span<CommandList*> commandList)
-    {
-        // Execute cmd lists
-        {
-            std::vector<ID3D12CommandList*> cmdListsArr;
-            cmdListsArr.reserve(commandList.size());
-            for (auto& cml : commandList)
-                cmdListsArr.emplace_back(cml->getCommandListNative());
-            m_graphicsQueue->ExecuteCommandLists(static_cast<UINT>(cmdListsArr.size()), cmdListsArr.data());
-        }
-
-        // sync part
-        const UINT64 fenceValue = ++m_synchronization.nextFrameFenceValue;
-
-        // when gpu is done set the nect value of the fence
-        const HRESULT hrFenceSignal = m_graphicsQueue->Signal(m_synchronization.frameFence.Get(), fenceValue);
-
-        if (FAILED(hrFenceSignal))
-        {
-            RHI_LOG_ERROR(std::format(L"SwapChain Fence Signal failed!\nError Code: {}", hrFenceSignal),
-                          RhiApi::DirectX12);
-        }
-
-        m_synchronization.frameFenceValue[getRHI().getCurrentFrame()] = fenceValue;
-    }
 }

@@ -98,7 +98,6 @@ namespace TiRHI::Vulkan
 
     RHI::RHI(const TiRHI::RhiCreate& create)
         : TiRHI::BaseRHI<Vulkan::RHI>(create)
-        , m_instance(*this)
     {
         enumerateAvailableAdatper();
     }

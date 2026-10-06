@@ -2,18 +2,9 @@
 
 #include <format>
 
-#if defined(TITANIUM_USE_PIX)
-#include <pix3.h>
-#endif // defined(TITANIUM_USE_PIX)
-
 #include <Titanium/Log.hpp>
 #include <DirectX12/DirectX12-RHI.hpp>
 #include <DirectX12/DirectX12-Device.hpp>
-
-static uint8_t toPixColor(float value)
-{
-    return static_cast<uint8_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f);
-}
 
 namespace TiRHI::DirectX12
 {
@@ -105,36 +96,6 @@ namespace TiRHI::DirectX12
         onEndRecord();
 
         return true;
-    }
-
-    void CommandList::beginDebugLabel(std::string_view name,
-                                      [[maybe_unused]] std::optional<std::span<const float, 4>> color)
-    {
-        if (!getRHI().getUseDebugLabel())
-            return;
-
-#if defined(TITANIUM_USE_PIX)
-        UINT64 colorPix = PIX_COLOR_DEFAULT;
-        if (color)
-        {
-            const std::span<const float, 4> colors = *color;
-            const auto toByte = [](float v) -> uint8_t
-            { return static_cast<uint8_t>(std::clamp(v, 0.0f, 1.0f) * 255.0f); };
-
-            colorPix = PIX_COLOR(toByte(colors[0]), toByte(colors[1]), toByte(colors[2]));
-        }
-        PIXBeginEvent(m_commandList.Get(), colorPix, name.data());
-#endif
-    }
-
-    void CommandList::endDebugLabel()
-    {
-        if (!getRHI().getUseDebugLabel())
-            return;
-
-#if defined(TITANIUM_USE_PIX)
-        PIXEndEvent(m_commandList.Get());
-#endif // defined(TITANIUM_USE_PIX)
     }
 
 }

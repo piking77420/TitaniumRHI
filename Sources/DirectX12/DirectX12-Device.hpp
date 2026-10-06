@@ -63,14 +63,13 @@ namespace TiRHI::DirectX12
 
         struct Synchronization
         {
-            HANDLE waitFenceEvent;
-            MComPtr<ID3D12Fence> waitFence;
-            UINT64 waitFenceValue = 1u;
+            HANDLE deviceFenceEvent;
+            MComPtr<ID3D12Fence> deviceFence;
+            uint64_t deviceFenceValue = 1u;
 
             HANDLE frameFenceEvent = nullptr;
             MComPtr<ID3D12Fence> frameFence;
-            std::vector<UINT64> frameFenceValue{0u};
-            UINT64 nextFrameFenceValue = 0;
+            std::vector<uint64_t> frameFenceValue{0u};
 
         } m_synchronization;
 

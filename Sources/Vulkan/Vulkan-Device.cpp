@@ -65,14 +65,9 @@ namespace TiRHI::Vulkan
             return false;
 
         assert(adapters.size() == nativePhysicalDevice.size());
-        std::vector<Adapter::Features> finalFeatures;
-
-        // clang-format off
-        return checkExtensionToEnableValid(adapters[adaptaterIndex], finalFeatures) &&
-               createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(), adapters[adaptaterIndex], finalFeatures) &&
-               initVolkTable() && 
-               createSynchronisationPrimitives();
-        // clang-format on
+        return createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(),
+                            adapters[adaptaterIndex]) &&
+               initVolkTable() && createSynchronisationPrimitives();
     }
 
     void Device::wait()
@@ -82,6 +77,11 @@ namespace TiRHI::Vulkan
 
     void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> commandLists)
     {
+        if (acquiredFrames.size() != commandLists.size())
+        {
+            RHI_LOG_ERROR(L"acquiredFrames and command list are not the same size", RhiApi::Vulkan);
+        }
+
         const uint32_t minSubmit =
             std::min(static_cast<uint32_t>(acquiredFrames.size()), static_cast<uint32_t>(commandLists.size()));
 
@@ -131,36 +131,7 @@ namespace TiRHI::Vulkan
         m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
     }
 
-    bool Device::checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures)
-    {
-        const std::span<const Adapter::Features> requested = getFeaturesToEnable();
-        const std::span<const Adapter::Features> supported = adapter.getFeatures();
-
-        bool allSupported = true;
-
-        for (const Adapter::Features feature : requested)
-        {
-            const bool isSupported = std::ranges::find(supported, feature) != supported.end();
-
-            if (isSupported)
-            {
-                finalFeatures.push_back(feature);
-            }
-            else
-            {
-                allSupported = false;
-
-                RHI_LOG_WARNING(std::format(L"Requested feature '{}' is not supported by adapter '{}'",
-                                            Adapter::toWString(feature), adapter.getNameW()),
-                                RhiApi::Vulkan);
-            }
-        }
-
-        return allSupported;
-    }
-
-    bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter,
-                              const std::vector<Adapter::Features>& featuresToEnable)
+    bool Device::createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter)
     {
         m_physicalDevice = physicalDevice;
         m_queueProperties = Private::DeviceQueueProperties(physicalDevice, surface);
@@ -195,7 +166,7 @@ namespace TiRHI::Vulkan
             queueCreateInfo[i].pQueuePriorities = queuePriority.data();
         }
 
-        std::vector<const char*> getDeviceExtensionName = getDeviceVkExtensionName(featuresToEnable);
+        const std::vector<const char*> getDeviceExtensionName = getDeviceVkExtensionName(adapter.getFeatures());
 
         vk::DeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = vk::StructureType::eDeviceCreateInfo;
