@@ -6,7 +6,7 @@
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Vulkan-SwapChain.hpp>
-#include <vulkan/Vulkan-CommandList.hpp>
+#include <Vulkan/Vulkan-CommandList.hpp>
 
 namespace TiRHI
 {
