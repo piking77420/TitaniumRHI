@@ -82,11 +82,6 @@ namespace TiRHI::Vulkan
 
     void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> commandLists)
     {
-        if (acquiredFrames.size() != commandLists.size())
-        {
-            RHI_LOG_ERROR(L"acquiredFrames and command list are not the same size", RhiApi::Vulkan);
-        }
-
         const uint32_t minSubmit =
             std::min(static_cast<uint32_t>(acquiredFrames.size()), static_cast<uint32_t>(commandLists.size()));
 
