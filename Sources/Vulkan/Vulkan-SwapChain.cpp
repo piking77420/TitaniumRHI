@@ -1,9 +1,13 @@
 #include <Vulkan/Vulkan-SwapChain.hpp>
+#include <span>
+
 #include <vulkan/vulkan.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <vulkan/Vulkan-Instance.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
 #include <Vulkan/Vulkan-Surface.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Private/VulkanToRHI.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -14,6 +18,11 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
+        if (!BaseSwapChain::build())
+        {
+            return false;
+        }
+
         m_device = device.getNativeDevice();
         if (m_device == VK_NULL_HANDLE)
         {
@@ -112,40 +121,23 @@ namespace TiRHI::Vulkan
         return vkSwapChainCreateInfo;
     }
 
-    bool SwapChain::createRenderPass(vk::Device device)
+    bool SwapChain::createRenderPassDescriptor(Device& device)
     {
-        m_renderPassState.currentFormat = m_currentFormat;
+        AttachmentDescriptor attachement{};
+        attachement.setFormat(m_format)
+            .setSampleCount(SampleCount::Count1)
+            .setLoadOp(LoadOp::Clear)
+            .setStoreOp(StoreOp::Store)
+            .setStencilLoadOp(LoadOp::DontCare)
+            .setStencilStoreOp(StoreOp::DontCare)
+            .setRenderState(ResourceState::RenderTarget)
+            .setFinalState(ResourceState::Present);
 
-        vk::AttachmentDescription attachmentDescription{};
-        attachmentDescription.format = m_renderPassState.currentFormat.format;
-        attachmentDescription.samples = vk::SampleCountFlagBits::e1;
-        attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
-        attachmentDescription.storeOp = vk::AttachmentStoreOp::eStore;
-        attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        attachmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        attachmentDescription.initialLayout = vk::ImageLayout::eUndefined;
-        attachmentDescription.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+        const std::array attachments{attachement};
 
-        vk::AttachmentReference colorRef{};
-        colorRef.attachment = 0;
-        colorRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-        vk::SubpassDescription subpassDesc{};
-        subpassDesc.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-        subpassDesc.colorAttachmentCount = 1;
-        subpassDesc.pColorAttachments = &colorRef;
-
-        vk::RenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &attachmentDescription;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpassDesc;
-
-        m_renderPassState.renderPass = device.createRenderPassUnique(renderPassInfo);
-
-        RHI_LOG_VERBOSE(L"Create Swapchain RenderPass", RhiApi::Vulkan);
-
-        return true;
+        return m_renderPassDescriptor.setColorAttachements(attachments)
+            .setAcceptedPipelineType(PipelineType::Graphics)
+            .build(device);
     }
 
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
@@ -174,10 +166,17 @@ namespace TiRHI::Vulkan
         }
         m_currentFormat = getSurfaceFormat();
 
-        if (m_renderPassState.currentFormat != m_currentFormat)
+        // render pass check
         {
-            if (!createRenderPass(device.getNativeDevice()))
-                return false;
+            std::span colorAttachement = m_renderPassDescriptor.getColorAttachements();
+            if (colorAttachement.empty() || colorAttachement[0].format != Private::toRhi(m_currentFormat.format))
+            {
+                if (!createRenderPassDescriptor(device))
+                {
+                    RHI_LOG_ERROR(L"Failed to create render pass descriptor of swapChain", RhiApi::Vulkan);
+                    return false;
+                }
+            }
         }
 
         vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(device, surface);
@@ -208,7 +207,7 @@ namespace TiRHI::Vulkan
             m_imageViews.push_back(vkDevice.createImageViewUnique(viewInfo));
         }
 
-        return createFrameBuffer(vkDevice);
+        return createFrameBuffer(device);
     }
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
@@ -228,6 +227,15 @@ namespace TiRHI::Vulkan
 
     vk::SurfaceFormatKHR SwapChain::getSurfaceFormat() const noexcept
     {
+        vk::Format currentFormat = Private::toVulkan(m_format);
+
+        for (const auto& availableFormat : m_swapChainSupportDetails.formats)
+        {
+            if (availableFormat.format == currentFormat &&
+                availableFormat.colorSpace == vk::ColorSpaceKHR::eExtendedSrgbNonlinearEXT)
+                return availableFormat;
+        }
+
         for (const auto& availableFormat : m_swapChainSupportDetails.formats)
         {
             if (availableFormat.format == vk::Format::eB8G8R8A8Unorm &&
@@ -269,20 +277,21 @@ namespace TiRHI::Vulkan
         return extent;
     }
 
-    bool SwapChain::createFrameBuffer(vk::Device device)
+    bool SwapChain::createFrameBuffer(Device& device)
     {
         const vk::Extent2D ext = getExtent2D();
         m_frameBuffers.reserve(m_imageViews.size());
+
         for (size_t i = 0; i < m_imageViews.size(); ++i)
         {
             vk::FramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.setRenderPass(m_renderPassState.renderPass.get())
+            framebufferInfo.setRenderPass(m_renderPassDescriptor.getNativeRenderPass())
                 .setAttachments(m_imageViews[i].get())
                 .setWidth(ext.width)
                 .setHeight(ext.height)
-                .setLayers(1)
-                .setRenderPass(m_renderPassState.renderPass.get());
-            auto& frameBuffer = m_frameBuffers.emplace_back(device.createFramebufferUnique(framebufferInfo));
+                .setLayers(1);
+            auto& frameBuffer =
+                m_frameBuffers.emplace_back(device.getNativeDevice().createFramebufferUnique(framebufferInfo));
 
             if (!frameBuffer)
             {

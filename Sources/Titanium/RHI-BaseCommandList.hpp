@@ -15,6 +15,7 @@ namespace TiRHI
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
+            static_assert(std::derived_from<T, BaseCommandList<T, TRHI>>);
         }
 
     protected:

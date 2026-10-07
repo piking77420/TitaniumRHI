@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Vulkan/Vulkan-AcquiredFrame.hpp>
+#include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -11,7 +12,7 @@ namespace TiRHI::Vulkan
     class Device;
     class Surface;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Vulkan::RenderPassDescriptor>
     {
     public:
         SwapChain() = delete;
@@ -37,10 +38,6 @@ namespace TiRHI::Vulkan
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
 
         // TODO DELTE
-        vk::RenderPass getNativeRenderPass() const
-        {
-            return m_renderPassState.renderPass.get();
-        }
 
         vk::Framebuffer getNativeFrameBuffer() const;
         //
@@ -54,12 +51,6 @@ namespace TiRHI::Vulkan
         std::vector<vk::UniqueFramebuffer> m_frameBuffers;
 
         vk::SurfaceFormatKHR m_currentFormat;
-
-        struct RenderPassState
-        {
-            vk::UniqueRenderPass renderPass;
-            vk::SurfaceFormatKHR currentFormat = vk::SurfaceFormatKHR{};
-        } m_renderPassState;
 
         struct SwapChainSupportDetails
         {
@@ -90,9 +81,9 @@ namespace TiRHI::Vulkan
 
         vk::SwapchainCreateInfoKHR getSwapChainCreateInfo(Device& device, Surface& surface) const;
 
-        bool createRenderPass(vk::Device device);
+        bool createRenderPassDescriptor(Device& device);
 
-        bool createFrameBuffer(vk::Device device);
+        bool createFrameBuffer(Device& device);
 
         bool createSyncObjects(vk::Device device);
     };

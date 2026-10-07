@@ -102,6 +102,89 @@ namespace TiRHI
 
     IMPLEMENT_TO_STRING_TITANIUM(Format, RHI_FORMAT_LIST)
 
+#define RHI_LOAD_OP_LIST(X)                                                                                            \
+    X(LoadOp)                                                                                                          \
+    X(Clear)                                                                                                           \
+    X(DontCare)
+
+    enum struct LoadOp
+    {
+#define X(name) name,
+        RHI_LOAD_OP_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(LoadOp, RHI_LOAD_OP_LIST)
+
+#define RHI_STORE_OP_LIST(X)                                                                                           \
+    X(Store)                                                                                                           \
+    X(DontCare)                                                                                                        \
+    X(None)
+
+    enum struct StoreOp
+    {
+#define X(name) name,
+        RHI_STORE_OP_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(StoreOp, RHI_STORE_OP_LIST)
+
+#define RHI_SAMPLE_COUNT_LIST(X)                                                                                       \
+    X(Count1)                                                                                                          \
+    X(Count2)                                                                                                          \
+    X(Count4)                                                                                                          \
+    X(Count8)                                                                                                          \
+    X(Count16)                                                                                                         \
+    X(Count32)                                                                                                         \
+    X(Count64)
+
+    enum struct SampleCount
+    {
+#define X(name) name,
+        RHI_SAMPLE_COUNT_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(SampleCount, RHI_SAMPLE_COUNT_LIST)
+
+#define RHI_RESOURCE_STATE_LIST(X)                                                                                     \
+    X(Undefined)                                                                                                       \
+    X(Common)                                                                                                          \
+    X(VertexBuffer)                                                                                                    \
+    X(IndexBuffer)                                                                                                     \
+    X(ConstantBuffer)                                                                                                  \
+    X(ShaderResource)                                                                                                  \
+    X(UnorderedAccess)                                                                                                 \
+    X(RenderTarget)                                                                                                    \
+    X(DepthWrite)                                                                                                      \
+    X(DepthRead)                                                                                                       \
+    X(CopySource)                                                                                                      \
+    X(CopyDestination)                                                                                                 \
+    X(IndirectArgument)                                                                                                \
+    X(Present)
+
+    enum struct ResourceState
+    {
+#define X(name) name,
+        RHI_RESOURCE_STATE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(ResourceState, RHI_RESOURCE_STATE_LIST)
+
+#define RHI_PIPELINE_TYPE_LIST(X)                                                                                      \
+    X(Graphics)                                                                                                        \
+    X(Compute)                                                                                                         \
+    X(RayTracing)
+
+    enum struct PipelineType
+    {
+#define X(name) name,
+        RHI_PIPELINE_TYPE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(PipelineType, RHI_PIPELINE_TYPE_LIST)
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate

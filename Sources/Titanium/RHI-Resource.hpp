@@ -3,22 +3,7 @@
 
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHI-Object.hpp>
-
-#define RESOURCE_STATE_LIST(X)                                                                                         \
-    X(Undefined)                                                                                                       \
-    X(Common)                                                                                                          \
-    X(VertexBuffer)                                                                                                    \
-    X(IndexBuffer)                                                                                                     \
-    X(ConstantBuffer)                                                                                                  \
-    X(ShaderResource)                                                                                                  \
-    X(UnorderedAccess)                                                                                                 \
-    X(RenderTarget)                                                                                                    \
-    X(DepthWrite)                                                                                                      \
-    X(DepthRead)                                                                                                       \
-    X(CopySource)                                                                                                      \
-    X(CopyDestination)                                                                                                 \
-    X(IndirectArgument)                                                                                                \
-    X(Present)
+#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
@@ -26,15 +11,6 @@ namespace TiRHI
     class Resource : public Object<T, TRHI>
     {
     public:
-        enum struct State
-        {
-#define X(name) name,
-            RESOURCE_STATE_LIST(X)
-#undef X
-        };
-
-        IMPLEMENT_TO_STRING_TITANIUM(State, RESOURCE_STATE_LIST)
-
         Resource() = default;
         ~Resource() = default;
         Resource(TRHI& rhi)
@@ -43,20 +19,20 @@ namespace TiRHI
             static_assert(std::derived_from<T, Resource<T, TRHI>>);
         }
 
-        T& defaultState(State state)
+        ResourceState getState() const
         {
-            m_initaleState = state;
+            return m_state;
+        }
+
+        Resource& setState(ResourceState newState) const
+        {
+            m_state = newState;
+
             return reinterpret_cast<T&>(*this);
         }
 
-        bool create()
-        {
-            m_state = m_initaleState;
-        }
-
     private:
-        State m_initaleState = State::Undefined;
-        State m_state = State::Undefined;
+        ResourceState m_state = ResourceState::Undefined;
     };
 
 } // TiRHI

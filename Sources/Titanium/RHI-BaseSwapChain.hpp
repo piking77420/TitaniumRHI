@@ -2,13 +2,14 @@
 #define TITANIUM_SWAPCHAIN_H
 
 #include <concepts>
+#include <format>
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI>
+    template<typename T, typename TRHI, typename TRenderPassDescriptor>
     class BaseSwapChain : public Object<T, TRHI>
     {
     public:
@@ -18,8 +19,9 @@ namespace TiRHI
         ~BaseSwapChain() = default;
         BaseSwapChain(TRHI& rhi)
             : Object<T, TRHI>(rhi)
+            , m_renderPassDescriptor(rhi)
         {
-            static_assert(std::derived_from<T, BaseSwapChain<T, TRHI>>);
+            static_assert(std::derived_from<T, BaseSwapChain<T, TRHI, TRenderPassDescriptor>>);
         }
 
         bool getVsync() const
@@ -66,6 +68,22 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
+        const TRenderPassDescriptor& getRenderPassDescriptor() const
+        {
+            return m_renderPassDescriptor;
+        }
+
+        const TRenderPassDescriptor& getRenderPassDescriptor()
+        {
+            return m_renderPassDescriptor;
+        }
+
+        bool build()
+        {
+            m_renderPassDescriptor.setName(std::format("{} renderPassDescriptor", this->getName()));
+            return true;
+        }
+
     protected:
         bool m_vsync = false;
 
@@ -74,6 +92,10 @@ namespace TiRHI
         uint32_t m_height = 0;
 
         uint32_t m_imageCount = 1;
+
+        Format m_format = Format::B8G8R8A8_UNorm;
+
+        TRenderPassDescriptor m_renderPassDescriptor;
     };
 
 } // TiRHI

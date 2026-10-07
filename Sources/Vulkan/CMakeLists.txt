@@ -5,6 +5,10 @@ target_sources(
     PRIVATE
         Private/DeviceQueueFamily.cpp
         Private/DeviceQueueFamily.hpp
+        Private/RHIToVulkan.cpp
+        Private/RHIToVulkan.hpp
+        Private/VulkanToRHI.cpp
+        Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp
         Vulkan-AcquiredFrame.hpp
         Vulkan-CommandList.cpp
@@ -13,6 +17,10 @@ target_sources(
         Vulkan-Device.hpp
         Vulkan-Instance.cpp
         Vulkan-Instance.hpp
+        Vulkan-RenderPassDescriptor.cpp
+        Vulkan-RenderPassDescriptor.hpp
+        Vulkan-RenderTargets.cpp
+        Vulkan-RenderTargets.hpp
         Vulkan-RHI.cpp
         Vulkan-RHI.hpp
         Vulkan-Surface.cpp

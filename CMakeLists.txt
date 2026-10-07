@@ -90,7 +90,7 @@ if(TITANIUM_USE_PIX)
     FetchContent_GetProperties(
         WinPixEventRuntime
         SOURCE_DIR 
-    P   IX_SOURCE_DIR)
+        PIX_SOURCE_DIR)
 
     set(PIX_VERSION "1.0.240308001")
 

@@ -7,6 +7,8 @@
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Vulkan-SwapChain.hpp>
 #include <Vulkan/Vulkan-CommandList.hpp>
+#include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
+#include <Vulkan/Vulkan-RenderTargets.hpp>
 
 namespace TiRHI
 {
@@ -16,6 +18,8 @@ namespace TiRHI
     using SwapChain = Vulkan::SwapChain;
     using AcquiredFrame = Vulkan::AcquiredFrame;
     using CommandList = Vulkan::CommandList;
+    using RenderPassDescriptor = Vulkan::RenderPassDescriptor;
+    using RenderTargets = Vulkan::RenderTargets;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -82,10 +86,12 @@ namespace TiRHI::Contract
 
     // SwapChain
     template<typename T>
-    concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle) {
+    concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle,
+                                         const RenderPassDescriptor&) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
         { swapChain.acquireNextImage() } -> std::same_as<AcquiredFrame>;
         { swapChain.present() } -> std::same_as<bool>;
+        { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);
