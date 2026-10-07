@@ -17,6 +17,8 @@ target_sources(
         RHI-BaseRHI.hpp
         RHI-BaseSwapChain.cpp
         RHI-BaseSwapChain.hpp
+        RHI-DebugScope.cpp
+        RHI-DebugScope.hpp
         RHI-EnumToString.hpp
         RHI-Object.hpp
         RHI-Resource.cpp

@@ -106,7 +106,8 @@ namespace TiRHI
 
     struct RhiCreate
     {
-        size_t frameInFlight;
+        bool useDebugLabel = false;
+        size_t frameInFlight = 2;
         LogCallBackSignature logCallback;
     };
 

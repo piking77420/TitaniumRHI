@@ -218,7 +218,7 @@ namespace TiRHI::Vulkan
 
     vk::Semaphore SwapChain::getNativeRenderFinishedSemaphore() const
     {
-        return m_synchronisations[getRHI().getCurrentFrame()].renderFinishedSemaphore.get();
+        return m_synchronisations[m_imageIndex].renderFinishedSemaphore.get();
     }
 
     vk::Framebuffer SwapChain::getNativeFrameBuffer() const

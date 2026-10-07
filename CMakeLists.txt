@@ -15,9 +15,9 @@ set(RHI_BACKENDS
     DirectX12
     Metal
 )
-
 set(TITANIUM_RHI_BACKEND "Vulkan" CACHE STRING "RHI backend")
 set_property(CACHE TITANIUM_RHI_BACKEND PROPERTY STRINGS ${RHI_BACKENDS})
+option(TITANIUM_USE_PIX "Enable PIX instrumentation for DirectX 12" OFF)
 
 if(NOT TITANIUM_RHI_BACKEND IN_LIST RHI_BACKENDS)
     message(FATAL_ERROR
@@ -52,47 +52,95 @@ if(TITANIUM_RHI_BACKEND STREQUAL "Vulkan")
 if(WIN32)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_WIN32_KHR
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_WIN32_KHR)
 
 elseif(ANDROID)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_ANDROID_KHR)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_ANDROID_KHR
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_ANDROID_KHR)
 
 elseif(APPLE)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_METAL_EXT)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_METAL_EXT
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_METAL_EXT)
 
 elseif(UNIX)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WAYLAND_KHR)
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_USE_PLATFORM_WAYLAND_KHR
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_USE_PLATFORM_WAYLAND_KHR)
 endif()
 
-    target_compile_definitions(TitaniumRHI PUBLIC
-        VK_NO_PROTOTYPES
-    )
+    target_compile_definitions(TitaniumRHI PUBLIC VK_NO_PROTOTYPES)
 
     find_package(Vulkan REQUIRED COMPONENTS volk)
     target_link_libraries(TitaniumRHI
         PUBLIC
-            Vulkan::volk
-    )
+            Vulkan::volk)
 
     add_subdirectory(ThirdParty/VulkanMemoryAllocator)
     add_subdirectory(Sources/Vulkan)
 elseif(TITANIUM_RHI_BACKEND STREQUAL "DirectX12")
     message(STATUS "RHI Backend: DirectX12")
     target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_DIRECT_X12=1)
+
+if(TITANIUM_USE_PIX)
+    message(STATUS "Link PIX")
+
+    include(FetchContent)
+    FetchContent_GetProperties(
+        WinPixEventRuntime
+        SOURCE_DIR 
+    P   IX_SOURCE_DIR)
+
+    set(PIX_VERSION "1.0.240308001")
+
+    FetchContent_Declare(
+        WinPixEventRuntime
+        URL "https://www.nuget.org/api/v2/package/WinPixEventRuntime/${PIX_VERSION}"
+    )
+
+    FetchContent_MakeAvailable(WinPixEventRuntime)
+
+    FetchContent_GetProperties(
+        WinPixEventRuntime
+        SOURCE_DIR PIX_SOURCE_DIR
+    )
+
+    add_library(PIX INTERFACE)
+
+    target_include_directories(PIX INTERFACE
+        "${PIX_SOURCE_DIR}/include/WinPixEventRuntime"
+    )
+
+    target_link_libraries(PIX INTERFACE
+        "${PIX_SOURCE_DIR}/bin/x64/WinPixEventRuntime.lib"
+    )
+
+    target_compile_definitions(PIX INTERFACE
+        USE_PIX
+    )
+
+    FetchContent_GetProperties(
+    WinPixEventRuntime
+    SOURCE_DIR PIX_SOURCE_DIR)
+
+    set(
+        TITANIUM_PIX_DLL
+        "${PIX_SOURCE_DIR}/bin/x64/WinPixEventRuntime.dll"
+        CACHE INTERNAL "Path to WinPixEventRuntime.dll"
+        FORCE
+    )
+
+    message(STATUS "Titanium PIX DLL = ${TITANIUM_PIX_DLL}")
+
+    target_link_libraries(TitaniumRHI PRIVATE PIX)
+
+    target_compile_definitions(
+        TitaniumRHI
+        PRIVATE TITANIUM_USE_PIX
+    )
+endif()
+
     add_subdirectory(Sources/DirectX12)
 
 elseif(TITANIUM_RHI_BACKEND STREQUAL "Metal")

@@ -23,7 +23,6 @@ namespace TiRHI::Vulkan
             RHI_LOG_ERROR(L"vkDevice was null handle", RhiApi::Vulkan);
             return false;
         }
-
         m_commandPool = vkDevice.createCommandPoolUnique(vkCommandPoolCreateInfo);
 
         if (!m_commandPool)
@@ -45,6 +44,7 @@ namespace TiRHI::Vulkan
             return false;
         }
 
+        m_volkTable = &device.getVolkTable();
         return true;
     }
 
@@ -66,6 +66,30 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().end();
         onEndRecord();
         return true;
+    }
+
+    void CommandList::beginDebugLabel(std::string_view name, std::optional<std::span<const float, 4>> color)
+    {
+        if (!getRHI().getUseDebugLabel() || !m_volkTable)
+            return;
+
+        vk::DebugUtilsLabelEXT label{};
+        label.pLabelName = name.data();
+
+        if (color)
+        {
+            std::copy(color->begin(), color->end(), label.color.begin());
+        }
+
+        getcurrentFrameCmb().beginDebugUtilsLabelEXT(label);
+    }
+
+    void CommandList::endDebugLabel()
+    {
+        if (!getRHI().getUseDebugLabel() || !m_volkTable)
+            return;
+
+        getcurrentFrameCmb().endDebugUtilsLabelEXT();
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb()

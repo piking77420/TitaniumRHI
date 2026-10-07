@@ -134,6 +134,11 @@ namespace TiRHI
             return m_name;
         }
 
+        const std::wstring getNameW() const noexcept
+        {
+            return m_name.empty() ? std::wstring(L"") : std::wstring(m_name.begin(), m_name.end());
+        }
+
         const std::string_view getVendor() const noexcept
         {
             return m_vendor;

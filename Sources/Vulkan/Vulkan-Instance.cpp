@@ -3,6 +3,7 @@
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include <Vulkan-Instance.hpp>
+#include <Vulkan/Vulkan-RHI.hpp>
 
 #include <vector>
 
@@ -145,7 +146,7 @@ namespace TiRHI::Vulkan
         return VK_FALSE;
     }
 
-    Instance::Instance()
+    Instance::Instance(const RHI& rhi)
     {
         RHI_LOG_VERBOSE(L"volkInitialize", RhiApi::Vulkan);
         const vk::Result volkInitResult = static_cast<vk::Result>(volkInitialize());
@@ -175,9 +176,8 @@ namespace TiRHI::Vulkan
 #endif // defined(_WIN32)
         };
 
-#if defined(TITANIUM_VALIDATION_LAYER)
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
+        if (rhi.getUseDebugLabel())
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME); // important for debuglabel
 
         vk::ApplicationInfo appInfo = {};
         appInfo.sType = vk::StructureType::eApplicationInfo;
