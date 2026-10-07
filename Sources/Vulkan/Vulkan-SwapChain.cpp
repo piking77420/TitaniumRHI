@@ -8,6 +8,7 @@
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Vulkan/Private/VulkanToRHI.hpp>
+#include <Vulkan/Vulkan-CommandList.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -208,6 +209,39 @@ namespace TiRHI::Vulkan
         }
 
         return createFrameBuffer(device);
+    }
+
+    bool SwapChain::beginRenderTargets(CommandList& commandList)
+    {
+        auto cmd = commandList.getcurrentFrameCmb();
+        constexpr std::array clearColor{0.0f, 0.0f, 0.0f, 1.0f};
+
+        vk::ClearColorValue clearColorValue;
+        clearColorValue.setFloat32(clearColor);
+
+        vk::ClearValue clearValue{};
+        clearValue.setColor(clearColorValue);
+
+        vk::RenderPassBeginInfo renderPassBeginInfo{};
+        renderPassBeginInfo.setRenderPass(getRenderPassDescriptor().getNativeRenderPass())
+            .setFramebuffer(m_frameBuffers[m_imageIndex].get())
+            .setRenderArea({{0, 0}, {static_cast<uint32_t>(getWidth()), static_cast<uint32_t>(getHeight())}})
+            .setClearValues(clearValue);
+
+        vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(getWidth()), static_cast<float>(getHeight()), 0.0f, 1.0f};
+
+        vk::Rect2D scissor{{0, 0}, {static_cast<uint32_t>(getWidth()), static_cast<uint32_t>(getHeight())}};
+
+        cmd.setViewport(0, viewport);
+        cmd.setScissor(0, scissor);
+        commandList.getcurrentFrameCmb().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+        return true;
+    }
+
+    void SwapChain::endRenderTargets(CommandList& commandList)
+    {
+        commandList.getcurrentFrameCmb().endRenderPass();
     }
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const

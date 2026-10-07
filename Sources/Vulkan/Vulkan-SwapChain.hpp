@@ -11,6 +11,7 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
     class Surface;
+    class CommandList;
 
     class SwapChain : public BaseSwapChain<SwapChain, RHI, Vulkan::RenderPassDescriptor>
     {
@@ -27,6 +28,10 @@ namespace TiRHI::Vulkan
         bool present();
 
         bool recreateSwapChain(Device& device, Surface& surface);
+
+        bool beginRenderTargets(CommandList& commandList);
+
+        void endRenderTargets(CommandList& commandList);
 
         uint32_t getImageIndex() const
         {

@@ -10,6 +10,8 @@ namespace TiRHI::Vulkan::Private
         {
         case vk::Format::eR8G8B8A8Unorm:
             return Format::R8G8B8A8_UNorm;
+        case vk::Format::eB8G8R8A8Unorm:
+            return Format::B8G8R8A8_UNorm;
         default:
         {
             const std::string s = vk::to_string(format);
