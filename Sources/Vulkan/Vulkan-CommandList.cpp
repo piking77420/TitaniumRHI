@@ -92,6 +92,74 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().endDebugUtilsLabelEXT();
     }
 
+    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
+    {
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
+
+        m_vulkanStorage.clearValues.clear();
+        m_vulkanStorage.clearValues.reserve(beginRenderPass.clearValues.size());
+
+        for (const auto& clearValues : beginRenderPass.clearValues)
+        {
+            vk::ClearValue clearValue;
+            std::visit(overloaded{[&clearValue](const ClearValueDepthStencil& clearValueDepthStencil)
+                                  {
+                                      vk::ClearDepthStencilValue vkClearDepthStencilValue;
+                                      vkClearDepthStencilValue.setDepth(clearValueDepthStencil.depth);
+                                      vkClearDepthStencilValue.setStencil(clearValueDepthStencil.stencil);
+                                      clearValue.setDepthStencil(vkClearDepthStencilValue);
+                                  },
+                                  [&clearValue](const ClearValueColor& clearValueColor)
+                                  {
+                                      vk::ClearColorValue vkClearColorValue;
+                                      vkClearColorValue.setFloat32(clearValueColor.color);
+                                      clearValue.setColor(vkClearColorValue);
+                                  }},
+                       clearValues);
+            m_vulkanStorage.clearValues.emplace_back(clearValue);
+        }
+
+        vk::CommandBuffer cmd = getcurrentFrameCmb();
+
+        vk::Rect2D renderArea;
+        renderArea.offset.x = beginRenderPass.renderArea.offset.x;
+        renderArea.offset.y = beginRenderPass.renderArea.offset.x;
+
+        renderArea.extent.width = beginRenderPass.renderArea.extend.width;
+        renderArea.extent.height = beginRenderPass.renderArea.extend.height;
+
+        vk::RenderPassBeginInfo renderPassBeginInfo{};
+        renderPassBeginInfo.setRenderPass(renderTargets.getRenderPassDescriptor()->getNativeRenderPass())
+            .setFramebuffer(RenderTargets::Private::getFrameBuffer(renderTargets))
+            .setRenderArea(renderArea)
+            .setClearValues(m_vulkanStorage.clearValues);
+
+        getcurrentFrameCmb().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+        return true;
+    }
+
+    void CommandList::endRenderPass()
+    {
+        onEndRenderPass();
+        getcurrentFrameCmb().endRenderPass();
+    }
+
+    void CommandList::setViewPort(const Viewport& viewPort)
+    {
+        const vk::Viewport viewport{viewPort.position.x,    viewPort.position.y, viewPort.extend.width,
+                                    viewPort.extend.height, viewPort.minDepth,   viewPort.maxDepth};
+        getcurrentFrameCmb().setViewport(0, viewport);
+    }
+
+    void CommandList::setScissors(const Rect2D& rect2d)
+    {
+        const vk::Rect2D scissor{{rect2d.offset.x, rect2d.offset.y}, {rect2d.extend.width, rect2d.extend.height}};
+
+        getcurrentFrameCmb().setScissor(0, scissor);
+    }
+
     vk::CommandBuffer CommandList::getcurrentFrameCmb()
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();

@@ -9,7 +9,7 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
 
-    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI>
+    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, Vulkan::RenderPassDescriptor>
     {
     public:
         RenderTargets() = delete;
@@ -17,17 +17,34 @@ namespace TiRHI::Vulkan
         RHI_MOVE_CONSTRUCT_ONLY(RenderTargets);
 
         RenderTargets(RHI& rhi)
-            : BaseRenderTargets<RenderTargets, RHI>(rhi)
+            : BaseRenderTargets(rhi)
         {
         }
 
-        bool build(Device& device, const RenderPassDescriptor& renderPassDescriptor);
+        struct Private
+        {
+            static vk::Framebuffer getFrameBuffer(const RenderTargets& renderTargets)
+            {
+                return renderTargets.m_frameBuffer.get();
+            }
+
+            static bool build(RenderTargets& renderTargets, Device& device, vk::ImageView imageView)
+            {
+                return renderTargets.build(device, imageView);
+            }
+        };
+
+        bool build(Device& device);
 
     private:
+        friend Private;
+
         vk::UniqueFramebuffer m_frameBuffer;
 
         bool createFrameBuffer(vk::Device device);
 
+        // private builder
+        bool build(Device& device, vk::ImageView imageView);
     };
 
 } // namespace TiRHI::Vulkan

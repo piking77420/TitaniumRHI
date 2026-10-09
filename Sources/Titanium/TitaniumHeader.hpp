@@ -92,6 +92,8 @@ namespace TiRHI::Contract
         { swapChain.acquireNextImage() } -> std::same_as<AcquiredFrame>;
         { swapChain.present() } -> std::same_as<bool>;
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
+        { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
+        { swapChain.getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);
@@ -99,11 +101,14 @@ namespace TiRHI::Contract
     // CommandList
 
     template<typename T>
-    concept CommandListContract = requires(T& commandList, Device& device) {
-        { commandList.build(device) } -> std::same_as<bool>;
-        { commandList.beginRecord() } -> std::same_as<bool>;
-        { commandList.endRecord() } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    concept CommandListContract =
+        requires(T& commandList, Device& device, const Viewport& viewport, const Rect2D& rect2D) {
+            { commandList.build(device) } -> std::same_as<bool>;
+            { commandList.beginRecord() } -> std::same_as<bool>;
+            { commandList.endRecord() } -> std::same_as<bool>;
+            { commandList.setViewPort(viewport) } -> std::same_as<void>;
+            { commandList.setScissors(rect2D) } -> std::same_as<void>;
+        } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
 

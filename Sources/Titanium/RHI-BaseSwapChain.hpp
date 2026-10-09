@@ -9,11 +9,13 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TRenderPassDescriptor>
+    template<typename T, typename TRHI, typename TDevice, typename TRenderPassDescriptor, typename TRenderTarget>
     class BaseSwapChain : public Object<T, TRHI>
     {
     public:
         using _Derived = T;
+        using _RHI = TRHI;
+        using _Device = TDevice;
 
         BaseSwapChain() = delete;
         ~BaseSwapChain() = default;
@@ -22,32 +24,32 @@ namespace TiRHI
             : Object<T, TRHI>(rhi)
             , m_renderPassDescriptor(rhi)
         {
-            static_assert(std::derived_from<T, BaseSwapChain<T, TRHI, TRenderPassDescriptor>>);
+            static_assert(std::derived_from<T, BaseSwapChain<T, TRHI, TDevice, TRenderPassDescriptor, TRenderTarget>>);
         }
 
-        bool getVsync() const
+        bool getVsync() const noexcept
         {
             return m_vsync;
         }
 
-        _Derived& setVsync(bool newVsync)
+        _Derived& setVsync(bool newVsync) noexcept
         {
             m_vsync = newVsync;
             return static_cast<_Derived&>(*this);
         }
 
-        uint32_t getWidth() const
+        uint32_t getWidth() const noexcept
         {
             return m_width;
         }
 
-        _Derived& setWidth(uint32_t newWidth)
+        _Derived& setWidth(uint32_t newWidth) noexcept
         {
             m_width = newWidth;
             return static_cast<_Derived&>(*this);
         }
 
-        uint32_t getHeight() const
+        uint32_t getHeight() const noexcept
         {
             return m_height;
         }
@@ -58,31 +60,57 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
-        uint32_t getImageCount() const
+        Extend2DUi getExtend() const noexcept
+        {
+            return Extend2DUi{.width = getWidth(), .height = getHeight()};
+        }
+
+        _Derived& setExtend(Extend2DUi newExtend) noexcept
+        {
+            m_width = newExtend.width;
+            m_height = newExtend.height;
+            return static_cast<_Derived&>(*this);
+        }
+
+        uint32_t getImageCount() const noexcept
         {
             return m_imageCount;
         }
 
-        _Derived& setImageCount(uint32_t newImageCount)
+        _Derived& setImageCount(uint32_t newImageCount) noexcept
         {
             m_imageCount = newImageCount;
             return static_cast<_Derived&>(*this);
         }
 
-        const TRenderPassDescriptor& getRenderPassDescriptor() const
+        const TRenderPassDescriptor& getRenderPassDescriptor() const noexcept
         {
             return m_renderPassDescriptor;
         }
 
-        const TRenderPassDescriptor& getRenderPassDescriptor()
-        {
-            return m_renderPassDescriptor;
-        }
-
-        bool build()
+        bool build() noexcept
         {
             m_renderPassDescriptor.setName(std::format("{} renderPassDescriptor", this->getName()));
             return true;
+        }
+
+        bool createRenderPassDescriptor(_Device& device) noexcept
+        {
+            AttachmentDescriptor attachement{};
+            attachement.setFormat(m_format)
+                .setSampleCount(SampleCount::Count1)
+                .setLoadOp(LoadOp::Clear)
+                .setStoreOp(StoreOp::Store)
+                .setStencilLoadOp(LoadOp::DontCare)
+                .setStencilStoreOp(StoreOp::DontCare)
+                .setRenderState(ResourceState::RenderTarget)
+                .setFinalState(ResourceState::Present);
+
+            const std::array attachments{attachement};
+
+            return m_renderPassDescriptor.setColorAttachements(attachments)
+                .setAcceptedPipelineType(PipelineType::Graphics)
+                .build(device);
         }
 
     protected:

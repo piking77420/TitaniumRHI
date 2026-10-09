@@ -5,6 +5,7 @@
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Vulkan/Vulkan-AcquiredFrame.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
+#include <Vulkan/Vulkan-RenderTargets.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -13,7 +14,7 @@ namespace TiRHI::Vulkan
     class Surface;
     class CommandList;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI, Vulkan::RenderPassDescriptor>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, Vulkan::RenderPassDescriptor, Vulkan::RenderTargets>
     {
     public:
         SwapChain() = delete;
@@ -29,9 +30,9 @@ namespace TiRHI::Vulkan
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
-        bool beginRenderTargets(CommandList& commandList);
+        const RenderTargets& getCurrentRenderTargets() const;
 
-        void endRenderTargets(CommandList& commandList);
+        const RenderTargets& getCurrentRenderTargets();
 
         uint32_t getImageIndex() const
         {
@@ -42,18 +43,14 @@ namespace TiRHI::Vulkan
 
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
 
-        // TODO DELTE
-
-        vk::Framebuffer getNativeFrameBuffer() const;
-        //
     private:
+        std::vector<RenderTargets> m_renderTargets;
+
         vk::UniqueSwapchainKHR m_swapchain;
 
         std::vector<vk::Image> m_images;
 
         std::vector<vk::UniqueImageView> m_imageViews;
-
-        std::vector<vk::UniqueFramebuffer> m_frameBuffers;
 
         vk::SurfaceFormatKHR m_currentFormat;
 
@@ -86,9 +83,7 @@ namespace TiRHI::Vulkan
 
         vk::SwapchainCreateInfoKHR getSwapChainCreateInfo(Device& device, Surface& surface) const;
 
-        bool createRenderPassDescriptor(Device& device);
-
-        bool createFrameBuffer(Device& device);
+        bool createRenderTargets(Device& device);
 
         bool createSyncObjects(vk::Device device);
     };

@@ -5,6 +5,7 @@
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <vulkan/Vulkan-Instance.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Vulkan/Private/VulkanToRHI.hpp>
@@ -122,32 +123,13 @@ namespace TiRHI::Vulkan
         return vkSwapChainCreateInfo;
     }
 
-    bool SwapChain::createRenderPassDescriptor(Device& device)
-    {
-        AttachmentDescriptor attachement{};
-        attachement.setFormat(m_format)
-            .setSampleCount(SampleCount::Count1)
-            .setLoadOp(LoadOp::Clear)
-            .setStoreOp(StoreOp::Store)
-            .setStencilLoadOp(LoadOp::DontCare)
-            .setStencilStoreOp(StoreOp::DontCare)
-            .setRenderState(ResourceState::RenderTarget)
-            .setFinalState(ResourceState::Present);
-
-        const std::array attachments{attachement};
-
-        return m_renderPassDescriptor.setColorAttachements(attachments)
-            .setAcceptedPipelineType(PipelineType::Graphics)
-            .build(device);
-    }
-
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
     {
         /// keep previous one
         vk::UniqueSwapchainKHR oldSwapchain = std::move(m_swapchain);
 
         // Destroy resources referencing old swapchain images FIRST
-        m_frameBuffers.clear();
+        m_renderTargets.clear();
         m_imageViews.clear();
         m_images.clear();
 
@@ -208,40 +190,17 @@ namespace TiRHI::Vulkan
             m_imageViews.push_back(vkDevice.createImageViewUnique(viewInfo));
         }
 
-        return createFrameBuffer(device);
+        return createRenderTargets(device);
     }
 
-    bool SwapChain::beginRenderTargets(CommandList& commandList)
+    const RenderTargets& SwapChain::getCurrentRenderTargets() const
     {
-        auto cmd = commandList.getcurrentFrameCmb();
-        constexpr std::array clearColor{0.0f, 0.0f, 0.0f, 1.0f};
-
-        vk::ClearColorValue clearColorValue;
-        clearColorValue.setFloat32(clearColor);
-
-        vk::ClearValue clearValue{};
-        clearValue.setColor(clearColorValue);
-
-        vk::RenderPassBeginInfo renderPassBeginInfo{};
-        renderPassBeginInfo.setRenderPass(getRenderPassDescriptor().getNativeRenderPass())
-            .setFramebuffer(m_frameBuffers[m_imageIndex].get())
-            .setRenderArea({{0, 0}, {static_cast<uint32_t>(getWidth()), static_cast<uint32_t>(getHeight())}})
-            .setClearValues(clearValue);
-
-        vk::Viewport viewport{0.0f, 0.0f, static_cast<float>(getWidth()), static_cast<float>(getHeight()), 0.0f, 1.0f};
-
-        vk::Rect2D scissor{{0, 0}, {static_cast<uint32_t>(getWidth()), static_cast<uint32_t>(getHeight())}};
-
-        cmd.setViewport(0, viewport);
-        cmd.setScissor(0, scissor);
-        commandList.getcurrentFrameCmb().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-        return true;
+        return m_renderTargets[m_imageIndex];
     }
 
-    void SwapChain::endRenderTargets(CommandList& commandList)
+    const RenderTargets& SwapChain::getCurrentRenderTargets()
     {
-        commandList.getcurrentFrameCmb().endRenderPass();
+        return m_renderTargets[m_imageIndex];
     }
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
@@ -252,11 +211,6 @@ namespace TiRHI::Vulkan
     vk::Semaphore SwapChain::getNativeRenderFinishedSemaphore() const
     {
         return m_synchronisations[m_imageIndex].renderFinishedSemaphore.get();
-    }
-
-    vk::Framebuffer SwapChain::getNativeFrameBuffer() const
-    {
-        return m_frameBuffers[m_imageIndex].get();
     }
 
     vk::SurfaceFormatKHR SwapChain::getSurfaceFormat() const noexcept
@@ -311,23 +265,20 @@ namespace TiRHI::Vulkan
         return extent;
     }
 
-    bool SwapChain::createFrameBuffer(Device& device)
+    bool SwapChain::createRenderTargets(Device& device)
     {
         const vk::Extent2D ext = getExtent2D();
-        m_frameBuffers.reserve(m_imageViews.size());
+        m_renderTargets.reserve(m_imageViews.size());
 
         for (size_t i = 0; i < m_imageViews.size(); ++i)
         {
-            vk::FramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.setRenderPass(m_renderPassDescriptor.getNativeRenderPass())
-                .setAttachments(m_imageViews[i].get())
-                .setWidth(ext.width)
+            auto& renderTarget = m_renderTargets.emplace_back(getRHI());
+            renderTarget.setWidth(ext.width)
                 .setHeight(ext.height)
-                .setLayers(1);
-            auto& frameBuffer =
-                m_frameBuffers.emplace_back(device.getNativeDevice().createFramebufferUnique(framebufferInfo));
+                .setRenderPassDescriptor(&m_renderPassDescriptor)
+                .setName(std::format("{} Swap Chain's RenderTargets {}", getName(), i));
 
-            if (!frameBuffer)
+            if (!Vulkan::RenderTargets::Private::build(renderTarget, device, m_imageViews[i].get()))
             {
                 RHI_LOG_ERROR(std::format(L"Failed to crate Framebuffer {}", i), RhiApi::Vulkan);
                 return false;

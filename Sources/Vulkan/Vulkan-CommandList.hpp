@@ -2,16 +2,18 @@
 #define TITANIUM_VULKAN_COMMAND_LIST_H
 
 #include <optional>
+#include <memory_resource>
 #include <Volk/volk.h>
 #include <Vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseCommandList.hpp>
+#include <Vulkan/Vulkan-RenderTargets.hpp>
 
 namespace TiRHI::Vulkan
 {
     class RHI;
     class Device;
 
-    class CommandList : public BaseCommandList<CommandList, RHI>
+    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets>
     {
     public:
         CommandList() = delete;
@@ -29,6 +31,14 @@ namespace TiRHI::Vulkan
 
         void endDebugLabel();
 
+        bool beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets);
+
+        void endRenderPass();
+
+        void setViewPort(const Viewport& viewPort);
+
+        void setScissors(const Rect2D& rect2d);
+
         vk::CommandBuffer getcurrentFrameCmb();
 
     private:
@@ -37,6 +47,11 @@ namespace TiRHI::Vulkan
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
         const VolkDeviceTable* m_volkTable = nullptr;
+
+        struct VulkanStorage
+        {
+            std::vector<vk::ClearValue> clearValues;
+        } m_vulkanStorage;
     };
 
 } // namespace TiRHI::Vulkan
