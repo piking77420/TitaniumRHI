@@ -21,10 +21,7 @@ namespace TiRHI::Vulkan
     public:
         Device() = delete;
         ~Device() = default;
-        Device(const Device&) = delete;
-        Device& operator=(const Device&) = delete;
-        Device(Device&&) noexcept = default;
-        Device& operator=(Device&&) noexcept = default;
+        RHI_MOVE_CONSTRUCT_ONLY(Device)
         Device(RHI& rhi);
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,

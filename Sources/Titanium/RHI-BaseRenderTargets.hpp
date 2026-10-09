@@ -17,6 +17,7 @@ namespace TiRHI
         BaseRenderTargets() = delete;
         ~BaseRenderTargets() = default;
 
+        RHI_MOVE_CONSTRUCT_ONLY(BaseRenderTargets);
         BaseRenderTargets(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

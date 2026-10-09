@@ -17,6 +17,7 @@ namespace TiRHI
 
         BaseSwapChain() = delete;
         ~BaseSwapChain() = default;
+        RHI_MOVE_CONSTRUCT_ONLY(BaseSwapChain)
         BaseSwapChain(TRHI& rhi)
             : Object<T, TRHI>(rhi)
             , m_renderPassDescriptor(rhi)

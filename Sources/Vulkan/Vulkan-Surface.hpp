@@ -14,6 +14,7 @@ namespace TiRHI::Vulkan
     public:
         Surface() = delete;
         ~Surface();
+        RHI_MOVE_CONSTRUCT_ONLY(Surface)
         Surface(RHI& rhi)
             : BaseSurface(rhi)
         {
