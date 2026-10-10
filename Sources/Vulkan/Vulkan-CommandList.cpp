@@ -2,6 +2,7 @@
 #include <Titanium/Log.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -173,9 +174,72 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().setScissor(0, scissor);
     }
 
-    vk::CommandBuffer CommandList::getcurrentFrameCmb()
+    void CommandList::transitionResource(Texture& texture, const ResourceState state) const
+    {
+        const ResourceState currentState = texture.getState();
+        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE)
+            return;
+
+        const vk::PipelineStageFlags srcPipelineStageFlag = getTransitionSrcMask(currentState);
+        const vk::PipelineStageFlags dstPipelineStageFlag = getTransitionDstMask(state);
+
+        const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
+
+        getcurrentFrameCmb().pipelineBarrier(srcPipelineStageFlag, dstPipelineStageFlag,
+                                             getTransitionDependencyMask(currentState, state), {}, {}, barrier);
+        texture.setState(state);
+    }
+
+    vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();
+    }
+
+    vk::PipelineStageFlags CommandList::getTransitionSrcMask(ResourceState current)
+    {
+        if (current == ResourceState::Undefined)
+            return vk::PipelineStageFlagBits::eTopOfPipe;
+
+        return Private::getPipelineStage(current);
+    }
+
+    vk::PipelineStageFlags CommandList::getTransitionDstMask(ResourceState target)
+    {
+        return Private::getPipelineStage(target);
+    }
+
+    vk::DependencyFlags CommandList::getTransitionDependencyMask(ResourceState current, ResourceState target)
+    {
+        return {};
+    }
+
+    vk::ImageMemoryBarrier CommandList::makeImageBarrier(Texture& texture, ResourceState current, ResourceState target)
+    {
+        using namespace Private;
+
+        // TODO be able to choose level an layer
+        vk::ImageSubresourceRange range{};
+        range.aspectMask = vk::ImageAspectFlagBits::eColor;
+        range.baseMipLevel = 0;
+        range.levelCount = VK_REMAINING_MIP_LEVELS;
+        range.baseArrayLayer = 0;
+        range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+        vk::ImageMemoryBarrier barrier{};
+
+        barrier.oldLayout = Private::toVulkanImageLayout(current);
+        barrier.newLayout = Private::toVulkanImageLayout(target);
+
+        barrier.srcAccessMask = getAccessMask(current);
+        barrier.dstAccessMask = getAccessMask(target);
+
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.image = Texture::Private::getImage(texture);
+        barrier.subresourceRange = range;
+
+        return barrier;
     }
 
 } // namespace TiRHI::Vulkan

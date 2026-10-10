@@ -101,12 +101,9 @@ namespace TiRHI
         {
             AttachmentDescriptor attachement{};
             attachement.setFormat(m_format)
-                .setSampleCount(SampleCount::Count1)
                 .setLoadOp(LoadOp::Clear)
                 .setStoreOp(StoreOp::Store)
-                .setStencilLoadOp(LoadOp::DontCare)
-                .setStencilStoreOp(StoreOp::DontCare)
-                .setInitialState(ResourceState::Undefined) // TO DO to put present need an resource tracker
+                .setInitialState(ResourceState::Present) // TO DO to put present need an resource tracker
                 .setRenderState(ResourceState::RenderTarget)
                 .setFinalState(ResourceState::Present);
 

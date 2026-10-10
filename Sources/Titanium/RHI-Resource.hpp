@@ -25,10 +25,9 @@ namespace TiRHI
             return m_state;
         }
 
-        Resource& setState(ResourceState newState) const noexcept
+        T& setState(ResourceState newState) noexcept
         {
             m_state = newState;
-
             return reinterpret_cast<T&>(*this);
         }
 

@@ -15,6 +15,13 @@ namespace TiRHI::Vulkan::Private
     vk::AttachmentStoreOp toVulkanAttachementStoreOp(StoreOp storeOp);
 
     vk::PipelineBindPoint toPipelineBindPoint(PipelineType type);
+
+    vk::PipelineStageFlags getPipelineStage(ResourceState state);
+
+    vk::AccessFlags getAccessMask(ResourceState state);
+
+    vk::ImageLayout getImageLayout(ResourceState state);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

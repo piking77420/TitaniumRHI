@@ -7,6 +7,7 @@
 #include <Vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
+#include <Vulkan/Vulkan-Texture.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -39,7 +40,9 @@ namespace TiRHI::Vulkan
 
         void setScissors(const Rect2D& rect2d);
 
-        vk::CommandBuffer getcurrentFrameCmb();
+        void transitionResource(Texture& texture, ResourceState state) const ;
+
+        vk::CommandBuffer getcurrentFrameCmb() const;
 
     private:
         vk::UniqueCommandPool m_commandPool;
@@ -52,6 +55,14 @@ namespace TiRHI::Vulkan
         {
             std::vector<vk::ClearValue> clearValues;
         } m_vulkanStorage;
+
+        static vk::PipelineStageFlags getTransitionSrcMask(ResourceState current);
+
+        static vk::PipelineStageFlags getTransitionDstMask(ResourceState target);
+
+        static vk::DependencyFlags getTransitionDependencyMask(ResourceState current, ResourceState target);
+
+        static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
     };
 
 } // namespace TiRHI::Vulkan
