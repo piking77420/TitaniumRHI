@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <memory_resource>
+#include <map>
 #include <Volk/volk.h>
 #include <Vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseCommandList.hpp>
@@ -40,7 +41,8 @@ namespace TiRHI::Vulkan
 
         void setScissors(const Rect2D& rect2d);
 
-        void transitionResource(Texture& texture, ResourceState state) const ;
+        // TODO make some overload for batching barriers
+        void transitionResource(Texture& texture, ResourceState state);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 
@@ -54,11 +56,8 @@ namespace TiRHI::Vulkan
         struct VulkanStorage
         {
             std::vector<vk::ClearValue> clearValues;
+            std::array<std::vector<size_t>, ResourceStateCount * ResourceStateCount> transitionTexture;
         } m_vulkanStorage;
-
-        static vk::PipelineStageFlags getTransitionSrcMask(ResourceState current);
-
-        static vk::PipelineStageFlags getTransitionDstMask(ResourceState target);
 
         static vk::DependencyFlags getTransitionDependencyMask(ResourceState current, ResourceState target);
 

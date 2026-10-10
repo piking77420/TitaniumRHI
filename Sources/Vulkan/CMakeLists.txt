@@ -7,6 +7,7 @@ target_sources(
         Private/DeviceQueueFamily.hpp
         Private/RHIToVulkan.cpp
         Private/RHIToVulkan.hpp
+        Private/Transition.hpp
         Private/VulkanToRHI.cpp
         Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp

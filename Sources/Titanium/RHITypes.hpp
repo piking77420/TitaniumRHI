@@ -169,7 +169,8 @@ namespace TiRHI
     X(CopySource)                                                                                                      \
     X(CopyDestination)                                                                                                 \
     X(IndirectArgument)                                                                                                \
-    X(Present)
+    X(Present)                                                                                                         \
+    X(Count)
 
     enum struct ResourceState
     {
@@ -177,6 +178,13 @@ namespace TiRHI
         RHI_RESOURCE_STATE_LIST(X)
 #undef X
     };
+
+    constexpr size_t ResourceStateCount = static_cast<size_t>(ResourceState::Count);
+
+    static constexpr size_t getResourceCombinaisonIndex(ResourceState from, ResourceState to)
+    {
+        return static_cast<size_t>(from) * ResourceStateCount + static_cast<size_t>(to);
+    }
 
     IMPLEMENT_TO_STRING_TITANIUM(ResourceState, RHI_RESOURCE_STATE_LIST)
 

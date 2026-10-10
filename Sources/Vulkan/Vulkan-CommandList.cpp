@@ -3,6 +3,7 @@
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Private/Transition.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -174,18 +175,19 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().setScissor(0, scissor);
     }
 
-    void CommandList::transitionResource(Texture& texture, const ResourceState state) const
+    void CommandList::transitionResource(Texture& texture, const ResourceState state)
     {
         const ResourceState currentState = texture.getState();
         if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE)
             return;
 
-        const vk::PipelineStageFlags srcPipelineStageFlag = getTransitionSrcMask(currentState);
-        const vk::PipelineStageFlags dstPipelineStageFlag = getTransitionDstMask(state);
+        using namespace Private;
+
+        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
 
         const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
 
-        getcurrentFrameCmb().pipelineBarrier(srcPipelineStageFlag, dstPipelineStageFlag,
+        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
                                              getTransitionDependencyMask(currentState, state), {}, {}, barrier);
         texture.setState(state);
     }
@@ -193,19 +195,6 @@ namespace TiRHI::Vulkan
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();
-    }
-
-    vk::PipelineStageFlags CommandList::getTransitionSrcMask(ResourceState current)
-    {
-        if (current == ResourceState::Undefined)
-            return vk::PipelineStageFlagBits::eTopOfPipe;
-
-        return Private::getPipelineStage(current);
-    }
-
-    vk::PipelineStageFlags CommandList::getTransitionDstMask(ResourceState target)
-    {
-        return Private::getPipelineStage(target);
     }
 
     vk::DependencyFlags CommandList::getTransitionDependencyMask(ResourceState current, ResourceState target)
