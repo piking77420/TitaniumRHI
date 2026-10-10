@@ -94,48 +94,61 @@ namespace TiRHI::Vulkan
 
     bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
     {
-        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+        const auto* pass = renderTargets.getRenderPassDescriptor();
+
+        if (!pass)
             return false;
 
-        m_vulkanStorage.clearValues.clear();
-        m_vulkanStorage.clearValues.reserve(beginRenderPass.clearValues.size());
+        const auto colorAttachments = pass->getColorAttachements();
+        const auto depthAttachment = pass->getDepthAttachement();
 
-        for (const auto& clearValues : beginRenderPass.clearValues)
+        const size_t attachmentCount = colorAttachments.size() + (depthAttachment.has_value() ? 1 : 0);
+
+        // Validate before beginning the render pass.
+        if (beginRenderPass.clearColors.size() > colorAttachments.size())
+            return false;
+
+        // Assuming all color attachments use LoadOp::Clear.
+        if (beginRenderPass.clearColors.size() < colorAttachments.size())
+            return false;
+
+        if (depthAttachment && depthAttachment->loadOp == LoadOp::Clear && !beginRenderPass.clearDepthStencil)
+            return false;
+
+        m_vulkanStorage.clearValues.reserve(attachmentCount);
+
+        // Color attachments
+        for (size_t i = 0; i < beginRenderPass.clearColors.size(); ++i)
         {
-            vk::ClearValue clearValue;
-            std::visit(overloaded{[&clearValue](const ClearValueDepthStencil& clearValueDepthStencil)
-                                  {
-                                      vk::ClearDepthStencilValue vkClearDepthStencilValue;
-                                      vkClearDepthStencilValue.setDepth(clearValueDepthStencil.depth);
-                                      vkClearDepthStencilValue.setStencil(clearValueDepthStencil.stencil);
-                                      clearValue.setDepthStencil(vkClearDepthStencilValue);
-                                  },
-                                  [&clearValue](const ClearValueColor& clearValueColor)
-                                  {
-                                      vk::ClearColorValue vkClearColorValue;
-                                      vkClearColorValue.setFloat32(clearValueColor.color);
-                                      clearValue.setColor(vkClearColorValue);
-                                  }},
-                       clearValues);
-            m_vulkanStorage.clearValues.emplace_back(clearValue);
+            m_vulkanStorage.clearValues.emplace_back().setColor(
+                vk::ClearColorValue{beginRenderPass.clearColors[i].color});
         }
 
-        vk::CommandBuffer cmd = getcurrentFrameCmb();
+        // Depth/stencil attachment is the last attachment.
+        if (depthAttachment && beginRenderPass.clearDepthStencil)
+        {
+            const auto& ds = *beginRenderPass.clearDepthStencil;
 
-        vk::Rect2D renderArea;
+            m_vulkanStorage.clearValues.emplace_back().setDepthStencil(
+                vk::ClearDepthStencilValue{ds.depth, ds.stencil});
+        }
+
+        vk::Rect2D renderArea{};
         renderArea.offset.x = beginRenderPass.renderArea.offset.x;
-        renderArea.offset.y = beginRenderPass.renderArea.offset.x;
-
+        renderArea.offset.y = beginRenderPass.renderArea.offset.y;
         renderArea.extent.width = beginRenderPass.renderArea.extend.width;
         renderArea.extent.height = beginRenderPass.renderArea.extend.height;
 
-        vk::RenderPassBeginInfo renderPassBeginInfo{};
-        renderPassBeginInfo.setRenderPass(renderTargets.getRenderPassDescriptor()->getNativeRenderPass())
+        vk::RenderPassBeginInfo beginInfo{};
+        beginInfo.setRenderPass(pass->getNativeRenderPass())
             .setFramebuffer(RenderTargets::Private::getFrameBuffer(renderTargets))
             .setRenderArea(renderArea)
             .setClearValues(m_vulkanStorage.clearValues);
 
-        getcurrentFrameCmb().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
+
+        getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
         return true;
     }

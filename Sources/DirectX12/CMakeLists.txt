@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/RhiToDirectX12.cpp
+        Private/RhiToDirectX12.hpp
         DirectX12-AcquireFrame.cpp
         DirectX12-AcquireFrame.hpp
         DirectX12-CommandList.cpp
@@ -10,6 +12,10 @@ target_sources(
         DirectX12-Device.cpp
         DirectX12-Device.hpp
         DirectX12-Header.hpp
+        DirectX12-RenderPassDescriptor.cpp
+        DirectX12-RenderPassDescriptor.hpp
+        DirectX12-RenderTargets.cpp
+        DirectX12-RenderTargets.hpp
         DirectX12-Factory.cpp
         DirectX12-Factory.hpp
         DirectX12-RHI.cpp

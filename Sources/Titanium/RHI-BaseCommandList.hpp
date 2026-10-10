@@ -4,19 +4,11 @@
 #include <format>
 #include <optional>
 #include <array>
-#include <variant>
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/Log.hpp>
 
 namespace TiRHI
 {
-    // helper for std::visit
-    template<class... Ts>
-    struct overloaded : Ts...
-    {
-        using Ts::operator()...;
-    };
-
     struct ClearValueDepthStencil
     {
         float depth;
@@ -28,22 +20,27 @@ namespace TiRHI
         std::array<float, 4> color;
     };
 
-    using ClearValue = std::variant<ClearValueColor, ClearValueDepthStencil>;
-
     struct BeginRenderPass
     {
-        std::span<ClearValue> clearValues;
+        std::span<const ClearValueColor> clearColors;
+        std::optional<ClearValueDepthStencil> clearDepthStencil;
         Rect2D renderArea;
 
-        BeginRenderPass& setClearColor(const std::span<ClearValue>& newClearValue) noexcept
+        BeginRenderPass& setClearColors(std::span<const ClearValueColor> values) noexcept
         {
-            clearValues = newClearValue;
+            clearColors = values;
             return *this;
         }
 
-        BeginRenderPass& setRenderArea(const Rect2D newRenderArea) noexcept
+        BeginRenderPass& setClearDepthStencil(ClearValueDepthStencil value) noexcept
         {
-            renderArea = newRenderArea;
+            clearDepthStencil = value;
+            return *this;
+        }
+
+        BeginRenderPass& setRenderArea(Rect2D area) noexcept
+        {
+            renderArea = area;
             return *this;
         }
     };
@@ -86,6 +83,8 @@ namespace TiRHI
             }
 
             m_recordState.isRecording = true;
+
+            return true;
         }
 
         void onEndRecord()

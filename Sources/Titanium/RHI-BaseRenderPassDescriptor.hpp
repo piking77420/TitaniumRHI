@@ -51,6 +51,11 @@ namespace TiRHI
             return m_acceptedPipelineType;
         }
 
+        size_t getAttachementCount() const
+        {
+            return m_colorAttachements.size() + (m_depthAttachement ? 1 : 0);
+        }
+
     private:
         std::vector<AttachmentDescriptor> m_colorAttachements;
 

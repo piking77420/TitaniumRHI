@@ -9,6 +9,8 @@
 #include <Titanium/Log.hpp>
 #include <DirectX12/DirectX12-RHI.hpp>
 #include <DirectX12/DirectX12-Device.hpp>
+#include <DirectX12/DirectX12-RenderTargets.hpp>
+#include <DirectX12/Private/RhiToDirectX12.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -135,6 +137,191 @@ namespace TiRHI::DirectX12
 #if defined(TITANIUM_USE_PIX)
         PIXEndEvent(m_commandList.Get());
 #endif // defined(TITANIUM_USE_PIX)
+    }
+
+    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
+    {
+        const auto* pass = renderTargets.getRenderPassDescriptor();
+        const auto colorAtt = pass->getColorAttachements();
+        const auto depthAtt = pass->getDepthAttachement();
+        const auto d3d12Att = renderTargets.getAttachements();
+
+        const size_t colorCount = colorAtt.size();
+
+        // Validate before modifying command-list state.
+        if (colorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT)
+            return false;
+
+        if (d3d12Att.size() < colorCount + (depthAtt.has_value() ? 1 : 0))
+            return false;
+
+        // Assumes every color attachment uses LoadOp::Clear.
+        if (beginRenderPass.clearColors.size() < colorCount)
+            return false;
+
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
+
+        if (!renderTargetTransitionIn(renderTargets))
+            return false;
+
+        std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> attachments{};
+
+        for (size_t i = 0; i < colorCount; ++i)
+        {
+            auto& desc = attachments[i];
+            const auto& colorAttachment = colorAtt[i];
+
+            desc.cpuDescriptor = d3d12Att[i].handle;
+
+            desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR; // TODO
+
+            desc.BeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(colorAttachment.format);
+
+            std::copy_n(beginRenderPass.clearColors[i].color.begin(), 4, desc.BeginningAccess.Clear.ClearValue.Color);
+
+            desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        }
+
+        D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthDesc{};
+        D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* depthDescPtr = nullptr;
+
+        if (depthAtt)
+        {
+            depthDesc.cpuDescriptor = d3d12Att[colorCount].handle;
+            depthDesc.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+            depthDesc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            depthDesc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+            depthDesc.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+
+            if (beginRenderPass.clearDepthStencil)
+            {
+                depthDesc.DepthBeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(depthAtt->format);
+
+                depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth =
+                    beginRenderPass.clearDepthStencil->depth;
+            }
+            else
+            {
+                // A CLEAR operation requires a clear value.
+                return false;
+            }
+
+            depthDescPtr = &depthDesc;
+        }
+
+        m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? attachments.data() : nullptr,
+                                       depthDescPtr, D3D12_RENDER_PASS_FLAG_NONE);
+
+        m_currentRenderTargets = &renderTargets;
+
+        return true;
+    }
+
+    void CommandList::endRenderPass()
+    {
+        onEndRenderPass();
+        m_commandList->EndRenderPass();
+
+        if (m_currentRenderTargets)
+        {
+            renderTargetTransitionOut(*m_currentRenderTargets);
+        }
+    }
+
+    void CommandList::setViewPort(const Viewport& viewPort)
+    {
+        D3D12_VIEWPORT d3d12Viewport;
+        d3d12Viewport.TopLeftX = viewPort.position.x;
+        d3d12Viewport.TopLeftY = viewPort.position.y;
+        d3d12Viewport.Width = viewPort.extend.width;
+        d3d12Viewport.Height = viewPort.extend.height;
+        d3d12Viewport.MinDepth = viewPort.minDepth;
+        d3d12Viewport.MaxDepth = viewPort.maxDepth;
+        m_commandList->RSSetViewports(1, &d3d12Viewport);
+    }
+
+    void CommandList::setScissors(const Rect2D& rect2d)
+    {
+        D3D12_RECT d3d12Scissors{};
+        d3d12Scissors.left = rect2d.offset.x;
+        d3d12Scissors.top = rect2d.offset.y;
+        d3d12Scissors.right = rect2d.offset.x + static_cast<LONG>(rect2d.extend.width);
+        d3d12Scissors.bottom = rect2d.offset.y + static_cast<LONG>(rect2d.extend.height);
+
+        m_commandList->RSSetScissorRects(1, &d3d12Scissors);
+    }
+
+    bool CommandList::renderTargetTransitionIn(const RenderTargets& renderTargets)
+    {
+        const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
+        if (!renderPassDescriptor)
+            return false;
+
+        std::span attachements = renderTargets.getAttachements();
+
+        if (attachements.size() != renderPassDescriptor->getAttachementCount())
+        {
+            RHI_LOG_ERROR(
+                std::format(L"CommandList {}: renderTargetTransition but d3d12 renderTargets size is not equal to ",
+                            this->getNameW()),
+                RhiApi::DirectX12);
+
+            return false;
+        }
+
+        m_barriers.clear();
+        m_barriers.reserve(attachements.size());
+        for (const auto& att : attachements)
+        {
+            D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource = att.image;
+            // TODO ABtract Resource state
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        }
+
+        m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
+
+        return true;
+    }
+
+    bool CommandList::renderTargetTransitionOut(const RenderTargets& renderTargets)
+    {
+        const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
+        if (!renderPassDescriptor)
+            return false;
+
+        std::span attachements = renderTargets.getAttachements();
+
+        if (attachements.size() != renderPassDescriptor->getAttachementCount())
+        {
+            RHI_LOG_ERROR(
+                std::format(L"CommandList {}: renderTargetTransition but d3d12 renderTargets size is not equal to ",
+                            this->getNameW()),
+                RhiApi::DirectX12);
+
+            return false;
+        }
+
+        m_barriers.clear();
+        m_barriers.reserve(attachements.size());
+        for (const auto& att : attachements)
+        {
+            D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource = att.image;
+            // TODO ABtract Resource state
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        }
+
+        m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
+
+        return true;
     }
 
 }

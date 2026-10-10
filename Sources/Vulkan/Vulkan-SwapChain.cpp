@@ -198,7 +198,7 @@ namespace TiRHI::Vulkan
         return m_renderTargets[m_imageIndex];
     }
 
-    const RenderTargets& SwapChain::getCurrentRenderTargets()
+    RenderTargets& SwapChain::getCurrentRenderTargets()
     {
         return m_renderTargets[m_imageIndex];
     }

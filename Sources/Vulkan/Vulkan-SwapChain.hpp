@@ -32,7 +32,7 @@ namespace TiRHI::Vulkan
 
         const RenderTargets& getCurrentRenderTargets() const;
 
-        const RenderTargets& getCurrentRenderTargets();
+        RenderTargets& getCurrentRenderTargets();
 
         uint32_t getImageIndex() const
         {

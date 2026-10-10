@@ -11,8 +11,9 @@ namespace TiRHI::DirectX12
 {
     class RHI;
     class Device;
+    class RenderTargets;
 
-    class CommandList : public BaseCommandList<CommandList, RHI>
+    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets>
     {
     public:
         CommandList() = delete;
@@ -29,6 +30,14 @@ namespace TiRHI::DirectX12
 
         void endDebugLabel();
 
+        bool beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets);
+
+        void endRenderPass();
+
+        void setViewPort(const Viewport& viewPort);
+
+        void setScissors(const Rect2D& rect2d);
+
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
             return m_commandList.Get();
@@ -36,7 +45,12 @@ namespace TiRHI::DirectX12
 
     private:
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
-        MComPtr<ID3D12GraphicsCommandList1> m_commandList;
+        MComPtr<ID3D12GraphicsCommandList4> m_commandList;
+        std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
+        const RenderTargets* m_currentRenderTargets;
+
+        bool renderTargetTransitionIn(const RenderTargets& renderTargets);
+        bool renderTargetTransitionOut(const RenderTargets& renderTargets);
     };
 
 } // namespace TiRHI::DirectX12

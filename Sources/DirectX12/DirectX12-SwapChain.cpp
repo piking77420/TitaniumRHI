@@ -6,6 +6,8 @@
 #include <DirectX12/DirectX12-Device.hpp>
 #include <DirectX12/DirectX12-RHI.hpp>
 #include <DirectX12/DirectX12-Surface.hpp>
+#include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
+#include <DirectX12/DirectX12-RenderTargets.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -69,11 +71,6 @@ namespace TiRHI::DirectX12
         return queryBuffer() && createRenderTarget(device);
     }
 
-    ID3D12Resource* SwapChain::getNativeCurrentBackBuffer() const
-    {
-        return m_images[m_swapchainFrameIndex].Get();
-    }
-
     bool SwapChain::createSwapChain(Device& device, Surface& surface)
     {
         if (!getRHI().getNativeFactory())
@@ -131,7 +128,7 @@ namespace TiRHI::DirectX12
             RHI_LOG_ERROR(std::format(L"SwapChain cast failed! \n Error Code: {}", hrSwapChainCast), RhiApi::DirectX12);
         }
 
-        return queryBuffer() && initSynchronisation(device) && createRenderTarget(device);
+        return queryBuffer() && createRenderPassDescriptor(device) && createRenderTarget(device);
     }
 
     bool SwapChain::queryBuffer()
@@ -161,12 +158,6 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool SwapChain::initSynchronisation(Device& device)
-    {
-
-        return true;
-    }
-
     bool SwapChain::createRenderTarget(Device& device)
     {
         m_rtvHeap.Reset();
@@ -189,6 +180,7 @@ namespace TiRHI::DirectX12
 
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
+        m_renderTargets.reserve(heapDesc.NumDescriptors);
         for (UINT i = 0; i < heapDesc.NumDescriptors; ++i)
         {
             if (FAILED(m_swapchain->GetBuffer(i, IID_PPV_ARGS(&m_images[i]))))
@@ -197,13 +189,31 @@ namespace TiRHI::DirectX12
 
                 return false;
             }
+            auto& currentRenderTarget = m_renderTargets.emplace_back(getRHI());
+            currentRenderTarget.setWidth(getWidth())
+                .setHeight(getHeight())
+                .setName(std::format("SwapChain Rendertarget {}", i))
+                .setRenderPassDescriptor(&m_renderPassDescriptor);
 
-            d3d12Device->CreateRenderTargetView(m_images[i].Get(), nullptr, rtvHandle);
+            if (!RenderTargets::Private::build(currentRenderTarget, device, rtvHandle, m_images[i].Get()))
+            {
+                RHI_LOG_ERROR(L"Failed to build render targets of swapChain image", RhiApi::DirectX12);
+            }
 
             rtvHandle.ptr += m_rtvDescriptorSize;
         }
 
         return true;
+    }
+
+    const RenderTargets& SwapChain::getCurrentRenderTargets() const
+    {
+        return m_renderTargets[m_swapchainFrameIndex];
+    }
+
+    RenderTargets& SwapChain::getCurrentRenderTargets()
+    {
+        return m_renderTargets[m_swapchainFrameIndex];
     }
 
 } // namespace TiRHI::DirectX12
