@@ -51,7 +51,7 @@ namespace TiRHI
     public:
         BaseCommandList() = delete;
         ~BaseCommandList() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseCommandList)
+        RHI_MOVE_ONLY(BaseCommandList)
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

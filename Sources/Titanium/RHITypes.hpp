@@ -7,6 +7,13 @@
 
 namespace TiRHI
 {
+    // helper for variant
+    template<class... Ts>
+    struct overloads : Ts...
+    {
+        using Ts::operator()...;
+    };
+
     enum struct RhiMessageSeverity
     {
         Verbose,

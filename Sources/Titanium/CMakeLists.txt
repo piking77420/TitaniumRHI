@@ -19,8 +19,11 @@ target_sources(
         RHI-BaseRHI.hpp
         RHI-BaseSwapChain.cpp
         RHI-BaseSwapChain.hpp
+        RHI-BaseTexture.cpp
+        RHI-BaseTexture.hpp
         RHI-DebugScope.cpp
         RHI-DebugScope.hpp
+        RHI-EnumFlag.hpp
         RHI-EnumToString.hpp
         RHI-Object.hpp
         RHI-BaseRenderTargets.cpp
@@ -29,8 +32,6 @@ target_sources(
         RHI-Resource.hpp
         RHI-Surface.cpp
         RHI-Surface.hpp
-        RHI-BaseTexture.cpp
-        RHI-BaseTexture.hpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp

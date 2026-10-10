@@ -14,7 +14,7 @@ namespace TiRHI::Vulkan
     public:
         RenderPassDescriptor() = delete;
         ~RenderPassDescriptor() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(RenderPassDescriptor);
+        RHI_MOVE_ONLY(RenderPassDescriptor);
         explicit RenderPassDescriptor(RHI& rhi);
 
         bool build(Device& device);

@@ -13,6 +13,7 @@ namespace TiRHI
     public:
         Resource() = default;
         ~Resource() = default;
+        RHI_MOVE_ONLY(Resource)
         Resource(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -24,7 +25,7 @@ namespace TiRHI
             return m_state;
         }
 
-        Resource& setState(ResourceState newState) const
+        Resource& setState(ResourceState newState) const noexcept
         {
             m_state = newState;
 

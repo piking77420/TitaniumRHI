@@ -6,6 +6,7 @@
 #include <Vulkan/Vulkan-AcquiredFrame.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
+#include <Vulkan/Vulkan-Texture.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -14,12 +15,13 @@ namespace TiRHI::Vulkan
     class Surface;
     class CommandList;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, Vulkan::RenderPassDescriptor, Vulkan::RenderTargets>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, Vulkan::RenderPassDescriptor, Vulkan::RenderTargets,
+                                           Vulkan::Texture>
     {
     public:
         SwapChain() = delete;
         ~SwapChain() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
+        RHI_MOVE_ONLY(SwapChain)
         explicit SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);
@@ -34,6 +36,10 @@ namespace TiRHI::Vulkan
 
         RenderTargets& getCurrentRenderTargets();
 
+        const Texture& getCurrentSwapChainTexture() const;
+
+        Texture& getCurrentSwapChainTexture();
+
         uint32_t getImageIndex() const
         {
             return m_imageIndex;
@@ -45,8 +51,6 @@ namespace TiRHI::Vulkan
 
     private:
         vk::UniqueSwapchainKHR m_swapchain;
-
-        std::vector<vk::Image> m_images;
 
         std::vector<vk::UniqueImageView> m_imageViews;
 

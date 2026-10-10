@@ -7,7 +7,7 @@
 
 namespace TiRHI::Vulkan
 {
-    [[nodiscard]] constexpr inline std::string_view getResultDescription(vk::Result result)
+    constexpr inline std::string_view getResultDescription(vk::Result result)
     {
         using namespace std::literals;
 

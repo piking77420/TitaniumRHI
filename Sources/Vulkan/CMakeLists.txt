@@ -27,6 +27,8 @@ target_sources(
         Vulkan-Surface.hpp
         Vulkan-SwapChain.cpp
         Vulkan-SwapChain.hpp
+        Vulkan-Texture.cpp
+        Vulkan-Texture.hpp
 )
 
 target_include_directories(
