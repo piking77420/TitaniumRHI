@@ -46,10 +46,7 @@ namespace TiRHI::Vulkan
                 Private::toVulkanAttachementLoadOp(attachmentDescription.stencilLoadOp);
             vkAttachmentDescription.stencilStoreOp =
                 Private::toVulkanAttachementStoreOp(attachmentDescription.stencilStoreOp);
-            vkAttachmentDescription.initialLayout =
-                attachmentDescription.loadOp == LoadOp::LoadOp
-                    ? Private::toVulkanImageLayout(attachmentDescription.renderState)
-                    : vk::ImageLayout::eUndefined;
+            vkAttachmentDescription.initialLayout = Private::toVulkanImageLayout(attachmentDescription.initialState);
             vkAttachmentDescription.finalLayout = Private::toVulkanImageLayout(attachmentDescription.finalState);
 
             vk::AttachmentReference& attachmentReference = vkColorAttachmentReferences[i];

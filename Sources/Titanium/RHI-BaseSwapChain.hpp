@@ -103,6 +103,7 @@ namespace TiRHI
                 .setStoreOp(StoreOp::Store)
                 .setStencilLoadOp(LoadOp::DontCare)
                 .setStencilStoreOp(StoreOp::DontCare)
+                .setInitialState(ResourceState::Undefined) // TO DO to put present need an resource tracker
                 .setRenderState(ResourceState::RenderTarget)
                 .setFinalState(ResourceState::Present);
 

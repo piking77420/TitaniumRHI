@@ -307,6 +307,7 @@ namespace TiRHI
         LoadOp stencilLoadOp = LoadOp::DontCare;
         StoreOp stencilStoreOp = StoreOp::DontCare;
 
+        ResourceState initialState = ResourceState::Undefined;
         ResourceState renderState = ResourceState::Undefined;
         ResourceState finalState = ResourceState::Undefined;
 
@@ -345,6 +346,12 @@ namespace TiRHI
         constexpr AttachmentDescriptor& setStencilStoreOp(StoreOp value) noexcept
         {
             stencilStoreOp = value;
+            return *this;
+        }
+
+        constexpr AttachmentDescriptor& setInitialState(ResourceState value) noexcept
+        {
+            initialState = value;
             return *this;
         }
 

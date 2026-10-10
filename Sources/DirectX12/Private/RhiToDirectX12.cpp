@@ -1,5 +1,8 @@
 #include <Private/RhiToDirectX12.hpp>
 
+#include <format>
+#include <Titanium/Log.hpp>
+
 namespace TiRHI::DirectX12::Private
 {
     DXGI_FORMAT toDirectX12(Format format)
@@ -64,7 +67,102 @@ namespace TiRHI::DirectX12::Private
             return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
         default:
+        {
+            RHI_LOG_ERROR(std::format(L"Unsupported format '{}' for DirectX 12 conversion.", toWString(format)),
+                          RhiApi::DirectX12);
             return DXGI_FORMAT_UNKNOWN;
         }
+        }
+        return DXGI_FORMAT_UNKNOWN;
+    }
+    D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE toDirectX12(LoadOp loadOp)
+    {
+        switch (loadOp)
+        {
+        case LoadOp::LoadOp:
+            return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+
+        case LoadOp::Clear:
+            return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+
+        case LoadOp::DontCare:
+            return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+        }
+
+        RHI_LOG_ERROR(std::format(L"Unsupported LoadOp '{}' for DirectX 12 conversion.", toWString(loadOp)),
+                      RhiApi::DirectX12);
+
+        return {};
+    }
+
+    D3D12_RENDER_PASS_ENDING_ACCESS_TYPE toDirectX12(StoreOp storeOp)
+    {
+        switch (storeOp)
+        {
+        case StoreOp::Store:
+            return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+
+        case StoreOp::DontCare:
+            return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+
+        case StoreOp::None:
+            return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+        }
+
+        RHI_LOG_ERROR(std::format(L"Unsupported StoreOp '{}' for DirectX 12 conversion.", toWString(storeOp)),
+                      RhiApi::DirectX12);
+        return {};
+    }
+
+    D3D12_RESOURCE_STATES toDirectX12(ResourceState state)
+    {
+        switch (state)
+        {
+        case ResourceState::Undefined:
+            return D3D12_RESOURCE_STATE_COMMON;
+
+        case ResourceState::Common:
+            return D3D12_RESOURCE_STATE_COMMON;
+
+        case ResourceState::VertexBuffer:
+            return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+        case ResourceState::IndexBuffer:
+            return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+
+        case ResourceState::ConstantBuffer:
+            return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+        case ResourceState::ShaderResource:
+            return D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+
+        case ResourceState::UnorderedAccess:
+            return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+        case ResourceState::RenderTarget:
+            return D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+        case ResourceState::DepthWrite:
+            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+        case ResourceState::DepthRead:
+            return D3D12_RESOURCE_STATE_DEPTH_READ;
+
+        case ResourceState::CopySource:
+            return D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+        case ResourceState::CopyDestination:
+            return D3D12_RESOURCE_STATE_COPY_DEST;
+
+        case ResourceState::IndirectArgument:
+            return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+
+        case ResourceState::Present:
+            return D3D12_RESOURCE_STATE_PRESENT;
+        }
+
+        RHI_LOG_ERROR(L"Unsupported resource state for DirectX 12 conversion.", RhiApi::DirectX12);
+
+        return D3D12_RESOURCE_STATE_COMMON;
     }
 } // namespace TiRHI::DirectX12::Private

@@ -174,11 +174,12 @@ namespace TiRHI::DirectX12
 
             desc.cpuDescriptor = d3d12Att[i].handle;
 
-            desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR; // TODO
+            desc.BeginningAccess.Type = Private::toDirectX12(colorAtt[i].loadOp);
 
             desc.BeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(colorAttachment.format);
 
-            std::copy_n(beginRenderPass.clearColors[i].color.begin(), 4, desc.BeginningAccess.Clear.ClearValue.Color);
+            std::copy_n(beginRenderPass.clearColors[i].color.begin(), beginRenderPass.clearColors[i].color.size(),
+                        desc.BeginningAccess.Clear.ClearValue.Color);
 
             desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
         }
@@ -189,10 +190,10 @@ namespace TiRHI::DirectX12
         if (depthAtt)
         {
             depthDesc.cpuDescriptor = d3d12Att[colorCount].handle;
-            depthDesc.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-            depthDesc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-            depthDesc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
-            depthDesc.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+            depthDesc.DepthBeginningAccess.Type = Private::toDirectX12(depthAtt->loadOp);
+            depthDesc.DepthEndingAccess.Type = Private::toDirectX12(depthAtt->storeOp);
+            depthDesc.StencilBeginningAccess.Type = Private::toDirectX12(depthAtt->stencilLoadOp);
+            depthDesc.StencilEndingAccess.Type = Private::toDirectX12(depthAtt->stencilStoreOp);
 
             if (beginRenderPass.clearDepthStencil)
             {
@@ -226,6 +227,7 @@ namespace TiRHI::DirectX12
         if (m_currentRenderTargets)
         {
             renderTargetTransitionOut(*m_currentRenderTargets);
+            m_currentRenderTargets = nullptr;
         }
     }
 
@@ -254,6 +256,8 @@ namespace TiRHI::DirectX12
 
     bool CommandList::renderTargetTransitionIn(const RenderTargets& renderTargets)
     {
+        // TODO refactor this
+
         const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
         if (!renderPassDescriptor)
             return false;
@@ -272,15 +276,31 @@ namespace TiRHI::DirectX12
 
         m_barriers.clear();
         m_barriers.reserve(attachements.size());
-        for (const auto& att : attachements)
+        for (size_t i = 0; i < attachements.size(); i++)
         {
-            D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource = att.image;
-            // TODO ABtract Resource state
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            const auto& att = attachements[i];
+            if (i == attachements.size() - 1 && renderPassDescriptor->getDepthAttachement())
+            {
+                const AttachmentDescriptor& desc = *renderPassDescriptor->getDepthAttachement();
+
+                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrier.Transition.pResource = att.image;
+                barrier.Transition.StateBefore = Private::toDirectX12(desc.initialState);
+                barrier.Transition.StateAfter = Private::toDirectX12(desc.renderState);
+                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            }
+            else
+            {
+                const AttachmentDescriptor& desc = renderPassDescriptor->getColorAttachements()[i];
+
+                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrier.Transition.pResource = att.image;
+                barrier.Transition.StateBefore = Private::toDirectX12(desc.initialState);
+                barrier.Transition.StateAfter = Private::toDirectX12(desc.renderState);
+                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            }
         }
 
         m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
@@ -308,15 +328,31 @@ namespace TiRHI::DirectX12
 
         m_barriers.clear();
         m_barriers.reserve(attachements.size());
-        for (const auto& att : attachements)
+        for (size_t i = 0; i < attachements.size(); i++)
         {
-            D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource = att.image;
-            // TODO ABtract Resource state
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            const auto& att = attachements[i];
+            if (i == attachements.size() - 1 && renderPassDescriptor->getDepthAttachement())
+            {
+                const AttachmentDescriptor& desc = *renderPassDescriptor->getDepthAttachement();
+
+                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrier.Transition.pResource = att.image;
+                barrier.Transition.StateBefore = Private::toDirectX12(desc.renderState);
+                barrier.Transition.StateAfter = Private::toDirectX12(desc.finalState);
+                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            }
+            else
+            {
+                const AttachmentDescriptor& desc = renderPassDescriptor->getColorAttachements()[i];
+
+                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrier.Transition.pResource = att.image;
+                barrier.Transition.StateBefore = Private::toDirectX12(desc.renderState);
+                barrier.Transition.StateAfter = Private::toDirectX12(desc.finalState);
+                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            }
         }
 
         m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());

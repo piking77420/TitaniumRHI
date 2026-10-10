@@ -180,6 +180,7 @@ namespace TiRHI::DirectX12
 
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
+        m_renderTargets.clear();
         m_renderTargets.reserve(heapDesc.NumDescriptors);
         for (UINT i = 0; i < heapDesc.NumDescriptors; ++i)
         {
