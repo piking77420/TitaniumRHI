@@ -15,9 +15,9 @@ namespace TiRHI
             return m_success;
         }
 
-        bool operator()() const
+        explicit operator bool() const
         {
-            return m_success;
+            return getSucces();
         }
 
     private:

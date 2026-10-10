@@ -49,9 +49,9 @@ namespace TiRHI::Vulkan
             return *this;
         }
 
-        bool operator()() const
+        explicit operator bool() const
         {
-            return BaseAcquiredFrame::operator()();
+            return BaseAcquiredFrame::operator bool();
         }
 
     private:
