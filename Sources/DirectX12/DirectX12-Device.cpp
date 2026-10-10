@@ -201,7 +201,7 @@ namespace TiRHI::DirectX12
 
 #endif // defined(TITANIUM_VALIDATION_LAYER)
 
-        return createUniqueQueue() && createSynchronisation();
+        return createUniqueQueue() && createSynchronisation() && queryOptions();
     }
 
     bool Device::createUniqueQueue()
@@ -285,6 +285,46 @@ namespace TiRHI::DirectX12
             RHI_LOG_INFO(std::format(L"Create SwapChain Fence success.\nHandle: {}, Name: {}",
                                      static_cast<void*>(m_synchronization.waitFence.Get()), name),
                          RhiApi::DirectX12);
+        }
+
+        return true;
+    }
+
+    bool Device::queryOptions()
+    {
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5{};
+
+        HRESULT hr = m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5));
+
+        if (SUCCEEDED(hr))
+        {
+            D3D12_RENDER_PASS_TIER tier = options5.RenderPassesTier;
+
+            switch (tier)
+            {
+            case D3D12_RENDER_PASS_TIER_0:
+                RHI_LOG_INFO(L"D3D12 Render Pass Tier 0: Runtime emulation, no native driver support.",
+                             RhiApi::DirectX12);
+                break;
+
+            case D3D12_RENDER_PASS_TIER_1:
+                RHI_LOG_INFO(L"D3D12 Render Pass Tier 1: Native driver support with optimized RTV/DSV operations.",
+                             RhiApi::DirectX12);
+                break;
+
+            case D3D12_RENDER_PASS_TIER_2:
+                RHI_LOG_INFO(L"D3D12 Render Pass Tier 2: Native driver support with optimized RTV/DSV and UAV writes.",
+                             RhiApi::DirectX12);
+                break;
+
+            default:
+                RHI_LOG_WARNING(L"Unknown D3D12 Render Pass Tier.", RhiApi::DirectX12);
+                break;
+            }
+        }
+        else
+        {
+            RHI_LOG_ERROR(L"Failed to check support for option5", RhiApi::DirectX12);
         }
 
         return true;

@@ -12,6 +12,8 @@ target_sources(
         RHI-Adapter.hpp
         RHI-BaseDevice.cpp
         RHI-BaseDevice.hpp
+        RHI-BaseRenderPassDescriptor.cpp
+        RHI-BaseRenderPassDescriptor.hpp
         RHI-BaseCommandList.cpp
         RHI-BaseCommandList.hpp
         RHI-BaseRHI.hpp
@@ -21,10 +23,14 @@ target_sources(
         RHI-DebugScope.hpp
         RHI-EnumToString.hpp
         RHI-Object.hpp
+        RHI-BaseRenderTargets.cpp
+        RHI-BaseRenderTargets.hpp
         RHI-Resource.cpp
         RHI-Resource.hpp
         RHI-Surface.cpp
         RHI-Surface.hpp
+        RHI-BaseTexture.cpp
+        RHI-BaseTexture.hpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp

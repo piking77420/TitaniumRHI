@@ -29,7 +29,7 @@ namespace TiRHI::DirectX12
 
         bool operator()() const
         {
-            return BaseAcquiredFrame::operator()();
+            return BaseAcquiredFrame::operator bool();
         }
 
     private:

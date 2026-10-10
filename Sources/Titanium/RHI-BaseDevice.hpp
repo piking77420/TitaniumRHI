@@ -17,6 +17,7 @@ namespace TiRHI
     public:
         BaseDevice() = delete;
         ~BaseDevice() = default;
+        RHI_MOVE_CONSTRUCT_ONLY(BaseDevice)
         BaseDevice(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

@@ -4,19 +4,22 @@
 #include <vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Vulkan/Vulkan-AcquiredFrame.hpp>
+#include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
+#include <Vulkan/Vulkan-RenderTargets.hpp>
 
 namespace TiRHI::Vulkan
 {
     class RHI;
     class Device;
     class Surface;
+    class CommandList;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, Vulkan::RenderPassDescriptor, Vulkan::RenderTargets>
     {
     public:
         SwapChain() = delete;
         ~SwapChain() = default;
-
+        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
         explicit SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);
@@ -27,6 +30,10 @@ namespace TiRHI::Vulkan
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
+        const RenderTargets& getCurrentRenderTargets() const;
+
+        RenderTargets& getCurrentRenderTargets();
+
         uint32_t getImageIndex() const
         {
             return m_imageIndex;
@@ -36,14 +43,6 @@ namespace TiRHI::Vulkan
 
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
 
-        // TODO DELTE
-        vk::RenderPass getNativeRenderPass() const
-        {
-            return m_renderPassState.renderPass.get();
-        }
-
-        vk::Framebuffer getNativeFrameBuffer() const;
-        //
     private:
         vk::UniqueSwapchainKHR m_swapchain;
 
@@ -51,15 +50,7 @@ namespace TiRHI::Vulkan
 
         std::vector<vk::UniqueImageView> m_imageViews;
 
-        std::vector<vk::UniqueFramebuffer> m_frameBuffers;
-
         vk::SurfaceFormatKHR m_currentFormat;
-
-        struct RenderPassState
-        {
-            vk::UniqueRenderPass renderPass;
-            vk::SurfaceFormatKHR currentFormat = vk::SurfaceFormatKHR{};
-        } m_renderPassState;
 
         struct SwapChainSupportDetails
         {
@@ -90,9 +81,7 @@ namespace TiRHI::Vulkan
 
         vk::SwapchainCreateInfoKHR getSwapChainCreateInfo(Device& device, Surface& surface) const;
 
-        bool createRenderPass(vk::Device device);
-
-        bool createFrameBuffer(vk::Device device);
+        bool createRenderTargets(Device& device);
 
         bool createSyncObjects(vk::Device device);
     };

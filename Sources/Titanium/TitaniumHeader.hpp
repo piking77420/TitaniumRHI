@@ -7,6 +7,8 @@
 #include <Vulkan/Vulkan-Surface.hpp>
 #include <Vulkan/Vulkan-SwapChain.hpp>
 #include <Vulkan/Vulkan-CommandList.hpp>
+#include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
+#include <Vulkan/Vulkan-RenderTargets.hpp>
 
 namespace TiRHI
 {
@@ -16,6 +18,8 @@ namespace TiRHI
     using SwapChain = Vulkan::SwapChain;
     using AcquiredFrame = Vulkan::AcquiredFrame;
     using CommandList = Vulkan::CommandList;
+    using RenderPassDescriptor = Vulkan::RenderPassDescriptor;
+    using RenderTargets = Vulkan::RenderTargets;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -25,6 +29,8 @@ namespace TiRHI
 #include <DirectX12/DirectX12-SwapChain.hpp>
 #include <DirectX12/DirectX12-CommandList.hpp>
 #include <DirectX12/DirectX12-AcquireFrame.hpp>
+#include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
+#include <DirectX12/DirectX12-RenderTargets.hpp>
 
 namespace TiRHI
 {
@@ -34,6 +40,8 @@ namespace TiRHI
     using SwapChain = DirectX12::SwapChain;
     using AcquiredFrame = DirectX12::AcquiredFrame;
     using CommandList = DirectX12::CommandList;
+    using RenderPassDescriptor = DirectX12::RenderPassDescriptor;
+    using RenderTargets = DirectX12::RenderTargets;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -82,10 +90,14 @@ namespace TiRHI::Contract
 
     // SwapChain
     template<typename T>
-    concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle) {
+    concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle,
+                                         const RenderPassDescriptor&) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
         { swapChain.acquireNextImage() } -> std::same_as<AcquiredFrame>;
         { swapChain.present() } -> std::same_as<bool>;
+        { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
+        { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
+        { swapChain.getCurrentRenderTargets() } -> std::same_as<RenderTargets&>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);
@@ -93,11 +105,14 @@ namespace TiRHI::Contract
     // CommandList
 
     template<typename T>
-    concept CommandListContract = requires(T& commandList, Device& device) {
-        { commandList.build(device) } -> std::same_as<bool>;
-        { commandList.beginRecord() } -> std::same_as<bool>;
-        { commandList.endRecord() } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    concept CommandListContract =
+        requires(T& commandList, Device& device, const Viewport& viewport, const Rect2D& rect2D) {
+            { commandList.build(device) } -> std::same_as<bool>;
+            { commandList.beginRecord() } -> std::same_as<bool>;
+            { commandList.endRecord() } -> std::same_as<bool>;
+            { commandList.setViewPort(viewport) } -> std::same_as<void>;
+            { commandList.setScissors(rect2D) } -> std::same_as<void>;
+        } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
 

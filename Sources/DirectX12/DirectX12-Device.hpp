@@ -25,6 +25,11 @@ namespace TiRHI::DirectX12
         Device& operator=(Device&&) noexcept = default;
         Device(RHI& rhi);
 
+        struct Private
+        {
+            // TODO
+        };
+
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                    std::optional<size_t> index = {});
 
@@ -55,6 +60,8 @@ namespace TiRHI::DirectX12
         }
 
     private:
+        friend Private;
+
         MComPtr<ID3D12Device> m_device;
 
         DWORD VLayerCallbackCookie = 0;
@@ -80,6 +87,8 @@ namespace TiRHI::DirectX12
         bool createUniqueQueue();
 
         bool createSynchronisation();
+
+        bool queryOptions();
     };
 } // namespace TiRHI::DirectX12
 

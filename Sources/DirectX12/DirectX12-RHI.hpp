@@ -20,7 +20,7 @@
 
 namespace TiRHI::DirectX12
 {
-    class RHI : public BaseRHI<RHI>
+    class RHI : public TiRHI::BaseRHI<RHI>
     {
     public:
         RHI(const RhiCreate& rhiCreate);

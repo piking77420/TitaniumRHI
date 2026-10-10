@@ -8,6 +8,8 @@
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/DirectX12-AcquireFrame.hpp>
+#include <DirectX12/DirectX12-RenderTargets.hpp>
+#include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -15,11 +17,12 @@ namespace TiRHI::DirectX12
     class RHI;
     class Surface;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets>
     {
     public:
         SwapChain() = delete;
         ~SwapChain();
+        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
         SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);
@@ -30,18 +33,10 @@ namespace TiRHI::DirectX12
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
-        // TODO TO DELTE
-        ID3D12Resource* getNativeCurrentBackBuffer() const;
+        const RenderTargets& getCurrentRenderTargets() const;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE getRtv() const
-        {
-            D3D12_CPU_DESCRIPTOR_HANDLE rtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+        RenderTargets& getCurrentRenderTargets();
 
-            rtv.ptr += m_swapchainFrameIndex * m_rtvDescriptorSize;
-
-            return rtv;
-        }
-        //
     private:
         MComPtr<IDXGISwapChain3> m_swapchain;
         uint32_t m_swapchainFrameIndex = 0u;
@@ -54,8 +49,6 @@ namespace TiRHI::DirectX12
         bool createSwapChain(Device& device, Surface& surface);
 
         bool queryBuffer();
-
-        bool initSynchronisation(Device& device);
 
         bool createRenderTarget(Device& device);
     };

@@ -1,9 +1,15 @@
 #include <Vulkan/Vulkan-SwapChain.hpp>
+#include <span>
+
 #include <vulkan/vulkan.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <vulkan/Vulkan-Instance.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-Surface.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Private/VulkanToRHI.hpp>
+#include <Vulkan/Vulkan-CommandList.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -14,6 +20,11 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::build(Device& device, Surface& surface)
     {
+        if (!BaseSwapChain::build())
+        {
+            return false;
+        }
+
         m_device = device.getNativeDevice();
         if (m_device == VK_NULL_HANDLE)
         {
@@ -112,49 +123,13 @@ namespace TiRHI::Vulkan
         return vkSwapChainCreateInfo;
     }
 
-    bool SwapChain::createRenderPass(vk::Device device)
-    {
-        m_renderPassState.currentFormat = m_currentFormat;
-
-        vk::AttachmentDescription attachmentDescription{};
-        attachmentDescription.format = m_renderPassState.currentFormat.format;
-        attachmentDescription.samples = vk::SampleCountFlagBits::e1;
-        attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
-        attachmentDescription.storeOp = vk::AttachmentStoreOp::eStore;
-        attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        attachmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        attachmentDescription.initialLayout = vk::ImageLayout::eUndefined;
-        attachmentDescription.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-
-        vk::AttachmentReference colorRef{};
-        colorRef.attachment = 0;
-        colorRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-        vk::SubpassDescription subpassDesc{};
-        subpassDesc.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-        subpassDesc.colorAttachmentCount = 1;
-        subpassDesc.pColorAttachments = &colorRef;
-
-        vk::RenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &attachmentDescription;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpassDesc;
-
-        m_renderPassState.renderPass = device.createRenderPassUnique(renderPassInfo);
-
-        RHI_LOG_VERBOSE(L"Create Swapchain RenderPass", RhiApi::Vulkan);
-
-        return true;
-    }
-
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
     {
         /// keep previous one
         vk::UniqueSwapchainKHR oldSwapchain = std::move(m_swapchain);
 
         // Destroy resources referencing old swapchain images FIRST
-        m_frameBuffers.clear();
+        m_renderTargets.clear();
         m_imageViews.clear();
         m_images.clear();
 
@@ -174,10 +149,17 @@ namespace TiRHI::Vulkan
         }
         m_currentFormat = getSurfaceFormat();
 
-        if (m_renderPassState.currentFormat != m_currentFormat)
+        // render pass check
         {
-            if (!createRenderPass(device.getNativeDevice()))
-                return false;
+            std::span colorAttachement = m_renderPassDescriptor.getColorAttachements();
+            if (colorAttachement.empty() || colorAttachement[0].format != Private::toRhi(m_currentFormat.format))
+            {
+                if (!createRenderPassDescriptor(device))
+                {
+                    RHI_LOG_ERROR(L"Failed to create render pass descriptor of swapChain", RhiApi::Vulkan);
+                    return false;
+                }
+            }
         }
 
         vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(device, surface);
@@ -208,7 +190,17 @@ namespace TiRHI::Vulkan
             m_imageViews.push_back(vkDevice.createImageViewUnique(viewInfo));
         }
 
-        return createFrameBuffer(vkDevice);
+        return createRenderTargets(device);
+    }
+
+    const RenderTargets& SwapChain::getCurrentRenderTargets() const
+    {
+        return m_renderTargets[m_imageIndex];
+    }
+
+    RenderTargets& SwapChain::getCurrentRenderTargets()
+    {
+        return m_renderTargets[m_imageIndex];
     }
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
@@ -221,13 +213,17 @@ namespace TiRHI::Vulkan
         return m_synchronisations[m_imageIndex].renderFinishedSemaphore.get();
     }
 
-    vk::Framebuffer SwapChain::getNativeFrameBuffer() const
-    {
-        return m_frameBuffers[m_imageIndex].get();
-    }
-
     vk::SurfaceFormatKHR SwapChain::getSurfaceFormat() const noexcept
     {
+        vk::Format currentFormat = Private::toVulkan(m_format);
+
+        for (const auto& availableFormat : m_swapChainSupportDetails.formats)
+        {
+            if (availableFormat.format == currentFormat &&
+                availableFormat.colorSpace == vk::ColorSpaceKHR::eExtendedSrgbNonlinearEXT)
+                return availableFormat;
+        }
+
         for (const auto& availableFormat : m_swapChainSupportDetails.formats)
         {
             if (availableFormat.format == vk::Format::eB8G8R8A8Unorm &&
@@ -269,22 +265,20 @@ namespace TiRHI::Vulkan
         return extent;
     }
 
-    bool SwapChain::createFrameBuffer(vk::Device device)
+    bool SwapChain::createRenderTargets(Device& device)
     {
         const vk::Extent2D ext = getExtent2D();
-        m_frameBuffers.reserve(m_imageViews.size());
+        m_renderTargets.reserve(m_imageViews.size());
+
         for (size_t i = 0; i < m_imageViews.size(); ++i)
         {
-            vk::FramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.setRenderPass(m_renderPassState.renderPass.get())
-                .setAttachments(m_imageViews[i].get())
-                .setWidth(ext.width)
+            auto& renderTarget = m_renderTargets.emplace_back(getRHI());
+            renderTarget.setWidth(ext.width)
                 .setHeight(ext.height)
-                .setLayers(1)
-                .setRenderPass(m_renderPassState.renderPass.get());
-            auto& frameBuffer = m_frameBuffers.emplace_back(device.createFramebufferUnique(framebufferInfo));
+                .setRenderPassDescriptor(&m_renderPassDescriptor)
+                .setName(std::format("{} Swap Chain's RenderTargets {}", getName(), i));
 
-            if (!frameBuffer)
+            if (!Vulkan::RenderTargets::Private::build(renderTarget, device, m_imageViews[i].get()))
             {
                 RHI_LOG_ERROR(std::format(L"Failed to crate Framebuffer {}", i), RhiApi::Vulkan);
                 return false;

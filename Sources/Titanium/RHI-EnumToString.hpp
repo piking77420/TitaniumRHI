@@ -26,7 +26,7 @@
         return "Unknown";                                                                                              \
     }                                                                                                                  \
                                                                                                                        \
-    constexpr std::wstring_view toWstring(EnumType value)                                                              \
+    constexpr std::wstring_view toWString(EnumType value)                                                              \
     {                                                                                                                  \
         using EnumT = EnumType;                                                                                        \
         switch (value)                                                                                                 \
