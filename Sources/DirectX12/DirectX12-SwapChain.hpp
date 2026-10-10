@@ -46,8 +46,6 @@ namespace TiRHI::DirectX12
         MComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         UINT m_rtvDescriptorSize = 0;
 
-        std::vector<RenderTargets> m_renderTargets;
-
         bool createSwapChain(Device& device, Surface& surface);
 
         bool queryBuffer();

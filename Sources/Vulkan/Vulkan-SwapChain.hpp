@@ -44,8 +44,6 @@ namespace TiRHI::Vulkan
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
 
     private:
-        std::vector<RenderTargets> m_renderTargets;
-
         vk::UniqueSwapchainKHR m_swapchain;
 
         std::vector<vk::Image> m_images;
