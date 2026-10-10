@@ -24,6 +24,7 @@ namespace TiRHI::DirectX12
     {
     public:
         RHI(const RhiCreate& rhiCreate);
+        RHI_MOVE_ONLY(RHI)
         ~RHI() = default;
 
         [[nodiscard]] Device newDevice();

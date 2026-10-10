@@ -12,12 +12,14 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
     class RenderTargets;
+    class Texture;
 
     class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets>
     {
     public:
         CommandList() = delete;
         ~CommandList() = default;
+        RHI_MOVE_ONLY(CommandList)
         CommandList(RHI& rhi);
 
         bool build(Device& device);
@@ -37,6 +39,8 @@ namespace TiRHI::DirectX12
         void setViewPort(const Viewport& viewPort);
 
         void setScissors(const Rect2D& rect2d);
+
+        void transitionResource(Texture& texture, ResourceState state);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {

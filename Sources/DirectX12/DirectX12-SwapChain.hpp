@@ -10,6 +10,7 @@
 #include <DirectX12/DirectX12-AcquireFrame.hpp>
 #include <DirectX12/DirectX12-RenderTargets.hpp>
 #include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
+#include <DirectX12/DirectX12-Texture.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -17,12 +18,12 @@ namespace TiRHI::DirectX12
     class RHI;
     class Surface;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets, Texture>
     {
     public:
         SwapChain() = delete;
         ~SwapChain();
-        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
+        RHI_MOVE_ONLY(SwapChain)
         SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);
@@ -37,11 +38,13 @@ namespace TiRHI::DirectX12
 
         RenderTargets& getCurrentRenderTargets();
 
+        const Texture& getCurrentSwapChainTexture() const;
+
+        Texture& getCurrentSwapChainTexture();
+
     private:
         MComPtr<IDXGISwapChain3> m_swapchain;
         uint32_t m_swapchainFrameIndex = 0u;
-
-        std::vector<MComPtr<ID3D12Resource>> m_images;
 
         MComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         UINT m_rtvDescriptorSize = 0;

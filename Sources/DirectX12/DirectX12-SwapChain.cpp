@@ -54,7 +54,7 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
     {
-        m_images.clear();
+        m_textures.clear();
 
         const HRESULT hr =
             m_swapchain->ResizeBuffers(getImageCount(), getWidth(), getHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, 0);
@@ -133,10 +133,12 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::queryBuffer()
     {
-        m_images.resize(getImageCount());
-        for (uint32_t i = 0; i < m_images.size(); ++i)
+        m_textures.clear();
+        m_textures.reserve(getImageCount());
+        for (uint32_t i = 0; i < getImageCount(); ++i)
         {
-            const HRESULT hrSwapChainGetBuffer = m_swapchain->GetBuffer(i, IID_PPV_ARGS(&m_images[i]));
+            MComPtr<ID3D12Resource> image;
+            const HRESULT hrSwapChainGetBuffer = m_swapchain->GetBuffer(i, IID_PPV_ARGS(&image));
             if (FAILED(hrSwapChainGetBuffer))
             {
                 RHI_LOG_ERROR(
@@ -146,11 +148,12 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                const std::wstring name = L"SwapchainBackBuffer [" + std::to_wstring(i) + L"]";
-                m_images[i]->SetName(name.data());
+                auto& texture = m_textures.emplace_back(getRHI());
+                texture.setName("SwapchainBackBuffer [" + std::to_string(i) + "]");
+                Texture::Private::build(texture, image);
 
-                RHI_LOG_INFO(std::format(L"Get SwapChain Buffer [%1] success.\n handle: {}, name: {}", i, name,
-                                         static_cast<void*>(m_images[i].Get())),
+                RHI_LOG_INFO(std::format(L"Get SwapChain Buffer [%1] success.\n handle: {}, name: {}", i,
+                                         texture.getNameW(), static_cast<void*>(Texture::Private::getImage(texture))),
                              RhiApi::DirectX12);
             }
         }
@@ -165,7 +168,7 @@ namespace TiRHI::DirectX12
 
         D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
         heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        heapDesc.NumDescriptors = static_cast<UINT>(m_images.size());
+        heapDesc.NumDescriptors = static_cast<UINT>(m_textures.size());
         heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
         const HRESULT result = d3d12Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_rtvHeap));
@@ -184,19 +187,14 @@ namespace TiRHI::DirectX12
         m_renderTargets.reserve(heapDesc.NumDescriptors);
         for (UINT i = 0; i < heapDesc.NumDescriptors; ++i)
         {
-            if (FAILED(m_swapchain->GetBuffer(i, IID_PPV_ARGS(&m_images[i]))))
-            {
-                RHI_LOG_ERROR(L"Failed to get buffer of swapChain image", RhiApi::DirectX12);
-
-                return false;
-            }
             auto& currentRenderTarget = m_renderTargets.emplace_back(getRHI());
             currentRenderTarget.setWidth(getWidth())
                 .setHeight(getHeight())
                 .setName(std::format("SwapChain Rendertarget {}", i))
                 .setRenderPassDescriptor(&m_renderPassDescriptor);
 
-            if (!RenderTargets::Private::build(currentRenderTarget, device, rtvHandle, m_images[i].Get()))
+            if (!RenderTargets::Private::build(currentRenderTarget, device, rtvHandle,
+                                               Texture::Private::getImage(m_textures[i])))
             {
                 RHI_LOG_ERROR(L"Failed to build render targets of swapChain image", RhiApi::DirectX12);
             }
@@ -215,6 +213,16 @@ namespace TiRHI::DirectX12
     RenderTargets& SwapChain::getCurrentRenderTargets()
     {
         return m_renderTargets[m_swapchainFrameIndex];
+    }
+
+    const Texture& SwapChain::getCurrentSwapChainTexture() const
+    {
+        return m_textures[m_swapchainFrameIndex];
+    }
+
+    Texture& SwapChain::getCurrentSwapChainTexture()
+    {
+        return m_textures[m_swapchainFrameIndex];
     }
 
 } // namespace TiRHI::DirectX12

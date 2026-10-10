@@ -17,7 +17,7 @@ namespace TiRHI::DirectX12
     public:
         RenderTargets() = delete;
         ~RenderTargets() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(RenderTargets)
+        RHI_MOVE_ONLY(RenderTargets)
         RenderTargets(RHI& rhi);
 
         struct Private

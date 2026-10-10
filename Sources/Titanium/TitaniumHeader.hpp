@@ -33,6 +33,7 @@ namespace TiRHI
 #include <DirectX12/DirectX12-AcquireFrame.hpp>
 #include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
 #include <DirectX12/DirectX12-RenderTargets.hpp>
+#include <DirectX12/DirectX12-Texture.hpp>
 
 namespace TiRHI
 {
@@ -44,6 +45,7 @@ namespace TiRHI
     using CommandList = DirectX12::CommandList;
     using RenderPassDescriptor = DirectX12::RenderPassDescriptor;
     using RenderTargets = DirectX12::RenderTargets;
+    using Texture = DirectX12::Texture;
 }
 
 #elif defined(TITANIUM_METAL)

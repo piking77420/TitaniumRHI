@@ -254,6 +254,24 @@ namespace TiRHI::DirectX12
         m_commandList->RSSetScissorRects(1, &d3d12Scissors);
     }
 
+    void CommandList::transitionResource(Texture& texture, ResourceState state)
+    {
+        const ResourceState current = texture.getState();
+        if (state == current)
+            return;
+
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Transition.pResource = Texture::Private::getImage(texture);
+        barrier.Transition.StateBefore = Private::toDirectX12(current);
+        barrier.Transition.StateAfter = Private::toDirectX12(state);
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        if (barrier.Transition.StateBefore == barrier.Transition.StateAfter)
+            return;
+
+        m_commandList->ResourceBarrier(1, &barrier);
+    }
+
     bool CommandList::renderTargetTransitionIn(const RenderTargets& renderTargets)
     {
         // TODO refactor this

@@ -19,10 +19,7 @@ namespace TiRHI::DirectX12
     public:
         Device() = delete;
         ~Device();
-        Device(const Device&) = delete;
-        Device& operator=(const Device&) = delete;
-        Device(Device&&) noexcept = default;
-        Device& operator=(Device&&) noexcept = default;
+        RHI_MOVE_ONLY(Device)
         Device(RHI& rhi);
 
         struct Private
