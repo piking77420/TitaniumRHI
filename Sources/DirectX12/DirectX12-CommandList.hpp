@@ -14,8 +14,9 @@ namespace TiRHI::DirectX12
     class RenderTargets;
     class Texture;
     class RenderPassDescriptor;
+    class GraphicPipeline;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor>
+    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor, GraphicPipeline>
     {
     public:
         CommandList() = delete;
@@ -42,6 +43,13 @@ namespace TiRHI::DirectX12
         void setScissors(const Rect2D& rect2d);
 
         void transitionResource(Texture& texture, ResourceState state);
+
+        void bindPipeline(const _GraphicPipeline& graphicPipeline);
+
+        void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+
+        void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
+                         uint32_t firstInstance);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {

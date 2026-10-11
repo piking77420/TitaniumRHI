@@ -14,6 +14,8 @@ target_sources(
         RHI-Adapter.hpp
         RHI-BaseDevice.cpp
         RHI-BaseDevice.hpp
+        RHI-BasePipeline.cpp
+        RHI-BasePipeline.hpp
         RHI-BaseRenderPassDescriptor.cpp
         RHI-BaseRenderPassDescriptor.hpp
         RHI-BaseCommandList.cpp

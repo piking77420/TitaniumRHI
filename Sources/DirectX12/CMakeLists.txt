@@ -20,6 +20,8 @@ target_sources(
         DirectX12-RenderTargets.hpp
         DirectX12-Factory.cpp
         DirectX12-Factory.hpp
+        DirectX12-GraphicPipeline.cpp
+        DirectX12-GraphicPipeline.hpp
         DirectX12-RHI.cpp
         DirectX12-RHI.hpp
         DirectX12-Surface.cpp
