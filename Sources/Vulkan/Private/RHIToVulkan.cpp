@@ -262,4 +262,82 @@ namespace TiRHI::Vulkan::Private
         return vk::ImageLayout::eUndefined;
     }
 
+    vk::PrimitiveTopology toVulkan(PrimitiveTopology primitiveTopology)
+    {
+        switch (primitiveTopology)
+        {
+        case PrimitiveTopology::PointList:
+            return vk::PrimitiveTopology::ePointList;
+        case PrimitiveTopology::LineList:
+            return vk::PrimitiveTopology::eLineList;
+        case PrimitiveTopology::LineStrip:
+            return vk::PrimitiveTopology::eLineStrip;
+        case PrimitiveTopology::TriangleList:
+            return vk::PrimitiveTopology::eTriangleList;
+        case PrimitiveTopology::TriangleStrip:
+            return vk::PrimitiveTopology::eTriangleStrip;
+        case PrimitiveTopology::LineListAdjacency:
+            return vk::PrimitiveTopology::eLineListWithAdjacency;
+        case PrimitiveTopology::LineStripAdjacency:
+            return vk::PrimitiveTopology::eLineStripWithAdjacency;
+        case PrimitiveTopology::TriangleListAdjacency:
+            return vk::PrimitiveTopology::eTriangleListWithAdjacency;
+        case PrimitiveTopology::TriangleStripAdjacency:
+            return vk::PrimitiveTopology::eTriangleStripWithAdjacency;
+        case PrimitiveTopology::PatchList:
+            return vk::PrimitiveTopology::ePatchList;
+        default:
+            RHI_LOG_ERROR(std::format(L"Unsupported RHI PrimitiveTopology to vk::PrimitiveTopology, Topology = {}",
+                                      toWString(primitiveTopology)),
+                          RhiApi::Vulkan);
+            return vk::PrimitiveTopology::eTriangleList;
+        }
+        return vk::PrimitiveTopology::eTriangleList;
+    }
+
+    vk::PolygonMode toVulkan(PolygonMode polygonMode)
+    {
+        switch (polygonMode)
+        {
+        case PolygonMode::Fill:
+            return vk::PolygonMode::eFill;
+        case PolygonMode::Line:
+            return vk::PolygonMode::eLine;
+        case PolygonMode::Point:
+            return vk::PolygonMode::ePoint;
+        default:
+            RHI_LOG_ERROR(std::format(L"Unsupported RHI PolygonMode, Mode = {}", toWString(polygonMode)),
+                          RhiApi::Vulkan);
+            return vk::PolygonMode::eFill;
+        }
+        return vk::PolygonMode::eFill;
+    }
+
+    vk::CullModeFlags toVulkan(CullModeFlag cullModeFlag)
+    {
+        vk::CullModeFlags flags{};
+
+        if ((cullModeFlag & CullModeFlag::Front) != CullModeFlag::None)
+            flags |= vk::CullModeFlagBits::eFront;
+
+        if ((cullModeFlag & CullModeFlag::Back) != CullModeFlag::None)
+            flags |= vk::CullModeFlagBits::eBack;
+
+        return flags;
+    }
+
+    vk::FrontFace toVulkan(FrontFace frontFace)
+    {
+        switch (frontFace)
+        {
+        case FrontFace::CounterClockwise:
+            return vk::FrontFace::eCounterClockwise;
+        case FrontFace::Clockwise:
+            return vk::FrontFace::eClockwise;
+        default:
+            RHI_LOG_ERROR(std::format(L"Unsupported RHI FrontFace, Face = {}", toWString(frontFace)), RhiApi::Vulkan);
+            return vk::FrontFace::eCounterClockwise;
+        }
+    }
+
 }

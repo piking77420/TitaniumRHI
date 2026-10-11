@@ -11,6 +11,7 @@
 #include <DirectX12/DirectX12-Device.hpp>
 #include <DirectX12/DirectX12-RenderTargets.hpp>
 #include <DirectX12/Private/RhiToDirectX12.hpp>
+#include <DirectX12/DirectX12-GraphicPipeline.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -288,6 +289,33 @@ namespace TiRHI::DirectX12
             return;
 
         m_commandList->ResourceBarrier(1, &barrier);
+    }
+
+    void CommandList::bindPipeline(const _GraphicPipeline& graphicPipeline)
+    {
+        BaseCommandList::bindPipeline(graphicPipeline);
+
+        if (!m_recordState.graphicPipeline)
+            return;
+
+        ID3D12RootSignature* root = GraphicPipeline::Private::getSignature(*m_recordState.graphicPipeline);
+
+        m_commandList->SetGraphicsRootSignature(root);
+        ID3D12PipelineState* state = GraphicPipeline::Private::getPipelineState(*m_recordState.graphicPipeline);
+        m_commandList->SetPipelineState(state);
+
+        m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    }
+
+    void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+    {
+        m_commandList->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
+    }
+
+    void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
+                                  int32_t vertexOffset, uint32_t firstInstance)
+    {
+        m_commandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
 
     bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)

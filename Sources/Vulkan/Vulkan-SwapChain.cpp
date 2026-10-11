@@ -25,13 +25,6 @@ namespace TiRHI::Vulkan
             return false;
         }
 
-        m_device = device.getNativeDevice();
-        if (m_device == VK_NULL_HANDLE)
-        {
-            RHI_LOG_ERROR(L"Failed to retreive vkDevice ", RhiApi::Vulkan);
-            return false;
-        }
-
         m_presentQueue = device.getNativePresentQueue();
         if (m_presentQueue == VK_NULL_HANDLE)
         {
@@ -42,19 +35,27 @@ namespace TiRHI::Vulkan
         return recreateSwapChain(device, surface) && createSyncObjects(device.getNativeDevice());
     }
 
-    AcquiredFrame SwapChain::acquireNextImage()
+    AcquiredFrame SwapChain::acquireNextImage(Device& device)
     {
-        if (m_device == VK_NULL_HANDLE)
-            return AcquiredFrame(false);
-
         {
-            const vk::ResultValue<uint32_t> result = m_device.acquireNextImageKHR(
+            const vk::ResultValue<uint32_t> result = device.getNativeDevice().acquireNextImageKHR(
                 m_swapchain.get(), std::numeric_limits<uint64_t>::max(), getNativeImageAvailableSemaphore());
 
             VulkanCheckErrorStatus(result.result);
             m_imageIndex = result.value;
             if (result.result != vk::Result::eSuccess)
                 return AcquiredFrame(false);
+        }
+
+        { // handle out of order swap chain
+            if (m_imageCount > getRHI().getFrameInFlight() &&
+                (m_synchronisations[m_imageIndex].imageInFlight != VK_NULL_HANDLE) &&
+                m_synchronisations[m_imageIndex].imageInFlight != device.getNativeInFlightFence())
+            {
+                device.getNativeDevice().waitForFences(m_synchronisations[m_imageIndex].imageInFlight, vk::True,
+                                                       std::numeric_limits<uint64_t>::max());
+            }
+            m_synchronisations[m_imageIndex].imageInFlight = device.getNativeInFlightFence();
         }
 
         AcquiredFrame acquiredFrame(true);
@@ -217,7 +218,7 @@ namespace TiRHI::Vulkan
 
     vk::Semaphore SwapChain::getNativeRenderFinishedSemaphore() const
     {
-        return m_synchronisations[m_imageIndex].renderFinishedSemaphore.get();
+        return m_synchronisations[getRHI().getCurrentFrame()].renderFinishedSemaphore.get();
     }
 
     vk::SurfaceFormatKHR SwapChain::getSurfaceFormat() const noexcept

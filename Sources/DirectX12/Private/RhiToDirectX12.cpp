@@ -165,4 +165,112 @@ namespace TiRHI::DirectX12::Private
 
         return D3D12_RESOURCE_STATE_COMMON;
     }
+
+    D3D_PRIMITIVE_TOPOLOGY toDirectX12(PrimitiveTopology primitiveTopology)
+    {
+        switch (primitiveTopology)
+        {
+        case PrimitiveTopology::PointList:
+            return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+        case PrimitiveTopology::LineList:
+            return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+        case PrimitiveTopology::LineStrip:
+            return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+        case PrimitiveTopology::TriangleList:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        case PrimitiveTopology::TriangleStrip:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+        case PrimitiveTopology::LineListAdjacency:
+            return D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+        case PrimitiveTopology::LineStripAdjacency:
+            return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ;
+        case PrimitiveTopology::TriangleListAdjacency:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
+        case PrimitiveTopology::TriangleStripAdjacency:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ;
+        case PrimitiveTopology::PatchList:
+            // Requires the patch control point count (1–32).
+            return D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
+        default:
+            RHI_LOG_ERROR(
+                std::format(L"Unsupported RHI PrimitiveTopology, Topology = {}", toWString(primitiveTopology)),
+                RhiApi::DirectX12);
+            return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+        }
+    }
+
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE toDirectX12TopologyType(PrimitiveTopology primitiveTopology)
+    {
+        switch (primitiveTopology)
+        {
+        case PrimitiveTopology::PointList:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+
+        case PrimitiveTopology::LineList:
+        case PrimitiveTopology::LineStrip:
+        case PrimitiveTopology::LineListAdjacency:
+        case PrimitiveTopology::LineStripAdjacency:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+
+        case PrimitiveTopology::TriangleList:
+        case PrimitiveTopology::TriangleStrip:
+        case PrimitiveTopology::TriangleListAdjacency:
+        case PrimitiveTopology::TriangleStripAdjacency:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+        case PrimitiveTopology::PatchList:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+
+        default:
+            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+        }
+    }
+
+    D3D12_FILL_MODE toDirectX12(PolygonMode polygonMode)
+    {
+        switch (polygonMode)
+        {
+        case PolygonMode::Fill:
+            return D3D12_FILL_MODE_SOLID;
+        case PolygonMode::Line:
+            return D3D12_FILL_MODE_WIREFRAME;
+        default:
+            RHI_LOG_ERROR(std::format(L"Unsupported RHI PolygonMode, Mode = {}", toWString(polygonMode)),
+                          RhiApi::DirectX12);
+            return D3D12_FILL_MODE_SOLID;
+        }
+    }
+
+    D3D12_CULL_MODE toDirectX12(CullModeFlag cullModeFlag)
+    {
+        switch (cullModeFlag)
+        {
+        case CullModeFlag::None:
+            return D3D12_CULL_MODE_NONE;
+        case CullModeFlag::Front:
+            return D3D12_CULL_MODE_FRONT;
+        case CullModeFlag::Back:
+            return D3D12_CULL_MODE_BACK;
+        default:
+            RHI_LOG_ERROR(std::format(L"Unsupported RHI CullModeFlag, Mode = {}", toWString(cullModeFlag)),
+                          RhiApi::DirectX12);
+            return D3D12_CULL_MODE_NONE;
+        }
+    }
+
+    BOOL toDirectX12(FrontFace frontFace)
+    {
+        switch (frontFace)
+        {
+        case FrontFace::CounterClockwise:
+            return TRUE;
+        case FrontFace::Clockwise:
+            return FALSE;
+        default:
+            RHI_LOG_ERROR(std::format(L"Unsupported RHI FrontFace, Face = {}", toWString(frontFace)),
+                          RhiApi::DirectX12);
+            return FALSE;
+        }
+    }
+
 } // namespace TiRHI::DirectX12::Private

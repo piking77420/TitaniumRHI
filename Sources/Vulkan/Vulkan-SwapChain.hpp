@@ -26,7 +26,7 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device, Surface& surface);
 
-        AcquiredFrame acquireNextImage();
+        AcquiredFrame acquireNextImage(Device& device);
 
         bool present();
 
@@ -65,6 +65,7 @@ namespace TiRHI::Vulkan
         {
             vk::UniqueSemaphore imageAvailableSemaphore;
             vk::UniqueSemaphore renderFinishedSemaphore;
+            vk::Fence imageInFlight;
         };
 
         std::vector<Synchronisation> m_synchronisations;
@@ -72,8 +73,6 @@ namespace TiRHI::Vulkan
         uint32_t m_imageIndex = 0;
 
         vk::Queue m_presentQueue = VK_NULL_HANDLE;
-
-        vk::Device m_device = VK_NULL_HANDLE;
 
         vk::SurfaceFormatKHR getSurfaceFormat() const noexcept;
 

@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <Titanium/RHI-EnumToString.hpp>
+#include <Titanium/RHI-EnumFlag.hpp>
 
 namespace TiRHI
 {
@@ -265,8 +266,8 @@ namespace TiRHI
     {
         Offset2DF position;
         Extend2DF extend;
-        float minDepth;
-        float maxDepth;
+        float minDepth = 1.0;
+        float maxDepth = 0.0;
 
         Viewport& setPosition(Offset2DF newOffset2DF) noexcept
         {
@@ -382,6 +383,69 @@ namespace TiRHI
             return *this;
         }
     };
+
+#define RHI_PRIMITIVE_TOPOLOGY_LIST(X)                                                                                 \
+    X(PointList)                                                                                                       \
+    X(LineList)                                                                                                        \
+    X(LineStrip)                                                                                                       \
+    X(TriangleList)                                                                                                    \
+    X(TriangleStrip)                                                                                                   \
+    X(LineListAdjacency)                                                                                               \
+    X(LineStripAdjacency)                                                                                              \
+    X(TriangleListAdjacency)                                                                                           \
+    X(TriangleStripAdjacency)                                                                                          \
+    X(PatchList)
+
+    enum struct PrimitiveTopology : uint8_t
+    {
+#define X(name) name,
+        RHI_PRIMITIVE_TOPOLOGY_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(PrimitiveTopology, RHI_PRIMITIVE_TOPOLOGY_LIST)
+
+#define RHI_POLYGON_MODE_LIST(X)                                                                                       \
+    X(Fill)                                                                                                            \
+    X(Line)                                                                                                            \
+    X(Point)
+
+    enum struct PolygonMode : uint8_t
+    {
+#define X(name) name,
+        RHI_POLYGON_MODE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(PolygonMode, RHI_POLYGON_MODE_LIST)
+
+#define RHI_CULL_MODE_FLAG_LIST(X)                                                                                     \
+    X(None, 0)                                                                                                         \
+    X(Front, 1u << 0)                                                                                                  \
+    X(Back, 1u << 1)                                                                                                   \
+    X(FrontAndBack, 1u << 3)
+
+    enum struct CullModeFlag : uint8_t
+    {
+#define X(name, value) name = value,
+        RHI_CULL_MODE_FLAG_LIST(X)
+#undef X
+    };
+
+    RHI_DEFINE_ENUM_FLAGS(CullModeFlag)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(CullModeFlag, RHI_CULL_MODE_FLAG_LIST)
+
+#define RHI_FRONT_FACE_LIST(X)                                                                                         \
+    X(CounterClockwise)                                                                                                \
+    X(Clockwise)
+
+    enum struct FrontFace : uint8_t
+    {
+#define X(name) name,
+        RHI_FRONT_FACE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(FrontFace, RHI_FRONT_FACE_LIST)
 
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 

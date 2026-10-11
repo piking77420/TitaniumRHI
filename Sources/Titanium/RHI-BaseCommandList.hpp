@@ -45,17 +45,23 @@ namespace TiRHI
         }
     };
 
-    template<typename T, typename TRHI, typename TRenderTarget, typename TRenderPassDescriptor>
+    template<typename T, typename TRHI, typename TRenderTarget, typename TRenderPassDescriptor,
+             typename TGraphicPipeline>
     class BaseCommandList : public Object<T, TRHI>
     {
     public:
+        using _RenderPassDescriptor = TRenderPassDescriptor;
+        using _RenderTarget = TRenderTarget;
+        using _GraphicPipeline = TGraphicPipeline;
+
         BaseCommandList() = delete;
         ~BaseCommandList() = default;
         RHI_MOVE_ONLY(BaseCommandList)
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget, TRenderPassDescriptor>>);
+            static_assert(
+                std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget, TRenderPassDescriptor, TGraphicPipeline>>);
         }
 
     protected:
@@ -63,8 +69,9 @@ namespace TiRHI
         {
             bool isRecording = false;
             bool isInRenderPass = false;
-            const TRenderPassDescriptor* renderPassDescritptor = nullptr;
-            TRenderTarget* renderTargets = nullptr;
+            const _RenderPassDescriptor* renderPassDescritptor = nullptr;
+            _RenderTarget* renderTargets = nullptr;
+            const _GraphicPipeline* graphicPipeline = nullptr;
 
             void reset()
             {
@@ -72,6 +79,7 @@ namespace TiRHI
                 isInRenderPass = false;
                 renderPassDescritptor = nullptr;
                 renderTargets = nullptr;
+                graphicPipeline = nullptr;
             }
         } m_recordState;
 
@@ -231,6 +239,11 @@ namespace TiRHI
                 const AttachmentDescriptor& descriptor = isDepth ? *depthAttachment : colorAttachments[i];
                 texture.setState(isSettingRenderState ? descriptor.renderState : descriptor.finalState);
             }
+        }
+
+        void bindPipeline(const _GraphicPipeline& graphicPipeline)
+        {
+            m_recordState.graphicPipeline = &graphicPipeline;
         }
     };
 

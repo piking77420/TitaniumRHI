@@ -59,6 +59,14 @@ namespace TiRHI::Vulkan::Private
 
     vk::ImageLayout getImageLayout(ResourceState state);
 
+    vk::PrimitiveTopology toVulkan(PrimitiveTopology primitiveTopology);
+
+    vk::PolygonMode toVulkan(PolygonMode polygoneMode);
+
+    vk::CullModeFlags toVulkan(CullModeFlag cullModeFlag);
+
+    vk::FrontFace toVulkan(FrontFace frontFace);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

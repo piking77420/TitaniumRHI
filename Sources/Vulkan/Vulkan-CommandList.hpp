@@ -15,8 +15,10 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
     class RenderPassDescriptor;
+    class GraphicPipeline;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor>
+    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
+                                               Vulkan::GraphicPipeline>
     {
     public:
         CommandList() = delete;
@@ -44,6 +46,13 @@ namespace TiRHI::Vulkan
 
         // TODO make some overload for batching barriers
         void transitionResource(Texture& texture, ResourceState state);
+
+        void bindPipeline(const GraphicPipeline& graphicPipeline);
+
+        void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+
+        void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
+                         uint32_t firstInstance);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 

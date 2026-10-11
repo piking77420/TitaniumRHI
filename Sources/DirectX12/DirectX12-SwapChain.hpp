@@ -28,7 +28,7 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device, Surface& surface);
 
-        AcquiredFrame acquireNextImage();
+        AcquiredFrame acquireNextImage(Device& device);
 
         bool present();
 

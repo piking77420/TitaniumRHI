@@ -16,6 +16,8 @@ target_sources(
         Vulkan-CommandList.hpp
         Vulkan-Device.cpp
         Vulkan-Device.hpp
+        Vulkan-GraphicPipeline.cpp
+        Vulkan-GraphicPipeline.hpp
         Vulkan-Instance.cpp
         Vulkan-Instance.hpp
         Vulkan-RenderPassDescriptor.cpp
