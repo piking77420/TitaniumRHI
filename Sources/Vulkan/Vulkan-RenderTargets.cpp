@@ -5,29 +5,25 @@
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Vulkan-Texture.hpp>
 
 namespace TiRHI::Vulkan
 {
     bool RenderTargets::build(Device& device)
-    {
-
-        // TODO
-
-        return true;
-    }
-
-    bool RenderTargets::build(Device& device, vk::ImageView imageView)
     {
         if (!BaseRenderTargets::build())
             return false;
 
         // m_renderPassDescriptor shoudl be valid
         assert(getRenderPassDescriptor());
-        assert(imageView);
 
+        std::vector<vk::ImageView> views;
+        views.push_back(Texture::Private::getImageView(*getColorAttachements()[0]));
+
+        // TODO multiple attachement
         vk::FramebufferCreateInfo framebufferInfo{};
         framebufferInfo.setRenderPass(getRenderPassDescriptor()->getNativeRenderPass())
-            .setAttachments(imageView)
+            .setAttachments(views)
             .setWidth(getWidth())
             .setHeight(getHeight())
             .setLayers(1);
@@ -41,11 +37,6 @@ namespace TiRHI::Vulkan
         }
 
         return m_frameBuffer.get();
-    }
-
-    bool createFrameBuffer(vk::Device device)
-    {
-        return true;
     }
 
 } // TiRHI::Vulkan

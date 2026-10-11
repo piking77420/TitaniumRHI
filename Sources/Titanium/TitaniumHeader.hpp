@@ -111,14 +111,17 @@ namespace TiRHI::Contract
     // CommandList
 
     template<typename T>
-    concept CommandListContract =
-        requires(T& commandList, Device& device, const Viewport& viewport, const Rect2D& rect2D) {
-            { commandList.build(device) } -> std::same_as<bool>;
-            { commandList.beginRecord() } -> std::same_as<bool>;
-            { commandList.endRecord() } -> std::same_as<bool>;
-            { commandList.setViewPort(viewport) } -> std::same_as<void>;
-            { commandList.setScissors(rect2D) } -> std::same_as<void>;
-        } && std::derived_from<T, Object<T, RHI>>;
+    concept CommandListContract = requires(T& commandList, Device& device, const Viewport& viewport,
+                                           const Rect2D& rect2D, const BeginRenderPass& beginRenderPass,
+                                           RenderTargets& renderTargets) {
+        { commandList.build(device) } -> std::same_as<bool>;
+        { commandList.beginRecord() } -> std::same_as<bool>;
+        { commandList.endRecord() } -> std::same_as<bool>;
+        { commandList.setViewPort(viewport) } -> std::same_as<void>;
+        { commandList.setScissors(rect2D) } -> std::same_as<void>;
+        { commandList.beginRenderPass(beginRenderPass, renderTargets) } -> std::same_as<bool>;
+        { commandList.endRenderPass() } -> std::same_as<void>;
+    } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
 

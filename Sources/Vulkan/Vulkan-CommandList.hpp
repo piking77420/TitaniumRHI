@@ -14,8 +14,9 @@ namespace TiRHI::Vulkan
 {
     class RHI;
     class Device;
+    class RenderPassDescriptor;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets>
+    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor>
     {
     public:
         CommandList() = delete;
@@ -33,7 +34,7 @@ namespace TiRHI::Vulkan
 
         void endDebugLabel();
 
-        bool beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets);
+        bool beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets);
 
         void endRenderPass();
 

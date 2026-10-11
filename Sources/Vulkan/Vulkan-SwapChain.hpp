@@ -52,8 +52,6 @@ namespace TiRHI::Vulkan
     private:
         vk::UniqueSwapchainKHR m_swapchain;
 
-        std::vector<vk::UniqueImageView> m_imageViews;
-
         vk::SurfaceFormatKHR m_currentFormat;
 
         struct SwapChainSupportDetails

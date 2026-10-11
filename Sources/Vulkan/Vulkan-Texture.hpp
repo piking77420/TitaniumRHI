@@ -20,14 +20,19 @@ namespace TiRHI::Vulkan
 
         struct Private
         {
-            static bool build(Texture& texture, Device& device, vk::Image image)
+            static bool build(Texture& texture, Device& device, vk::Image image, vk::Format format)
             {
-                return texture.build(device, image);
+                return texture.build(device, image, format);
             }
 
             static vk::Image getImage(Texture& texture)
             {
                 return texture.getImage();
+            }
+
+            static vk::ImageView getImageView(Texture& texture)
+            {
+                return texture.m_uniqueView.get();
             }
         };
 
@@ -39,6 +44,8 @@ namespace TiRHI::Vulkan
         //
         std::variant<std::monostate, vk::UniqueImage, vk::Image> m_image;
 
+        vk::UniqueImageView m_uniqueView;
+
         vk::Image getImage() const
         {
             return std::visit(overloads{[](auto&& v) -> vk::Image { return VK_NULL_HANDLE; },
@@ -47,7 +54,7 @@ namespace TiRHI::Vulkan
                               m_image);
         };
 
-        bool build(Device& device, vk::Image image);
+        bool build(Device& device, vk::Image image, vk::Format format);
     };
 }
 

@@ -145,9 +145,11 @@ namespace TiRHI::DirectX12
         if (!m_device)
             return false;
 
-        const auto* pass = renderTargets.getRenderPassDescriptor();
-        const auto colorAtt = pass->getColorAttachements();
-        const auto depthAtt = pass->getDepthAttachement();
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
+
+        const auto colorAtt = m_recordState.renderPassDescritptor->getColorAttachements();
+        const auto depthAtt = m_recordState.renderPassDescritptor->getDepthAttachement();
         const auto renderTargetAttachement = renderTargets.getColorAttachements();
         const auto depthTargetAttachement = renderTargets.getDepthAttachement();
 
@@ -157,24 +159,10 @@ namespace TiRHI::DirectX12
         if (colorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT)
             return false;
 
-        if ((renderTargetAttachement.size() + (depthTargetAttachement.has_value() ? 1 : 0)) !=
-            colorCount + (depthAtt.has_value() ? 1 : 0))
-        {
-            RHI_LOG_ERROR(
-                std::format(L"CommandList {}: render target and render pass descritor target missmatch ", getNameW()),
-                RhiApi::DirectX12);
-            return false;
-        }
-
-        // Assumes every color attachment uses LoadOp::Clear.
-        if (beginRenderPass.clearColors.size() < colorCount)
-            return false;
-
-        if (!onBeginRenderPass(beginRenderPass, renderTargets))
-            return false;
-
         if (!renderTargetTransition(renderTargets, false))
             return false;
+
+        setRenderPassRenderTargetState(true);
 
         std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> desc{};
 
@@ -246,21 +234,19 @@ namespace TiRHI::DirectX12
         m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? desc.data() : nullptr,
                                        depthDescPtr, D3D12_RENDER_PASS_FLAG_NONE);
 
-        m_currentRenderTargets = &renderTargets;
-
         return true;
     }
 
     void CommandList::endRenderPass()
     {
-        onEndRenderPass();
         m_commandList->EndRenderPass();
 
-        if (m_currentRenderTargets)
+        if (m_recordState.renderPassDescritptor)
         {
-            renderTargetTransition(*m_currentRenderTargets, true);
-            m_currentRenderTargets = nullptr;
+            renderTargetTransition(*m_recordState.renderTargets, true);
+            setRenderPassRenderTargetState(false);
         }
+        onEndRenderPass();
     }
 
     void CommandList::setViewPort(const Viewport& viewPort)
@@ -306,7 +292,8 @@ namespace TiRHI::DirectX12
 
     bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)
     {
-        // TODO refactor this
+        // Vulkan does make initial state to render state and final state by him self
+        // here we need to do it by ourself
 
         const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
         if (!renderPassDescriptor)
@@ -362,7 +349,6 @@ namespace TiRHI::DirectX12
             }
 
             m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
-            texture.setState(IsOutTransition ? desc.finalState : desc.renderState);
 
             return true;
         }

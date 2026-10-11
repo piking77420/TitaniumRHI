@@ -94,10 +94,12 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().endDebugUtilsLabelEXT();
     }
 
-    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
+    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets)
     {
-        const auto* pass = renderTargets.getRenderPassDescriptor();
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
 
+        const auto* pass = renderTargets.getRenderPassDescriptor();
         if (!pass)
             return false;
 
@@ -147,8 +149,7 @@ namespace TiRHI::Vulkan
             .setRenderArea(renderArea)
             .setClearValues(m_vulkanStorage.clearValues);
 
-        if (!onBeginRenderPass(beginRenderPass, renderTargets))
-            return false;
+        setRenderPassRenderTargetState(true);
 
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
@@ -157,8 +158,9 @@ namespace TiRHI::Vulkan
 
     void CommandList::endRenderPass()
     {
-        onEndRenderPass();
         getcurrentFrameCmb().endRenderPass();
+        setRenderPassRenderTargetState(false);
+        onEndRenderPass();
     }
 
     void CommandList::setViewPort(const Viewport& viewPort)

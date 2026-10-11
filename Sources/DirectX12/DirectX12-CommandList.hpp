@@ -13,8 +13,9 @@ namespace TiRHI::DirectX12
     class Device;
     class RenderTargets;
     class Texture;
+    class RenderPassDescriptor;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets>
+    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor>
     {
     public:
         CommandList() = delete;
@@ -52,7 +53,6 @@ namespace TiRHI::DirectX12
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
-        RenderTargets* m_currentRenderTargets;
 
         bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
     };

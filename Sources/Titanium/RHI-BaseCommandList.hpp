@@ -45,7 +45,7 @@ namespace TiRHI
         }
     };
 
-    template<typename T, typename TRHI, typename TRenderTarget>
+    template<typename T, typename TRHI, typename TRenderTarget, typename TRenderPassDescriptor>
     class BaseCommandList : public Object<T, TRHI>
     {
     public:
@@ -55,7 +55,7 @@ namespace TiRHI
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget>>);
+            static_assert(std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget, TRenderPassDescriptor>>);
         }
 
     protected:
@@ -63,10 +63,15 @@ namespace TiRHI
         {
             bool isRecording = false;
             bool isInRenderPass = false;
+            const TRenderPassDescriptor* renderPassDescritptor = nullptr;
+            TRenderTarget* renderTargets = nullptr;
 
             void reset()
             {
                 isRecording = false;
+                isInRenderPass = false;
+                renderPassDescritptor = nullptr;
+                renderTargets = nullptr;
             }
         } m_recordState;
 
@@ -103,7 +108,7 @@ namespace TiRHI
             m_recordState.reset();
         }
 
-        bool onBeginRenderPass(const BeginRenderPass& beginRenderPass, const TRenderTarget& renderTargets)
+        bool onBeginRenderPass(const BeginRenderPass& beginRenderPass, TRenderTarget& renderTargets)
         {
             if (!m_recordState.isRecording)
             {
@@ -122,7 +127,14 @@ namespace TiRHI
                     RhiApi::Common);
                 return false;
             }
-
+            m_recordState.renderTargets = &renderTargets;
+            m_recordState.renderPassDescritptor = renderTargets.getRenderPassDescriptor();
+            if (!inspectRenderPassRenderTargetState())
+            {
+                m_recordState.renderTargets = nullptr;
+                m_recordState.renderPassDescritptor = nullptr;
+                return false;
+            }
             m_recordState.isInRenderPass = true;
             return true;
         }
@@ -147,6 +159,78 @@ namespace TiRHI
             }
 
             m_recordState.isInRenderPass = false;
+            m_recordState.renderPassDescritptor = nullptr;
+            m_recordState.renderTargets = nullptr;
+        }
+
+        bool inspectRenderPassRenderTargetState()
+        {
+            if (!m_recordState.renderTargets || !m_recordState.renderPassDescritptor)
+                return false;
+
+            const std::span colorAttachments = m_recordState.renderPassDescritptor->getColorAttachements();
+            const std::optional depthAttachment = m_recordState.renderPassDescritptor->getDepthAttachement();
+
+            const std::span colorTextures = m_recordState.renderTargets->getColorAttachements();
+            const std::optional depthTextures = m_recordState.renderTargets->getDepthAttachement();
+            const size_t attachmentCount = colorAttachments.size() + (depthAttachment.has_value() ? 1 : 0);
+
+            if (colorAttachments.size() != colorTextures.size())
+            {
+                RHI_LOG_ERROR(
+                    std::format(L"CommandList '{}': Color attachment count mismatch. "
+                                L"RenderPassDescriptor expects {} attachments, but RenderTargets provides {}.",
+                                this->getNameW(), colorAttachments.size(), colorTextures.size()),
+                    RhiApi::Common);
+
+                return false;
+            }
+            if (depthAttachment.has_value() != depthTextures.has_value())
+            {
+                RHI_LOG_ERROR(std::format(L"CommandList '{}': Depth attachment mismatch. "
+                                          L"RenderPassDescriptor requires depth: {}, RenderTargets provides depth: {}.",
+                                          this->getNameW(), depthAttachment.has_value(), depthTextures.has_value()),
+                              RhiApi::Common);
+
+                return false;
+            }
+
+            for (size_t i = 0; i < attachmentCount; i++)
+            {
+                const bool isDepth = i == (attachmentCount - 1) && depthAttachment;
+                typename TRenderTarget::_Texture& texture = isDepth ? *(*depthTextures) : *colorTextures[i];
+                const AttachmentDescriptor& descriptor = isDepth ? *depthAttachment : colorAttachments[i];
+
+                if (texture.getState() != descriptor.initialState)
+                {
+                    RHI_LOG_WARNING(
+                        std::format(L"CommandList {}: Texture {} is in state {} but render pass expected {}",
+                                    this->getNameW(), texture.getNameW(), toWString(texture.getState()),
+                                    toWString(descriptor.initialState)),
+                        RhiApi::None);
+                }
+            }
+        }
+
+        void setRenderPassRenderTargetState(bool isSettingRenderState)
+        {
+            if (!m_recordState.renderTargets || !m_recordState.renderPassDescritptor)
+                return;
+
+            const std::span colorAttachments = m_recordState.renderPassDescritptor->getColorAttachements();
+            const std::optional depthAttachment = m_recordState.renderPassDescritptor->getDepthAttachement();
+            const size_t attachmentCount = colorAttachments.size() + (depthAttachment.has_value() ? 1 : 0);
+
+            const std::span colorTextures = m_recordState.renderTargets->getColorAttachements();
+            const std::optional depthTextures = m_recordState.renderTargets->getDepthAttachement();
+
+            for (size_t i = 0; i < attachmentCount; i++)
+            {
+                const bool isDepth = i == (attachmentCount - 1) && depthAttachment;
+                typename TRenderTarget::_Texture& texture = isDepth ? *(*depthTextures) : *colorTextures[i];
+                const AttachmentDescriptor& descriptor = isDepth ? *depthAttachment : colorAttachments[i];
+                texture.setState(isSettingRenderState ? descriptor.renderState : descriptor.finalState);
+            }
         }
     };
 
