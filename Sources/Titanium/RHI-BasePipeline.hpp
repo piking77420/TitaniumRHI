@@ -69,7 +69,7 @@ namespace TiRHI
         }
 
         template<ShaderStage stage>
-        bool getModule(BinaryModule** const module)
+        bool getModule(const BinaryModule** const module)
         {
             auto it =
                 std::ranges::find_if(m_binaryModule, [](const BinaryModule& binary) { return binary.stage == stage; });
@@ -88,20 +88,34 @@ namespace TiRHI
         std::vector<BinaryModule> m_binaryModule;
     };
 
-    template<typename T, typename TRHI>
+    template<typename T, typename TRHI, typename TRenderPassDescriptor>
     class BaseGraphicPipiline : public BasePipeline<T, TRHI>
     {
     public:
+        using _RenderPassDescriptor = TRenderPassDescriptor;
+
         BaseGraphicPipiline() = delete;
         ~BaseGraphicPipiline() = default;
         RHI_MOVE_ONLY(BaseGraphicPipiline)
         BaseGraphicPipiline(TRHI& rhi)
             : BasePipeline<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI>>);
+            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI, TRenderPassDescriptor>>);
+        }
+
+        T& setRenderPassDescritptor(const _RenderPassDescriptor* renderPassDescriptor)
+        {
+            m_renderPassDescritptor = renderPassDescriptor;
+            return static_cast<T&>(*this);
+        }
+
+        const _RenderPassDescriptor* getRenderPassDescriptor()
+        {
+            return m_renderPassDescritptor;
         }
 
     private:
+        const _RenderPassDescriptor* m_renderPassDescritptor = nullptr;
     };
 
 } // namespace TiRHI

@@ -265,8 +265,8 @@ namespace TiRHI
     {
         Offset2DF position;
         Extend2DF extend;
-        float minDepth;
-        float maxDepth;
+        float minDepth = 1.0;
+        float maxDepth = 0.0;
 
         Viewport& setPosition(Offset2DF newOffset2DF) noexcept
         {

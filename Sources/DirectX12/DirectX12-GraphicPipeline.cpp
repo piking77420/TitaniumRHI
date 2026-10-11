@@ -1,6 +1,7 @@
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/DirectX12-Device.hpp>
+#include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -40,12 +41,12 @@ namespace TiRHI::DirectX12
 
         desc.pRootSignature = m_rootSignature.Get();
 
-        BinaryModule* vertexModule = nullptr;
+        const BinaryModule* vertexModule = nullptr;
 
         if (!getModule<ShaderStage::Vertex>(&vertexModule))
             return false;
 
-        BinaryModule* pixel = nullptr;
+        const BinaryModule* pixel = nullptr;
 
         if (!getModule<ShaderStage::Pixel>(&pixel))
             return false;

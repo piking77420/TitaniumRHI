@@ -24,6 +24,11 @@ namespace TiRHI::Vulkan
 
         std::vector<vk::PhysicalDevice> getValidPhysicalDevices();
 
+        [[nodiscard]] RhiApi getApi() const
+        {
+            return RhiApi::Vulkan;
+        }
+
     private:
         Instance m_instance;
 

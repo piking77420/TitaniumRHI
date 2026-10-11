@@ -8,8 +8,9 @@ namespace TiRHI::DirectX12
 {
     class RHI;
     class Device;
+    class RenderPassDescriptor;
 
-    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, RenderPassDescriptor>
     {
     public:
         GraphicPipeline() = delete;

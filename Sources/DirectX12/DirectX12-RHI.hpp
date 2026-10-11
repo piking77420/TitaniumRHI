@@ -33,6 +33,11 @@ namespace TiRHI::DirectX12
 
         [[nodiscard]] IDXGIFactory6* getNativeFactory();
 
+        [[nodiscard]] RhiApi getApi() const
+        {
+            return RhiApi::DirectX12;
+        }
+
     private:
         Factory m_factory;
 

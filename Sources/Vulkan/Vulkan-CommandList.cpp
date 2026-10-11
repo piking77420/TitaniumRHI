@@ -4,6 +4,7 @@
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Vulkan/Private/Transition.hpp>
+#include <Vulkan/Vulkan-GraphicPipeline.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -192,6 +193,24 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
                                              getTransitionDependencyMask(currentState, state), {}, {}, barrier);
         texture.setState(state);
+    }
+
+    void CommandList::bindPipeline(const GraphicPipeline& graphicPipeline)
+    {
+        BaseCommandList::bindPipeline(graphicPipeline);
+        getcurrentFrameCmb().bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                          GraphicPipeline::Private::getPipeline(*m_recordState.graphicPipeline));
+    }
+
+    void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+    {
+        getcurrentFrameCmb().draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    }
+
+    void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
+                                  int32_t vertexOffset, uint32_t firstInstance)
+    {
+        getcurrentFrameCmb().drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const

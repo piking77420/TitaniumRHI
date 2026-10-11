@@ -10,6 +10,7 @@
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
+#include <Vulkan/Vulkan-GraphicPipeline.hpp>
 
 namespace TiRHI
 {
@@ -22,6 +23,7 @@ namespace TiRHI
     using RenderPassDescriptor = Vulkan::RenderPassDescriptor;
     using RenderTargets = Vulkan::RenderTargets;
     using Texture = Vulkan::Texture;
+    using GraphicPipeline = Vulkan::GraphicPipeline;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -68,6 +70,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept RHIContract = requires(T& rhi) {
         { rhi.newDevice() } -> std::same_as<Device>;
+        { rhi.getApi() } -> std::same_as<RhiApi>;
     } && std::constructible_from<T, const RhiCreate&>;
 
     static_assert(RHIContract<RHI>);
