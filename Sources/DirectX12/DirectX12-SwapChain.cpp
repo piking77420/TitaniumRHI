@@ -25,9 +25,8 @@ namespace TiRHI::DirectX12
         return createSwapChain(device, surface);
     }
 
-    AcquiredFrame SwapChain::acquireNextImage()
+    AcquiredFrame SwapChain::acquireNextImage([[maybe_unused]] Device& device)
     {
-
         // Update frame index.
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
 

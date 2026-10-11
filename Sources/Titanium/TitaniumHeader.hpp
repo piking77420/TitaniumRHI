@@ -102,7 +102,7 @@ namespace TiRHI::Contract
     concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle,
                                          const RenderPassDescriptor&) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
-        { swapChain.acquireNextImage() } -> std::same_as<AcquiredFrame>;
+        { swapChain.acquireNextImage(device) } -> std::same_as<AcquiredFrame>;
         { swapChain.present() } -> std::same_as<bool>;
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
         { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
