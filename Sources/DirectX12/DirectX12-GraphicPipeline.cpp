@@ -2,6 +2,7 @@
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/DirectX12-Device.hpp>
 #include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
+#include <DirectX12/Private/RhiToDirectX12.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -57,11 +58,10 @@ namespace TiRHI::DirectX12
 
         desc.InputLayout = {nullptr, 0};
 
-        desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-        desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-        desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-        desc.RasterizerState.FrontCounterClockwise = FALSE;
+        desc.PrimitiveTopologyType = DirectX12::Private::toDirectX12TopologyType(getPrimitiveTopology());
+        desc.RasterizerState.FillMode = DirectX12::Private::toDirectX12(getPolygoneMode());
+        desc.RasterizerState.CullMode = DirectX12::Private::toDirectX12(getCullFlagMode());
+        desc.RasterizerState.FrontCounterClockwise = DirectX12::Private::toDirectX12(getCullFlagMode());
         desc.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
         desc.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
         desc.RasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
@@ -86,6 +86,8 @@ namespace TiRHI::DirectX12
 
         desc.DepthStencilState.DepthEnable = FALSE;
         desc.DepthStencilState.StencilEnable = FALSE;
+
+        // TODO use color attachelment
 
         desc.NumRenderTargets = 1;
         desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;

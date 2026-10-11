@@ -7,6 +7,7 @@
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
+#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
@@ -114,8 +115,61 @@ namespace TiRHI
             return m_renderPassDescritptor;
         }
 
+        T& setPrimitiveTopology(PrimitiveTopology primitiveTopology)
+        {
+            m_primitiveTopology = m_primitiveTopology;
+            return static_cast<T&>(*this);
+        }
+
+        // TODO try to use dynamic state for vulkan
+        PrimitiveTopology getPrimitiveTopology() const
+        {
+            return m_primitiveTopology;
+        }
+
+        T& setPolygoneMode(PolygonMode polygonMode)
+        {
+            m_polygonMode = polygonMode;
+            return static_cast<T&>(*this);
+        }
+
+        PolygonMode getPolygoneMode() const
+        {
+            return m_polygonMode;
+        }
+
+        T& setCullModeFlag(CullModeFlag cullModeFlag)
+        {
+            m_cullModeFlag = cullModeFlag;
+            return static_cast<T&>(*this);
+        }
+
+        CullModeFlag getCullFlagMode() const
+        {
+            return m_cullModeFlag;
+        }
+
+        T& setFrontFace(FrontFace cullModeFlag)
+        {
+            m_frontFace = cullModeFlag;
+            return static_cast<T&>(*this);
+        }
+
+        FrontFace getFrontFace() const
+        {
+            return m_frontFace;
+        }
+
     private:
         const _RenderPassDescriptor* m_renderPassDescritptor = nullptr;
+
+        PrimitiveTopology m_primitiveTopology = PrimitiveTopology::TriangleList;
+
+        PolygonMode m_polygonMode = PolygonMode::Fill;
+
+        CullModeFlag m_cullModeFlag = CullModeFlag::None;
+
+        FrontFace m_frontFace = FrontFace::CounterClockwise;
     };
 
 } // namespace TiRHI

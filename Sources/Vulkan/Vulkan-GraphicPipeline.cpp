@@ -2,6 +2,7 @@
 
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -51,7 +52,7 @@ namespace TiRHI::Vulkan
 
         // 4. Triangle list
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly{};
-        inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
+        inputAssembly.topology = Vulkan::Private::toVulkan(getPrimitiveTopology());
         inputAssembly.primitiveRestartEnable = vk::False;
 
         // 5. Dynamic viewport and scissor
@@ -68,9 +69,9 @@ namespace TiRHI::Vulkan
         vk::PipelineRasterizationStateCreateInfo rasterizer{};
         rasterizer.depthClampEnable = vk::False;
         rasterizer.rasterizerDiscardEnable = vk::False;
-        rasterizer.polygonMode = vk::PolygonMode::eFill;
-        rasterizer.cullMode = vk::CullModeFlagBits::eNone;
-        rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
+        rasterizer.polygonMode = Vulkan::Private::toVulkan(getPolygoneMode());
+        rasterizer.cullMode = Vulkan::Private::toVulkan(getCullFlagMode());
+        rasterizer.frontFace = Vulkan::Private::toVulkan(getFrontFace());
         rasterizer.depthBiasEnable = vk::False;
         rasterizer.lineWidth = 1.0f;
 
