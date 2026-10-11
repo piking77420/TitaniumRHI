@@ -19,24 +19,34 @@ namespace TiRHI::DirectX12
 
         struct Private
         {
-            static bool build(Texture& texture, MComPtr<ID3D12Resource> image)
+            static bool build(Texture& texture, Device& device, MComPtr<ID3D12Resource> image)
             {
-                return texture.build(image);
+                return texture.build(device, image);
             }
 
             static ID3D12Resource* getImage(Texture& texture)
             {
                 return texture.m_image.Get();
             }
+
+            static bool getRtv(Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+            {
+                return texture.getRtv(device, handle);
+            }
         };
 
-        bool build(Texture& texture);
+        bool build(Device& device);
 
     private:
         friend Private;
+
         MComPtr<ID3D12Resource> m_image;
 
-        bool build(MComPtr<ID3D12Resource> image);
+        DirectX12::CpuDescriptorHandle m_rtvCpuHandle;
+
+        bool build(Device& device, MComPtr<ID3D12Resource> image);
+
+        bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle);
     };
 } // namespace TiRHI::DirectX12
 
