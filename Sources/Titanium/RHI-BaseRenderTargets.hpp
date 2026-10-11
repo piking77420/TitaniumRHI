@@ -80,7 +80,12 @@ namespace TiRHI
             return m_colorAttachements;
         }
 
-        T& bindColorAttachement(const _Texture& textureToBind, size_t bindingSlot)
+        const std::span<_Texture*>& getColorAttachements()
+        {
+            return m_colorAttachements;
+        }
+
+        T& bindColorAttachement(_Texture& textureToBind, size_t bindingSlot)
         {
             if (m_colorAttachements.size() <= bindingSlot)
             {
@@ -96,7 +101,12 @@ namespace TiRHI
             return m_depthAttachement;
         }
 
-        T& bindDepthAttachement(const _Texture& textureToBind, size_t bindingSlot)
+        const std::optional<_Texture*>& getDepthAttachement()
+        {
+            return m_depthAttachement;
+        }
+
+        T& bindDepthAttachement(_Texture& textureToBind, size_t bindingSlot)
         {
             m_depthAttachement = textureToBind;
             return reinterpret_cast<T&>(*this);
@@ -115,9 +125,9 @@ namespace TiRHI
 
         const TRenderPassDescriptor* m_renderPassDescriptor{nullptr};
 
-        std::vector<const _Texture*> m_colorAttachements;
+        std::vector<_Texture*> m_colorAttachements;
 
-        std::optional<const _Texture*> m_depthAttachement;
+        std::optional<_Texture*> m_depthAttachement;
     };
 
 } // TiRHI

@@ -32,7 +32,7 @@ namespace TiRHI::DirectX12
 
         void endDebugLabel();
 
-        bool beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets);
+        bool beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets);
 
         void endRenderPass();
 
@@ -52,9 +52,9 @@ namespace TiRHI::DirectX12
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
-        const RenderTargets* m_currentRenderTargets;
+        RenderTargets* m_currentRenderTargets;
 
-        bool renderTargetTransition(const RenderTargets& renderTargets, bool IsOutTransition);
+        bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
     };
 
 } // namespace TiRHI::DirectX12

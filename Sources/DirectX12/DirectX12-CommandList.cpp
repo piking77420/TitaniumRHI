@@ -140,7 +140,7 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_USE_PIX)
     }
 
-    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
+    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets)
     {
         if (!m_device)
             return false;
@@ -304,7 +304,7 @@ namespace TiRHI::DirectX12
         m_commandList->ResourceBarrier(1, &barrier);
     }
 
-    bool CommandList::renderTargetTransition(const RenderTargets& renderTargets, bool IsOutTransition)
+    bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)
     {
         // TODO refactor this
 
@@ -331,9 +331,19 @@ namespace TiRHI::DirectX12
         {
             const bool isDepthAtt = (i == attachements.size() - 1) && renderPassDescriptor->getDepthAttachement();
 
-            const auto& texture = isDepthAtt ? *(*depthAttachement) : *attachements[i];
+            Texture& texture = isDepthAtt ? *(*depthAttachement) : *attachements[i];
             const AttachmentDescriptor& desc = isDepthAtt ? *renderPassDescriptor->getDepthAttachement()
                                                           : renderPassDescriptor->getColorAttachements()[i];
+
+            const ResourceState current = texture.getState();
+
+            if (!IsOutTransition && current != desc.initialState)
+            {
+                RHI_LOG_WARNING(std::format(L"CommandList {}: Texture {} is in state {} but render pass expected {}",
+                                            getNameW(), texture.getNameW(), toWString(current),
+                                            toWString(desc.initialState)),
+                                RhiApi::DirectX12);
+            }
 
             D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -352,6 +362,7 @@ namespace TiRHI::DirectX12
             }
 
             m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
+            texture.setState(IsOutTransition ? desc.finalState : desc.renderState);
 
             return true;
         }
