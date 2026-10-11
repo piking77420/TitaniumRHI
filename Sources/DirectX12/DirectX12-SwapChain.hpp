@@ -46,12 +46,9 @@ namespace TiRHI::DirectX12
         MComPtr<IDXGISwapChain3> m_swapchain;
         uint32_t m_swapchainFrameIndex = 0u;
 
-        MComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-        UINT m_rtvDescriptorSize = 0;
-
         bool createSwapChain(Device& device, Surface& surface);
 
-        bool queryBuffer();
+        bool queryBuffer(Device& device);
 
         bool createRenderTarget(Device& device);
     };

@@ -48,13 +48,13 @@ namespace TiRHI::DirectX12
         }
 
     private:
+        Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
         const RenderTargets* m_currentRenderTargets;
 
-        bool renderTargetTransitionIn(const RenderTargets& renderTargets);
-        bool renderTargetTransitionOut(const RenderTargets& renderTargets);
+        bool renderTargetTransition(const RenderTargets& renderTargets, bool IsOutTransition);
     };
 
 } // namespace TiRHI::DirectX12

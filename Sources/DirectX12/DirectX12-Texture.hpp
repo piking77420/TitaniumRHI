@@ -3,6 +3,7 @@
 
 #include <Titanium/RHI-BaseTexture.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
+#include <DirectX12/Private/DescriptorAllocator.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -13,7 +14,7 @@ namespace TiRHI::DirectX12
     {
     public:
         Texture() = delete;
-        ~Texture() = default;
+        ~Texture();
         RHI_MOVE_ONLY(Texture);
         Texture(RHI& rhi);
 
@@ -24,12 +25,17 @@ namespace TiRHI::DirectX12
                 return texture.build(device, image);
             }
 
-            static ID3D12Resource* getImage(Texture& texture)
+            static ID3D12Resource* getImage(const Texture& texture)
             {
                 return texture.m_image.Get();
             }
 
             static bool getRtv(Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+            {
+                return texture.getRtv(device, handle);
+            }
+
+            static bool getRtv(const Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
             {
                 return texture.getRtv(device, handle);
             }
@@ -40,13 +46,17 @@ namespace TiRHI::DirectX12
     private:
         friend Private;
 
+        Device* m_device = nullptr;
+
         MComPtr<ID3D12Resource> m_image;
 
-        DirectX12::CpuDescriptorHandle m_rtvCpuHandle;
+        TiRHI::DirectX12::CpuDescriptorHandle m_rtvCpuHandle;
 
         bool build(Device& device, MComPtr<ID3D12Resource> image);
 
         bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle);
+
+        bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle) const;
     };
 } // namespace TiRHI::DirectX12
 

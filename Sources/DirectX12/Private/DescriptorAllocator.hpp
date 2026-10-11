@@ -6,10 +6,11 @@
 #include <array>
 #include <optional>
 #include <tuple>
+#include <vector>
 
 #include <Titanium/Private/StrongTypeId.hpp>
+#include <Titanium/RHI-Object.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
-#include <DirectX12/DirectX12-Texture.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -45,7 +46,10 @@ namespace TiRHI::DirectX12::Private
 
         bool build(Device& device);
 
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> getHandle(Device& device, CpuDescriptorHandle& cpuDescriptorHandle);
+        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> getOrCreate(Device& device,
+                                                               CpuDescriptorHandle& cpuDescriptorHandle);
+
+        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> get(const CpuDescriptorHandle& cpuDescriptorHandle);
 
         void release(CpuDescriptorHandle& cpuDescriptorHandle);
 

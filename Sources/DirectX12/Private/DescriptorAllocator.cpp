@@ -14,8 +14,8 @@ namespace TiRHI::DirectX12::Private
         return m_pools.emplace_back(std::make_unique<Pool>())->build(*device.getNativeDevice());
     }
 
-    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DescriptorAllocator::getHandle(Device& device,
-                                                                              CpuDescriptorHandle& cpuDescriptorHandle)
+    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
+    DescriptorAllocator::getOrCreate(Device& device, CpuDescriptorHandle& cpuDescriptorHandle)
     {
         if (!cpuDescriptorHandle.descriptorIndex.isValid() && !cpuDescriptorHandle.poolIndex.isValid())
         {
@@ -60,6 +60,29 @@ namespace TiRHI::DirectX12::Private
             RHI_LOG_FATAL(L"Un error as occur", RhiApi::DirectX12);
         }
         return {};
+    }
+
+    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DescriptorAllocator::get(const CpuDescriptorHandle& cpuDescriptorHandle)
+    {
+        if (!cpuDescriptorHandle.descriptorIndex.isValid() || !cpuDescriptorHandle.poolIndex.isValid())
+        {
+            return std::nullopt;
+        }
+
+        if (cpuDescriptorHandle.poolIndex.toUnderlying() >= 0 &&
+            cpuDescriptorHandle.poolIndex.toUnderlying() < m_pools.size())
+        {
+            Pool& pool = *m_pools[cpuDescriptorHandle.poolIndex.toUnderlying()].get();
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle = pool.baseHandlePtr;
+            handle.ptr += cpuDescriptorHandle.descriptorIndex.toUnderlying() * pool.rtvDescriptorSize;
+            return handle;
+        }
+        else
+        {
+            RHI_LOG_FATAL(L"Un error as occur", RhiApi::DirectX12);
+        }
+        return std::nullopt;
     }
 
     void DescriptorAllocator::release(CpuDescriptorHandle& handle)

@@ -11,8 +11,9 @@ namespace TiRHI::DirectX12
 {
     class RHI;
     class Device;
+    class Texture;
 
-    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, RenderPassDescriptor>
+    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, RenderPassDescriptor, Texture>
     {
     public:
         RenderTargets() = delete;
@@ -22,32 +23,12 @@ namespace TiRHI::DirectX12
 
         struct Private
         {
-            static bool build(RenderTargets& renderTargets, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE handle,
-                              ID3D12Resource* image)
-            {
-                return renderTargets.build(device, handle, image);
-            }
-        };
-
-        struct Attachement
-        {
-            D3D12_CPU_DESCRIPTOR_HANDLE handle;
-            ID3D12Resource* image;
         };
 
         bool build(Device& device);
 
-        std::span<const Attachement> getAttachements() const
-        {
-            return m_attachments;
-        }
-
     private:
         friend Private;
-
-        std::vector<Attachement> m_attachments;
-
-        bool build(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE handle, ID3D12Resource* image);
     };
 
 } // namespace TiRHI::DirectX12
