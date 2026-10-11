@@ -12,12 +12,15 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
     class RenderTargets;
+    class Texture;
+    class RenderPassDescriptor;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets>
+    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor>
     {
     public:
         CommandList() = delete;
         ~CommandList() = default;
+        RHI_MOVE_ONLY(CommandList)
         CommandList(RHI& rhi);
 
         bool build(Device& device);
@@ -30,7 +33,7 @@ namespace TiRHI::DirectX12
 
         void endDebugLabel();
 
-        bool beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets);
+        bool beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets);
 
         void endRenderPass();
 
@@ -38,19 +41,20 @@ namespace TiRHI::DirectX12
 
         void setScissors(const Rect2D& rect2d);
 
+        void transitionResource(Texture& texture, ResourceState state);
+
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
             return m_commandList.Get();
         }
 
     private:
+        Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
-        const RenderTargets* m_currentRenderTargets;
 
-        bool renderTargetTransitionIn(const RenderTargets& renderTargets);
-        bool renderTargetTransitionOut(const RenderTargets& renderTargets);
+        bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
     };
 
 } // namespace TiRHI::DirectX12

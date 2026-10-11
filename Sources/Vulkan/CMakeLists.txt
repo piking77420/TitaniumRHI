@@ -7,6 +7,7 @@ target_sources(
         Private/DeviceQueueFamily.hpp
         Private/RHIToVulkan.cpp
         Private/RHIToVulkan.hpp
+        Private/Transition.hpp
         Private/VulkanToRHI.cpp
         Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp
@@ -27,6 +28,8 @@ target_sources(
         Vulkan-Surface.hpp
         Vulkan-SwapChain.cpp
         Vulkan-SwapChain.hpp
+        Vulkan-Texture.cpp
+        Vulkan-Texture.hpp
 )
 
 target_include_directories(

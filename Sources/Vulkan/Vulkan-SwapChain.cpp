@@ -130,8 +130,7 @@ namespace TiRHI::Vulkan
 
         // Destroy resources referencing old swapchain images FIRST
         m_renderTargets.clear();
-        m_imageViews.clear();
-        m_images.clear();
+        m_textures.clear();
 
         vk::Device vkDevice = device.getNativeDevice();
         vk::PhysicalDevice physicalDevice = device.getNativePhysicalDevice();
@@ -173,21 +172,19 @@ namespace TiRHI::Vulkan
             return false;
         }
 
-        m_images = vkDevice.getSwapchainImagesKHR(*m_swapchain);
-        m_imageViews.reserve(m_images.size());
-
-        for (vk::Image image : m_images)
+        std::vector<vk::Image> images = vkDevice.getSwapchainImagesKHR(*m_swapchain);
         {
-            vk::ImageViewCreateInfo viewInfo{};
+            using ImageStorage = std::variant<std::monostate, vk::UniqueImage, vk::Image>;
 
-            viewInfo.setImage(image)
-                .setViewType(vk::ImageViewType::e2D)
-                .setFormat(createInfo.imageFormat)
-                .setComponents({vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
-                                vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity})
-                .setSubresourceRange({vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
-
-            m_imageViews.push_back(vkDevice.createImageViewUnique(viewInfo));
+            m_textures.reserve(images.size());
+            for (const auto& image : images)
+            {
+                auto& texture = m_textures.emplace_back(getRHI());
+                if (!Texture::Private::build(texture, device, image, createInfo.imageFormat))
+                {
+                    RHI_LOG_ERROR(std::format(L"Failed to build Swapchain {}", getNameW()), RhiApi::Vulkan);
+                }
+            }
         }
 
         return createRenderTargets(device);
@@ -201,6 +198,16 @@ namespace TiRHI::Vulkan
     RenderTargets& SwapChain::getCurrentRenderTargets()
     {
         return m_renderTargets[m_imageIndex];
+    }
+
+    const Texture& SwapChain::getCurrentSwapChainTexture() const
+    {
+        return m_textures[m_imageIndex];
+    }
+
+    Texture& SwapChain::getCurrentSwapChainTexture()
+    {
+        return m_textures[m_imageIndex];
     }
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
@@ -268,17 +275,19 @@ namespace TiRHI::Vulkan
     bool SwapChain::createRenderTargets(Device& device)
     {
         const vk::Extent2D ext = getExtent2D();
-        m_renderTargets.reserve(m_imageViews.size());
+        m_renderTargets.reserve(m_textures.size());
 
-        for (size_t i = 0; i < m_imageViews.size(); ++i)
+        for (size_t i = 0; i < m_textures.size(); ++i)
         {
             auto& renderTarget = m_renderTargets.emplace_back(getRHI());
-            renderTarget.setWidth(ext.width)
-                .setHeight(ext.height)
-                .setRenderPassDescriptor(&m_renderPassDescriptor)
-                .setName(std::format("{} Swap Chain's RenderTargets {}", getName(), i));
+            const bool build = renderTarget.setWidth(ext.width)
+                                   .setHeight(ext.height)
+                                   .setRenderPassDescriptor(&m_renderPassDescriptor)
+                                   .setName(std::format("{} Swap Chain's RenderTargets {}", getName(), i))
+                                   .bindColorAttachement(m_textures[i], 0)
+                                   .build(device);
 
-            if (!Vulkan::RenderTargets::Private::build(renderTarget, device, m_imageViews[i].get()))
+            if (!build)
             {
                 RHI_LOG_ERROR(std::format(L"Failed to crate Framebuffer {}", i), RhiApi::Vulkan);
                 return false;

@@ -9,22 +9,25 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TDevice, typename TRenderPassDescriptor, typename TRenderTarget>
+    template<typename T, typename TRHI, typename TDevice, typename TRenderPassDescriptor, typename TRenderTarget,
+             typename TTexture>
     class BaseSwapChain : public Object<T, TRHI>
     {
     public:
         using _Derived = T;
         using _RHI = TRHI;
         using _Device = TDevice;
+        using _Texture = TTexture;
 
         BaseSwapChain() = delete;
         ~BaseSwapChain() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseSwapChain)
+        RHI_MOVE_ONLY(BaseSwapChain)
         BaseSwapChain(TRHI& rhi)
             : Object<T, TRHI>(rhi)
             , m_renderPassDescriptor(rhi)
         {
-            static_assert(std::derived_from<T, BaseSwapChain<T, TRHI, TDevice, TRenderPassDescriptor, TRenderTarget>>);
+            static_assert(
+                std::derived_from<T, BaseSwapChain<T, TRHI, TDevice, TRenderPassDescriptor, TRenderTarget, TTexture>>);
         }
 
         bool getVsync() const noexcept
@@ -98,12 +101,9 @@ namespace TiRHI
         {
             AttachmentDescriptor attachement{};
             attachement.setFormat(m_format)
-                .setSampleCount(SampleCount::Count1)
                 .setLoadOp(LoadOp::Clear)
                 .setStoreOp(StoreOp::Store)
-                .setStencilLoadOp(LoadOp::DontCare)
-                .setStencilStoreOp(StoreOp::DontCare)
-                .setInitialState(ResourceState::Undefined) // TO DO to put present need an resource tracker
+                .setInitialState(ResourceState::Present) // TO DO to put present need an resource tracker
                 .setRenderState(ResourceState::RenderTarget)
                 .setFinalState(ResourceState::Present);
 
@@ -128,6 +128,8 @@ namespace TiRHI
         TRenderPassDescriptor m_renderPassDescriptor;
 
         std::vector<TRenderTarget> m_renderTargets;
+
+        std::vector<_Texture> m_textures;
     };
 
 } // TiRHI

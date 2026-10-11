@@ -9,6 +9,7 @@
 #include <Vulkan/Vulkan-CommandList.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
+#include <Vulkan/Vulkan-Texture.hpp>
 
 namespace TiRHI
 {
@@ -20,6 +21,7 @@ namespace TiRHI
     using CommandList = Vulkan::CommandList;
     using RenderPassDescriptor = Vulkan::RenderPassDescriptor;
     using RenderTargets = Vulkan::RenderTargets;
+    using Texture = Vulkan::Texture;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -31,6 +33,7 @@ namespace TiRHI
 #include <DirectX12/DirectX12-AcquireFrame.hpp>
 #include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
 #include <DirectX12/DirectX12-RenderTargets.hpp>
+#include <DirectX12/DirectX12-Texture.hpp>
 
 namespace TiRHI
 {
@@ -42,6 +45,7 @@ namespace TiRHI
     using CommandList = DirectX12::CommandList;
     using RenderPassDescriptor = DirectX12::RenderPassDescriptor;
     using RenderTargets = DirectX12::RenderTargets;
+    using Texture = DirectX12::Texture;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -98,6 +102,8 @@ namespace TiRHI::Contract
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
         { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
         { swapChain.getCurrentRenderTargets() } -> std::same_as<RenderTargets&>;
+        { std::as_const(swapChain.getCurrentSwapChainTexture()) } -> std::same_as<const Texture&>;
+        { swapChain.getCurrentSwapChainTexture() } -> std::same_as<Texture&>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(SwapChainContract<SwapChain>);
@@ -105,16 +111,38 @@ namespace TiRHI::Contract
     // CommandList
 
     template<typename T>
-    concept CommandListContract =
-        requires(T& commandList, Device& device, const Viewport& viewport, const Rect2D& rect2D) {
-            { commandList.build(device) } -> std::same_as<bool>;
-            { commandList.beginRecord() } -> std::same_as<bool>;
-            { commandList.endRecord() } -> std::same_as<bool>;
-            { commandList.setViewPort(viewport) } -> std::same_as<void>;
-            { commandList.setScissors(rect2D) } -> std::same_as<void>;
-        } && std::derived_from<T, Object<T, RHI>>;
+    concept CommandListContract = requires(T& commandList, Device& device, const Viewport& viewport,
+                                           const Rect2D& rect2D, const BeginRenderPass& beginRenderPass,
+                                           RenderTargets& renderTargets) {
+        { commandList.build(device) } -> std::same_as<bool>;
+        { commandList.beginRecord() } -> std::same_as<bool>;
+        { commandList.endRecord() } -> std::same_as<bool>;
+        { commandList.setViewPort(viewport) } -> std::same_as<void>;
+        { commandList.setScissors(rect2D) } -> std::same_as<void>;
+        { commandList.beginRenderPass(beginRenderPass, renderTargets) } -> std::same_as<bool>;
+        { commandList.endRenderPass() } -> std::same_as<void>;
+    } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
+
+    template<typename T>
+    concept RederPassDescriptorContract = requires(T& renderPassDescriptor, Device& device) {
+        { renderPassDescriptor.build(device) } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, RHI>>;
+
+    static_assert(RederPassDescriptorContract<RenderPassDescriptor>);
+
+    template<typename T>
+    concept RenderTargetsContract = requires(T& renderTargets, Device& device) {
+        { renderTargets.build(device) } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, RHI>>;
+
+    static_assert(RenderTargetsContract<RenderTargets>);
+
+    template<typename T>
+    concept TextureContract = requires(T& texture, Device& device) {
+        { texture.build(device) } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, RHI>>;
 
 } // TiRHI::Contracts
 

@@ -26,6 +26,7 @@ namespace TiRHI::DirectX12
 
     bool CommandList::build(Device& device)
     {
+        m_device = &device;
         m_allocators.resize(getRHI().getFrameInFlight());
 
         for (uint32_t i = 0; i < m_allocators.size(); ++i)
@@ -139,12 +140,18 @@ namespace TiRHI::DirectX12
 #endif // defined(TITANIUM_USE_PIX)
     }
 
-    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
+    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets)
     {
-        const auto* pass = renderTargets.getRenderPassDescriptor();
-        const auto colorAtt = pass->getColorAttachements();
-        const auto depthAtt = pass->getDepthAttachement();
-        const auto d3d12Att = renderTargets.getAttachements();
+        if (!m_device)
+            return false;
+
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
+
+        const auto colorAtt = m_recordState.renderPassDescritptor->getColorAttachements();
+        const auto depthAtt = m_recordState.renderPassDescritptor->getDepthAttachement();
+        const auto renderTargetAttachement = renderTargets.getColorAttachements();
+        const auto depthTargetAttachement = renderTargets.getDepthAttachement();
 
         const size_t colorCount = colorAtt.size();
 
@@ -152,36 +159,40 @@ namespace TiRHI::DirectX12
         if (colorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT)
             return false;
 
-        if (d3d12Att.size() < colorCount + (depthAtt.has_value() ? 1 : 0))
+        if (!renderTargetTransition(renderTargets, false))
             return false;
 
-        // Assumes every color attachment uses LoadOp::Clear.
-        if (beginRenderPass.clearColors.size() < colorCount)
-            return false;
+        setRenderPassRenderTargetState(true);
 
-        if (!onBeginRenderPass(beginRenderPass, renderTargets))
-            return false;
+        std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> desc{};
 
-        if (!renderTargetTransitionIn(renderTargets))
-            return false;
+        auto fillRenderTargetDesc = [device = m_device](D3D12_RENDER_PASS_RENDER_TARGET_DESC& desc,
+                                                        const Texture& texture,
+                                                        const AttachmentDescriptor& attachmentDescriptor)
+        {
+            if (!Texture::Private::getRtv(texture, *device, desc.cpuDescriptor))
+            {
+                RHI_LOG_ERROR(
+                    std::format(L"Failed to get D3D12_CPU_DESCRIPTOR_HANDLE fo the texture {}", texture.getNameW()),
+                    RhiApi::DirectX12);
+                return;
+            }
 
-        std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> attachments{};
+            desc.BeginningAccess.Type = Private::toDirectX12(attachmentDescriptor.loadOp);
+
+            desc.BeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(attachmentDescriptor.format);
+
+            desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        };
 
         for (size_t i = 0; i < colorCount; ++i)
         {
-            auto& desc = attachments[i];
-            const auto& colorAttachment = colorAtt[i];
+            if (!renderTargetAttachement[i])
+                continue;
 
-            desc.cpuDescriptor = d3d12Att[i].handle;
-
-            desc.BeginningAccess.Type = Private::toDirectX12(colorAtt[i].loadOp);
-
-            desc.BeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(colorAttachment.format);
-
+            fillRenderTargetDesc(desc[i], *renderTargetAttachement[i], colorAtt[i]);
             std::copy_n(beginRenderPass.clearColors[i].color.begin(), beginRenderPass.clearColors[i].color.size(),
-                        desc.BeginningAccess.Clear.ClearValue.Color);
-
-            desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                        desc[i].BeginningAccess.Clear.ClearValue.Color);
         }
 
         D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthDesc{};
@@ -189,7 +200,16 @@ namespace TiRHI::DirectX12
 
         if (depthAtt)
         {
-            depthDesc.cpuDescriptor = d3d12Att[colorCount].handle;
+            D3D12_CPU_DESCRIPTOR_HANDLE handle;
+            const Texture& depthTexture = *depthTargetAttachement.value();
+            if (Texture::Private::getRtv(depthTexture, *m_device, depthDesc.cpuDescriptor))
+            {
+                RHI_LOG_ERROR(std::format(L"Failed to get D3D12_CPU_DESCRIPTOR_HANDLE fo the texture {}",
+                                          depthTexture.getNameW()),
+                              RhiApi::DirectX12);
+                return false;
+            }
+            depthDesc.cpuDescriptor = handle;
             depthDesc.DepthBeginningAccess.Type = Private::toDirectX12(depthAtt->loadOp);
             depthDesc.DepthEndingAccess.Type = Private::toDirectX12(depthAtt->storeOp);
             depthDesc.StencilBeginningAccess.Type = Private::toDirectX12(depthAtt->stencilLoadOp);
@@ -211,24 +231,22 @@ namespace TiRHI::DirectX12
             depthDescPtr = &depthDesc;
         }
 
-        m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? attachments.data() : nullptr,
+        m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? desc.data() : nullptr,
                                        depthDescPtr, D3D12_RENDER_PASS_FLAG_NONE);
-
-        m_currentRenderTargets = &renderTargets;
 
         return true;
     }
 
     void CommandList::endRenderPass()
     {
-        onEndRenderPass();
         m_commandList->EndRenderPass();
 
-        if (m_currentRenderTargets)
+        if (m_recordState.renderPassDescritptor)
         {
-            renderTargetTransitionOut(*m_currentRenderTargets);
-            m_currentRenderTargets = nullptr;
+            renderTargetTransition(*m_recordState.renderTargets, true);
+            setRenderPassRenderTargetState(false);
         }
+        onEndRenderPass();
     }
 
     void CommandList::setViewPort(const Viewport& viewPort)
@@ -254,15 +272,35 @@ namespace TiRHI::DirectX12
         m_commandList->RSSetScissorRects(1, &d3d12Scissors);
     }
 
-    bool CommandList::renderTargetTransitionIn(const RenderTargets& renderTargets)
+    void CommandList::transitionResource(Texture& texture, ResourceState state)
     {
-        // TODO refactor this
+        const ResourceState current = texture.getState();
+        if (state == current)
+            return;
+
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Transition.pResource = Texture::Private::getImage(texture);
+        barrier.Transition.StateBefore = Private::toDirectX12(current);
+        barrier.Transition.StateAfter = Private::toDirectX12(state);
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        if (barrier.Transition.StateBefore == barrier.Transition.StateAfter)
+            return;
+
+        m_commandList->ResourceBarrier(1, &barrier);
+    }
+
+    bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)
+    {
+        // Vulkan does make initial state to render state and final state by him self
+        // here we need to do it by ourself
 
         const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
         if (!renderPassDescriptor)
             return false;
 
-        std::span attachements = renderTargets.getAttachements();
+        std::span attachements = renderTargets.getColorAttachements();
+        std::optional depthAttachement = renderTargets.getDepthAttachement();
 
         if (attachements.size() != renderPassDescriptor->getAttachementCount())
         {
@@ -278,87 +316,42 @@ namespace TiRHI::DirectX12
         m_barriers.reserve(attachements.size());
         for (size_t i = 0; i < attachements.size(); i++)
         {
-            const auto& att = attachements[i];
-            if (i == attachements.size() - 1 && renderPassDescriptor->getDepthAttachement())
-            {
-                const AttachmentDescriptor& desc = *renderPassDescriptor->getDepthAttachement();
+            const bool isDepthAtt = (i == attachements.size() - 1) && renderPassDescriptor->getDepthAttachement();
 
-                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrier.Transition.pResource = att.image;
-                barrier.Transition.StateBefore = Private::toDirectX12(desc.initialState);
-                barrier.Transition.StateAfter = Private::toDirectX12(desc.renderState);
-                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            }
-            else
-            {
-                const AttachmentDescriptor& desc = renderPassDescriptor->getColorAttachements()[i];
+            Texture& texture = isDepthAtt ? *(*depthAttachement) : *attachements[i];
+            const AttachmentDescriptor& desc = isDepthAtt ? *renderPassDescriptor->getDepthAttachement()
+                                                          : renderPassDescriptor->getColorAttachements()[i];
 
-                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrier.Transition.pResource = att.image;
-                barrier.Transition.StateBefore = Private::toDirectX12(desc.initialState);
-                barrier.Transition.StateAfter = Private::toDirectX12(desc.renderState);
-                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            const ResourceState current = texture.getState();
+
+            if (!IsOutTransition && current != desc.initialState)
+            {
+                RHI_LOG_WARNING(std::format(L"CommandList {}: Texture {} is in state {} but render pass expected {}",
+                                            getNameW(), texture.getNameW(), toWString(current),
+                                            toWString(desc.initialState)),
+                                RhiApi::DirectX12);
             }
+
+            D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource = Texture::Private::getImage(texture);
+            barrier.Transition.StateBefore =
+                IsOutTransition ? Private::toDirectX12(desc.renderState) : Private::toDirectX12(desc.initialState);
+            barrier.Transition.StateAfter =
+                IsOutTransition ? Private::toDirectX12(desc.finalState) : Private::toDirectX12(desc.renderState);
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+            if (barrier.Transition.StateBefore && barrier.Transition.StateAfter)
+            {
+                RHI_LOG_WARNING(
+                    std::format(L" Texture {} Transition state before is the same after", texture.getNameW()),
+                    RhiApi::DirectX12);
+            }
+
+            m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
+
+            return true;
         }
-
-        m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
-
-        return true;
     }
 
-    bool CommandList::renderTargetTransitionOut(const RenderTargets& renderTargets)
-    {
-        const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
-        if (!renderPassDescriptor)
-            return false;
-
-        std::span attachements = renderTargets.getAttachements();
-
-        if (attachements.size() != renderPassDescriptor->getAttachementCount())
-        {
-            RHI_LOG_ERROR(
-                std::format(L"CommandList {}: renderTargetTransition but d3d12 renderTargets size is not equal to ",
-                            this->getNameW()),
-                RhiApi::DirectX12);
-
-            return false;
-        }
-
-        m_barriers.clear();
-        m_barriers.reserve(attachements.size());
-        for (size_t i = 0; i < attachements.size(); i++)
-        {
-            const auto& att = attachements[i];
-            if (i == attachements.size() - 1 && renderPassDescriptor->getDepthAttachement())
-            {
-                const AttachmentDescriptor& desc = *renderPassDescriptor->getDepthAttachement();
-
-                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrier.Transition.pResource = att.image;
-                barrier.Transition.StateBefore = Private::toDirectX12(desc.renderState);
-                barrier.Transition.StateAfter = Private::toDirectX12(desc.finalState);
-                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            }
-            else
-            {
-                const AttachmentDescriptor& desc = renderPassDescriptor->getColorAttachements()[i];
-
-                D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrier.Transition.pResource = att.image;
-                barrier.Transition.StateBefore = Private::toDirectX12(desc.renderState);
-                barrier.Transition.StateAfter = Private::toDirectX12(desc.finalState);
-                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            }
-        }
-
-        m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
-
-        return true;
-    }
-
-}
-// namespace TiRHI::DirectX12
+} // namespace TiRHI::DirectX12

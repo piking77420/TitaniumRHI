@@ -6,11 +6,11 @@
 
 namespace TiRHI
 {
-#define RHI_MOVE_CONSTRUCT_ONLY(Type)                                                                                  \
+#define RHI_MOVE_ONLY(Type)                                                                                  \
     Type(const Type&) = delete;                                                                                        \
     Type& operator=(const Type&) = delete;                                                                             \
     Type(Type&&) noexcept = default;                                                                                   \
-    Type& operator=(Type&&) = delete;
+    Type& operator=(Type&&) = default;
 
     template<typename T, typename TRHI>
     class Object
@@ -18,10 +18,11 @@ namespace TiRHI
     public:
         Object() = delete;
         ~Object() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(Object)
+        RHI_MOVE_ONLY(Object)
         Object(TRHI& rhi)
             : m_rhi(rhi)
         {
+            static_assert(std::is_move_constructible_v<Object<T, TRHI>>);
             static_assert(std::is_nothrow_move_constructible_v<Object<T, TRHI>>);
         }
 

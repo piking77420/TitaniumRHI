@@ -8,13 +8,14 @@ namespace TiRHI::Vulkan
 {
     class RHI;
     class Device;
+    class Texture;
 
-    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, Vulkan::RenderPassDescriptor>
+    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, Vulkan::RenderPassDescriptor, Vulkan::Texture>
     {
     public:
         RenderTargets() = delete;
         ~RenderTargets() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(RenderTargets);
+        RHI_MOVE_ONLY(RenderTargets);
 
         RenderTargets(RHI& rhi)
             : BaseRenderTargets(rhi)
@@ -27,11 +28,6 @@ namespace TiRHI::Vulkan
             {
                 return renderTargets.m_frameBuffer.get();
             }
-
-            static bool build(RenderTargets& renderTargets, Device& device, vk::ImageView imageView)
-            {
-                return renderTargets.build(device, imageView);
-            }
         };
 
         bool build(Device& device);
@@ -40,11 +36,6 @@ namespace TiRHI::Vulkan
         friend Private;
 
         vk::UniqueFramebuffer m_frameBuffer;
-
-        bool createFrameBuffer(vk::Device device);
-
-        // private builder
-        bool build(Device& device, vk::ImageView imageView);
     };
 
 } // namespace TiRHI::Vulkan

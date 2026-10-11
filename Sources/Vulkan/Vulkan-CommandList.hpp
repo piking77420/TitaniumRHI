@@ -3,22 +3,25 @@
 
 #include <optional>
 #include <memory_resource>
+#include <map>
 #include <Volk/volk.h>
 #include <Vulkan/vulkan.hpp>
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
+#include <Vulkan/Vulkan-Texture.hpp>
 
 namespace TiRHI::Vulkan
 {
     class RHI;
     class Device;
+    class RenderPassDescriptor;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets>
+    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor>
     {
     public:
         CommandList() = delete;
         ~CommandList() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(CommandList)
+        RHI_MOVE_ONLY(CommandList)
         explicit CommandList(RHI& rhi);
 
         bool build(Device& device);
@@ -31,7 +34,7 @@ namespace TiRHI::Vulkan
 
         void endDebugLabel();
 
-        bool beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets);
+        bool beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets);
 
         void endRenderPass();
 
@@ -39,7 +42,10 @@ namespace TiRHI::Vulkan
 
         void setScissors(const Rect2D& rect2d);
 
-        vk::CommandBuffer getcurrentFrameCmb();
+        // TODO make some overload for batching barriers
+        void transitionResource(Texture& texture, ResourceState state);
+
+        vk::CommandBuffer getcurrentFrameCmb() const;
 
     private:
         vk::UniqueCommandPool m_commandPool;
@@ -51,7 +57,12 @@ namespace TiRHI::Vulkan
         struct VulkanStorage
         {
             std::vector<vk::ClearValue> clearValues;
+            std::array<std::vector<size_t>, ResourceStateCount * ResourceStateCount> transitionTexture;
         } m_vulkanStorage;
+
+        static vk::DependencyFlags getTransitionDependencyMask(ResourceState current, ResourceState target);
+
+        static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
     };
 
 } // namespace TiRHI::Vulkan

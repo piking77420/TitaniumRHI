@@ -2,6 +2,8 @@
 #include <Titanium/Log.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Private/Transition.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -92,10 +94,12 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().endDebugUtilsLabelEXT();
     }
 
-    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, const RenderTargets& renderTargets)
+    bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets)
     {
-        const auto* pass = renderTargets.getRenderPassDescriptor();
+        if (!onBeginRenderPass(beginRenderPass, renderTargets))
+            return false;
 
+        const auto* pass = renderTargets.getRenderPassDescriptor();
         if (!pass)
             return false;
 
@@ -145,8 +149,7 @@ namespace TiRHI::Vulkan
             .setRenderArea(renderArea)
             .setClearValues(m_vulkanStorage.clearValues);
 
-        if (!onBeginRenderPass(beginRenderPass, renderTargets))
-            return false;
+        setRenderPassRenderTargetState(true);
 
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
@@ -155,8 +158,9 @@ namespace TiRHI::Vulkan
 
     void CommandList::endRenderPass()
     {
-        onEndRenderPass();
         getcurrentFrameCmb().endRenderPass();
+        setRenderPassRenderTargetState(false);
+        onEndRenderPass();
     }
 
     void CommandList::setViewPort(const Viewport& viewPort)
@@ -173,9 +177,60 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().setScissor(0, scissor);
     }
 
-    vk::CommandBuffer CommandList::getcurrentFrameCmb()
+    void CommandList::transitionResource(Texture& texture, const ResourceState state)
+    {
+        const ResourceState currentState = texture.getState();
+        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE)
+            return;
+
+        using namespace Private;
+
+        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+
+        const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
+
+        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
+                                             getTransitionDependencyMask(currentState, state), {}, {}, barrier);
+        texture.setState(state);
+    }
+
+    vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();
+    }
+
+    vk::DependencyFlags CommandList::getTransitionDependencyMask(ResourceState current, ResourceState target)
+    {
+        return {};
+    }
+
+    vk::ImageMemoryBarrier CommandList::makeImageBarrier(Texture& texture, ResourceState current, ResourceState target)
+    {
+        using namespace Private;
+
+        // TODO be able to choose level an layer
+        vk::ImageSubresourceRange range{};
+        range.aspectMask = vk::ImageAspectFlagBits::eColor;
+        range.baseMipLevel = 0;
+        range.levelCount = VK_REMAINING_MIP_LEVELS;
+        range.baseArrayLayer = 0;
+        range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+        vk::ImageMemoryBarrier barrier{};
+
+        barrier.oldLayout = Private::toVulkanImageLayout(current);
+        barrier.newLayout = Private::toVulkanImageLayout(target);
+
+        barrier.srcAccessMask = getAccessMask(current);
+        barrier.dstAccessMask = getAccessMask(target);
+
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.image = Texture::Private::getImage(texture);
+        barrier.subresourceRange = range;
+
+        return barrier;
     }
 
 } // namespace TiRHI::Vulkan

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/DescriptorAllocator.cpp
+        Private/DescriptorAllocator.hpp
         Private/RhiToDirectX12.cpp
         Private/RhiToDirectX12.hpp
         DirectX12-AcquireFrame.cpp
@@ -24,6 +26,8 @@ target_sources(
         DirectX12-Surface.hpp
         DirectX12-SwapChain.cpp
         DirectX12-SwapChain.hpp
+        DirectX12-Texture.cpp
+        DirectX12-Texture.hpp
         DirectX12-Utils.cpp
         DirectX12-Utils.hpp
 )
