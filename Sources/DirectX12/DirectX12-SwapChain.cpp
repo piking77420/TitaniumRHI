@@ -163,6 +163,7 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::createRenderTarget(Device& device)
     {
+
         m_rtvHeap.Reset();
         ID3D12Device* d3d12Device = device.getNativeDevice();
 

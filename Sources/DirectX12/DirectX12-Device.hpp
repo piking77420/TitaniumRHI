@@ -5,6 +5,7 @@
 #include <Titanium/RHI-BaseDevice.hpp>
 
 #include <DirectX12-Header.hpp>
+#include <DirectX12/Private/DescriptorAllocator.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -46,6 +47,11 @@ namespace TiRHI::DirectX12
             return m_graphicsQueue;
         }
 
+        DirectX12::Private::DescriptorAllocator& getDescriptorAllocator()
+        {
+            return m_descriptorAllocator;
+        }
+
         bool isValid() const
         {
             return m_device;
@@ -77,6 +83,8 @@ namespace TiRHI::DirectX12
             UINT64 nextFrameFenceValue = 0;
 
         } m_synchronization;
+
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocator;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
 

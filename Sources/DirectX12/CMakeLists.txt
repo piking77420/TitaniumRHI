@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/DescriptorAllocator.cpp
+        Private/DescriptorAllocator.hpp
         Private/RhiToDirectX12.cpp
         Private/RhiToDirectX12.hpp
         DirectX12-AcquireFrame.cpp
