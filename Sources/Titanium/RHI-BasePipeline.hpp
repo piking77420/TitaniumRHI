@@ -50,9 +50,10 @@ namespace TiRHI
             static_assert(std::derived_from<T, BasePipeline<T, TRHI>>);
         }
 
-        BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size)
+        BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size,
+                                std::string entryPoint)
         {
-            m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data)});
+            m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
             return static_cast<T&>(*this);
         }
 
@@ -62,6 +63,7 @@ namespace TiRHI
             ShaderStage stage;
             uint32_t size;
             std::unique_ptr<uint8_t[]> data;
+            std::string entryPoint;
         };
 
         std::span<const BinaryModule> getModules()

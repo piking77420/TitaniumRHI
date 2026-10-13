@@ -43,9 +43,12 @@ namespace TiRHI::Vulkan
         // 2. Shader stages
         std::array<vk::PipelineShaderStageCreateInfo, 2> stages{};
 
-        stages[0].setStage(vk::ShaderStageFlagBits::eVertex).setModule(*vertexModule).setPName("main");
+        stages[0].setStage(vk::ShaderStageFlagBits::eVertex).setModule(*vertexModule).setPName(vertexBinary->entryPoint.data());
 
-        stages[1].setStage(vk::ShaderStageFlagBits::eFragment).setModule(*fragmentModule).setPName("main");
+        stages[1]
+            .setStage(vk::ShaderStageFlagBits::eFragment)
+            .setModule(*fragmentModule)
+            .setPName(fragmentBinary->entryPoint.data());
 
         // 3. No vertex buffers
         vk::PipelineVertexInputStateCreateInfo vertexInput{};
