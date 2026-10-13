@@ -57,6 +57,16 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
+        BasePipeline& addModule(ShaderStage shaderStage, const std::span<const std::byte>& code, std::string entryPoint)
+        {
+           const uint32_t size = static_cast<uint32_t>(code.size());
+
+           std::unique_ptr data = std::make_unique<uint8_t[]>(size);
+           std::memcpy(data.get(), code.data(), size);
+           m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
+           return static_cast<T&>(*this);
+        }
+
     protected:
         struct BinaryModule
         {
