@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.26)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
 target_sources(
     TitaniumRHI
     PRIVATE
+        Metal-Device.cpp
+        Metal-Device.hpp
         Metal-RHI.cpp
         Metal-RHI.hpp
+        Metal-Surface.cpp
+        Metal-Surface.hpp
 )
 
 target_include_directories(
