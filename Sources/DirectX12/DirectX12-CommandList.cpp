@@ -286,9 +286,13 @@ namespace TiRHI::DirectX12
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
         if (barrier.Transition.StateBefore == barrier.Transition.StateAfter)
+        {
+            texture.setState(state);
             return;
+        }
 
         m_commandList->ResourceBarrier(1, &barrier);
+        texture.setState(state);
     }
 
     void CommandList::bindPipeline(const _GraphicPipeline& graphicPipeline)
