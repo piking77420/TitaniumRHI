@@ -1,24 +1,41 @@
 #ifndef TITANIUM_METAL_RHI_H
 #define TITANIUM_METAL_RHI_H
 
-#include <Metal/Metal.hpp>
-#include <MetalFX/MetalFX.hpp>
+#include <Titanium/RHITypes.hpp>
+#include <Titanium/RHI-BaseRHI.hpp>
+
+#include <QuartzCore/CAMetalLayer.hpp>
 #include <Metal/Metal.hpp>
 
-#include <Titanium/RHI.hpp>
-
-namespace TiRHI
+namespace TiRHI::Metal
 {
-    class RHI
+    class RHI : public BaseRHI<RHI>
     {
     public:
-        RHI();
+        RHI() = delete;
         ~RHI();
+        RHI(const RhiCreate& rhiCreate);
 
-        void waitForDeviceIdle();
+        struct Private
+        {
+            MTL::Device* getDevice(RHI& rhi)
+            {
+                return rhi.m_device;
+            }
+
+            MTL::MetalLayer* getLayer(RHI& rhi)
+            {
+                return rhi.m_layer;
+            }
+        };
 
     private:
+        friend Private;
+
+        MTL::Device* m_device = nullptr;
+
+        CA::MetalLayer* m_layer = nullptr;
     };
-}
+} // TiRHI::Metal
 
 #endif // TITANIUM_METAL_RHI_H
