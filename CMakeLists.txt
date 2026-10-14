@@ -146,7 +146,7 @@ endif()
 elseif(TITANIUM_RHI_BACKEND STREQUAL "Metal")
     message(STATUS "RHI Backend: Metal")
         target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_METAL=1)
-    set(ABSOLUTE_METAL_CPP_DIR "${CMAKE_SOURCE_DIR}/ThirdParty/metal-cpp/")
+    set(ABSOLUTE_METAL_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/metal-cpp")
     add_subdirectory(Sources/Metal)
 endif()
 
