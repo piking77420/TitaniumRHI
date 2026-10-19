@@ -30,6 +30,7 @@ if(NOT TITANIUM_RHI_BACKEND IN_LIST RHI_BACKENDS)
 endif()
 
 add_library(TitaniumRHI STATIC)
+target_compile_features(TitaniumRHI PUBLIC cxx_std_23)
 
 ## Enable Validation Layer
 if (VALIDATION_LAYER)

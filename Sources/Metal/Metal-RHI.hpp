@@ -6,6 +6,12 @@
 
 #include <QuartzCore/CAMetalLayer.hpp>
 #include <Metal/Metal.hpp>
+#include <Metal/Metal-Device.hpp>
+
+namespace CA
+{
+    class MetalLayer;
+} // namespace CA
 
 namespace TiRHI::Metal
 {
@@ -18,16 +24,15 @@ namespace TiRHI::Metal
 
         struct Private
         {
-            MTL::Device* getDevice(RHI& rhi)
-            {
-                return rhi.m_device;
-            }
-
-            MTL::MetalLayer* getLayer(RHI& rhi)
+            CA::MetalLayer* getLayer(RHI& rhi)
             {
                 return rhi.m_layer;
             }
         };
+
+        [[nodiscard]] Device newDevice();
+
+        [[nodiscard]] RhiApi getApi() const;
 
     private:
         friend Private;

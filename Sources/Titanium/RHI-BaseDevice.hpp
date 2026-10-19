@@ -23,7 +23,6 @@ namespace TiRHI
         {
         }
 
-        template<typename TRHI>
         const Adapter& getSourceAdapter(const BaseRHI<TRHI>& rhi) const
         {
             static_assert(std::derived_from<T, BaseDevice<T, TRHI>>);

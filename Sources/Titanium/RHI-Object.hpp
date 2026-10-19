@@ -61,7 +61,7 @@ namespace TiRHI
 
         T& setName(const std::wstring& newName)
         {
-            static_assert(std::derived_from<T, Object<T>>);
+            static_assert(std::derived_from<T, Object<T, TRHI>>);
             if (!newName.empty())
             {
                 m_name = std::string(newName.begin(), newName.end());

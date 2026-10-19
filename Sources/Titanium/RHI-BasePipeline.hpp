@@ -1,9 +1,10 @@
 #ifndef TITANIUM_PIPELINE_H
 #define TITANIUM_PIPELINE_H
 
-#include <span>
 #include <memory>
+#include <span>
 #include <vector>
+#include <ranges>
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
@@ -101,6 +102,7 @@ namespace TiRHI
         std::vector<BinaryModule> m_binaryModule;
     };
 
+    // TODO fix typo
     template<typename T, typename TRHI, typename TRenderPassDescriptor>
     class BaseGraphicPipiline : public BasePipeline<T, TRHI>
     {
@@ -129,7 +131,7 @@ namespace TiRHI
 
         T& setPrimitiveTopology(PrimitiveTopology primitiveTopology)
         {
-            m_primitiveTopology = m_primitiveTopology;
+            m_primitiveTopology = primitiveTopology;
             return static_cast<T&>(*this);
         }
 

@@ -6,6 +6,10 @@
 namespace TiRHI::Metal
 {
     class RHI;
+    class Surface;
+    class Adapters;
+    class AcquiredFrame;
+    class CommandList;
 
     class Device : public BaseDevice<Device, RHI>
     {
@@ -17,6 +21,17 @@ namespace TiRHI::Metal
             : BaseDevice(rhi)
         {
         }
+
+        void beginFrame();
+
+        bool build(RHI& rhi, const Surface& surface, const Adapter& adapter, std::optional<size_t> index);
+
+        void wait();
+
+        void submit(std::span<const AcquiredFrame> acquiredFrames,
+                    std::span<CommandList*> cmdLists);
+
+        bool isValid();
 
     private:
     };

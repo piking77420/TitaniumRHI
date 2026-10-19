@@ -3,12 +3,26 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Metal-AcquiredFrame.cpp
+        Metal-AcquiredFrame.hpp
+        Metal-CommandList.cpp
+        Metal-CommandList.hpp
         Metal-Device.cpp
         Metal-Device.hpp
+        Metal-GraphicPipeline.cpp
+        Metal-GraphicPipeline.hpp
+        Metal-RenderPassDescriptor.cpp
+        Metal-RenderPassDescriptor.hpp
+        Metal-RenderTargets.cpp
+        Metal-RenderTargets.hpp
         Metal-RHI.cpp
         Metal-RHI.hpp
         Metal-Surface.cpp
         Metal-Surface.hpp
+        Metal-SwapChain.cpp
+        Metal-SwapChain.hpp
+        Metal-Texture.cpp
+        Metal-Texture.hpp
 )
 
 target_include_directories(
