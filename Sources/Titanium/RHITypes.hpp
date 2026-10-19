@@ -2,6 +2,7 @@
 #define TITANIUM_RHI_TYPES_H
 
 #include <functional>
+#include <type_traits>
 
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHI-EnumFlag.hpp>

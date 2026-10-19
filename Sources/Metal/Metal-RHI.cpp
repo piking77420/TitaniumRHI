@@ -11,42 +11,62 @@ namespace TiRHI::Metal
 {
     RHI::~RHI()
     {
-        if (m_device)
-            m_device->release();
+     
     }
 
     RHI::RHI(const RhiCreate& rhiCreate)
         : BaseRHI<RHI>(rhiCreate)
         , m_device(MTL::CreateSystemDefaultDevice())
     {
-        if (!m_device)
-            return;
 
-        const std::string adapterName = m_device->name()->utf8String();
+        // Enumerate all adapter / device
+        NS::Array* devices = MTL::CopyAllDevices();
 
-        std::vector<Adapter::Features> features;
+        for (NS::UInteger i = 0; i < devices->count(); ++i)
+        {
+            MTL::Device* device = devices->object<MTL::Device>(i);
+            if (!device)
+                continue;
 
-        // Metal ray tracing (ray queries / intersectors)
-        if (m_device->supportsRaytracing())
-            features.push_back(Adapter::Features::RayQuery);
+            std::vector<Adapter::Features> features;
 
-        // Metal object + mesh shaders
-        if (m_device->supportsFamily(MTL::GPUFamilyMetal3))
-            features.push_back(Adapter::Features::MeshShader);
+            // Metal ray tracing (ray queries / intersectors)
+            if (device->supportsRaytracing())
+                features.push_back(Adapter::Features::RayQuery);
 
-        // Metal has no direct equivalent to Vulkan's
-        // VK_KHR_ray_tracing_pipeline.
+            // Metal object + mesh shaders
+            if (device->supportsFamily(MTL::GPUFamilyMetal3))
+                features.push_back(Adapter::Features::MeshShader);
 
-        Adapter::Properties property{};
+            // Metal has no direct equivalent to Vulkan's
+            // VK_KHR_ray_tracing_pipeline.
 
-        // Metal does not directly expose a PCI vendor ID.
-        uint32_t vendorId = 0;
+            Adapter::Properties property{};
 
-        // Apple GPU
-        if (m_device->supportsFamily(MTL::GPUFamilyApple7))
-            vendorId = 0x106B;
+            // Metal does not directly expose a PCI vendor ID.
+            uint32_t vendorId = 0;
+            // Apple GPU
+            if (m_device->supportsFamily(MTL::GPUFamilyApple7))
+                vendorId = 0x106B;
 
-        m_adapters.emplace_back(adapterName, features, property, vendorId);
+            property.limits.minUniformBufferOffset = 256;
+            property.memoryLimits.vramMemoryBytes = device->recommendedMaxWorkingSetSize();
+            property.deviceType = device->isLowPower() ? Adapter::Properties::Type::IntegratedGpu : Adapter::Properties::Type::DiscreteGpu; 
+            
+            m_adapters.emplace_back(Adapter(device->name()->cString(NS::StringEncoding::ASCIIStringEncoding), features, property, vendorId));    
+        }
+
+        devices->release();
+    }
+
+    Device RHI::newDevice()
+    {
+        return Device(*this); 
+    }
+
+    [[nodiscard]] RhiApi RHI::getApi() const
+    {
+        return RhiApi::Metal;
     }
 
 } // TiRHI::Metal

@@ -55,10 +55,27 @@ namespace TiRHI
 #elif defined(TITANIUM_METAL)
 
 #include <Metal/Metal-RHI.hpp>
+#include <Metal/Metal-Surface.hpp>
+#include <Metal/Metal-SwapChain.hpp>
+#include <Metal/Metal-CommandList.hpp>
+#include <Metal/Metal-AcquiredFrame.hpp>
+#include <Metal/Metal-RenderPassDescriptor.hpp>
+#include <Metal/Metal-RenderTargets.hpp>
+#include <Metal/Metal-Texture.hpp>
+#include <Metal/Metal-GraphicPipeline.hpp>
 
 namespace TiRHI
 {
-    using Rhi = MetalRHI;
+    using RHI = Metal::RHI;
+    using Surface = Metal::Surface;
+    using Device = Metal::Device;
+    using SwapChain = Metal::SwapChain;
+    using AcquiredFrame = Metal::AcquiredFrame;
+    using CommandList = Metal::CommandList;
+    using RenderPassDescriptor = Metal::RenderPassDescriptor;
+    using RenderTargets = Metal::RenderTargets;
+    using Texture = Metal::Texture;
+    using GraphicPipeline = Metal::GraphicPipeline;
 }
 
 #else
@@ -70,7 +87,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept RHIContract = requires(T& rhi) {
         { rhi.newDevice() } -> std::same_as<Device>;
-        { rhi.getApi() } -> std::same_as<RhiApi>;
+        { std::as_const(rhi).getApi() } -> std::same_as<RhiApi>;
     } && std::constructible_from<T, const RhiCreate&>;
 
     static_assert(RHIContract<RHI>);

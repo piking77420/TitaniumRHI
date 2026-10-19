@@ -22,8 +22,8 @@ namespace TiRHI::Metal
         bool build(WindowHandle windowHandle);
 
     private:
+        WindowHandle m_windowHandle{nullptr};
     };
-
 }
 
 #endif // TITANIUM_METAL_SURFACE_H
