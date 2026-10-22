@@ -11,6 +11,7 @@ target_sources(
         Metal-Device.hpp
         Metal-GraphicPipeline.cpp
         Metal-GraphicPipeline.hpp
+        Metal-Header.hpp
         Metal-RenderPassDescriptor.cpp
         Metal-RenderPassDescriptor.hpp
         Metal-RenderTargets.cpp
@@ -45,7 +46,7 @@ if(APPLE)
 
     target_link_libraries(
         TitaniumRHI
-        PRIVATE
+        PUBLIC
             ${FOUNDATION_FRAMEWORK}
             ${QUARTZCORE_FRAMEWORK}
             ${METAL_FRAMEWORK}

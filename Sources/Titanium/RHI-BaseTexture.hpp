@@ -38,7 +38,7 @@ namespace TiRHI
             return m_flags;
         }
 
-        T& setFlag(TextureFlags newFlag) const
+        T& setFlag(TextureFlags newFlag)
         {
             m_flags = newFlag;
             return reinterpret_cast<T&>(*this);

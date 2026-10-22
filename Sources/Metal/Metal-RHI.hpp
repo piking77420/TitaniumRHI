@@ -3,10 +3,7 @@
 
 #include <Titanium/RHITypes.hpp>
 #include <Titanium/RHI-BaseRHI.hpp>
-
-#include <QuartzCore/CAMetalLayer.hpp>
-#include <Metal/Metal.hpp>
-#include <Metal/Metal-Device.hpp>
+#include <Metal/Metal-Header.hpp>
 
 namespace CA
 {
