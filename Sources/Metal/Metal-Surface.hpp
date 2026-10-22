@@ -19,9 +19,19 @@ namespace TiRHI::Metal
         {
         }
 
+        struct Private 
+        {
+            static WindowHandle getWindowHandle(Surface& Surface)
+            {
+                return Surface.m_windowHandle;
+            }
+        };
+
+
         bool build(WindowHandle windowHandle);
 
     private:
+        friend Private;
         WindowHandle m_windowHandle{nullptr};
     };
 }

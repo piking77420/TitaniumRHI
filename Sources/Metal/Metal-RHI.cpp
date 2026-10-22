@@ -1,17 +1,17 @@
-#include <Metal/Metal-RHI.hpp>
-
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
-
+#include <Foundation/Foundation.hpp>
+#include <QuartzCore/QuartzCore.hpp>
 #include <Metal/Metal.hpp>
-#include <MetalFX/MetalFX.hpp>
+
+#include <Metal/Metal-RHI.hpp>
+
 
 namespace TiRHI::Metal
 {
     RHI::~RHI()
     {
-     
     }
 
     RHI::RHI(const RhiCreate& rhiCreate)
@@ -51,9 +51,11 @@ namespace TiRHI::Metal
 
             property.limits.minUniformBufferOffset = 256;
             property.memoryLimits.vramMemoryBytes = device->recommendedMaxWorkingSetSize();
-            property.deviceType = device->isLowPower() ? Adapter::Properties::Type::IntegratedGpu : Adapter::Properties::Type::DiscreteGpu; 
-            
-            m_adapters.emplace_back(Adapter(device->name()->cString(NS::StringEncoding::ASCIIStringEncoding), features, property, vendorId));    
+            property.deviceType = device->isLowPower() ? Adapter::Properties::Type::IntegratedGpu
+                                                       : Adapter::Properties::Type::DiscreteGpu;
+
+            m_adapters.emplace_back(Adapter(device->name()->cString(NS::StringEncoding::ASCIIStringEncoding), features,
+                                            property, vendorId));
         }
 
         devices->release();
@@ -61,7 +63,7 @@ namespace TiRHI::Metal
 
     Device RHI::newDevice()
     {
-        return Device(*this); 
+        return Device(*this);
     }
 
     [[nodiscard]] RhiApi RHI::getApi() const

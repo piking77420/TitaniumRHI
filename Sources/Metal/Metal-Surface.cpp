@@ -2,6 +2,8 @@
 
 namespace TiRHI::Metal
 {
+    Surface::~Surface() = default;
+
     bool Surface::build(WindowHandle windowHandle)
     {
         m_windowHandle = windowHandle;

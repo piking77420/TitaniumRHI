@@ -84,6 +84,7 @@ namespace TiRHI
 
 namespace TiRHI::Contract
 {
+    /*
     template<typename T>
     concept RHIContract = requires(T& rhi) {
         { rhi.newDevice() } -> std::same_as<Device>;
@@ -173,7 +174,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept GraphicPipelineContract = requires(T& graphicPipeline, Device& device) {
         { graphicPipeline.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    } && std::derived_from<T, Object<T, RHI>>;*/
 
 } // TiRHI::Contracts
 

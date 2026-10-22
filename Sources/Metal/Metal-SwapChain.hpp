@@ -3,15 +3,21 @@
 
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Metal/Metal-RenderPassDescriptor.hpp>
+#include <Metal/Metal-RenderTargets.hpp>
+
+namespace CA
+{
+    class MetalLayer;
+} // namespace CA
 
 namespace TiRHI::Metal
 {
     class RHI;
     class Device;
-    class RenderTarget;
     class Texture;
+    class Surface;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTarget, Texture>
+    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets, Texture>
     {
     public:
         SwapChain() = delete;
@@ -19,9 +25,10 @@ namespace TiRHI::Metal
         RHI_MOVE_ONLY(SwapChain)
         SwapChain(RHI& rhi);
 
-        bool build();
+        bool build(Device& device, Surface& surface);
 
     private:
+        CA::MetalLayer* m_metalLayer{nullptr};
     };
 } // namespace TiRHI::Metal
 
