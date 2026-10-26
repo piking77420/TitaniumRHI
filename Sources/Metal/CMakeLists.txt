@@ -1,12 +1,29 @@
 cmake_minimum_required(VERSION 3.26)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
 target_sources(
     TitaniumRHI
     PRIVATE
+        Metal-AcquiredFrame.cpp
+        Metal-AcquiredFrame.hpp
+        Metal-CommandList.cpp
+        Metal-CommandList.hpp
+        Metal-Device.cpp
+        Metal-Device.hpp
+        Metal-GraphicPipeline.cpp
+        Metal-GraphicPipeline.hpp
+        Metal-Header.hpp
+        Metal-RenderPassDescriptor.cpp
+        Metal-RenderPassDescriptor.hpp
+        Metal-RenderTargets.cpp
+        Metal-RenderTargets.hpp
         Metal-RHI.cpp
         Metal-RHI.hpp
+        Metal-Surface.cpp
+        Metal-Surface.hpp
+        Metal-SwapChain.cpp
+        Metal-SwapChain.hpp
+        Metal-Texture.cpp
+        Metal-Texture.hpp
 )
 
 target_include_directories(
@@ -29,7 +46,7 @@ if(APPLE)
 
     target_link_libraries(
         TitaniumRHI
-        PRIVATE
+        PUBLIC
             ${FOUNDATION_FRAMEWORK}
             ${QUARTZCORE_FRAMEWORK}
             ${METAL_FRAMEWORK}

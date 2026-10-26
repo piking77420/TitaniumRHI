@@ -4,6 +4,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <ranges>
 
 #include <Titanium/RHITypes.hpp>
 
@@ -58,11 +59,13 @@ namespace TiRHI
             struct Limits
             {
                 uint32_t minUniformBufferOffset;
+                auto operator<=>(const Limits&) const = default;
             } limits;
 
             struct MemoryLimits
             {
                 uint64_t vramMemoryBytes{0ull};
+                auto operator<=>(const MemoryLimits&) const = default;
             } memoryLimits;
 
             enum struct Type
@@ -155,9 +158,10 @@ namespace TiRHI
         }
 
         template<Features F>
-        bool supportFeatures()
+        bool supportFeatures() const
         {
-            return std::ranges::find_if(m_features, F) != m_features.end();
+            return std::find(m_features.begin(), m_features.end(), F)
+                != m_features.end();
         }
 
         auto operator<=>(const Adapter& other) const = default;

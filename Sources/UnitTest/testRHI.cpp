@@ -50,8 +50,11 @@ void debugCallBack(const std::wstring& message, TiRHI::RhiApi api, TiRHI::RhiMes
         return AnsiReset;
     };
 
-    std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}]\n", TiRHI::toWstring(api), getColor(), TiRHI::toWstring(severity),
-                              AnsiReset, message);
+    const std::wstring_view apiS = TiRHI::toWString(api);
+    const std::wstring_view colorS = getColor();
+    const std::wstring_view severityS = TiRHI::toWstring(severity);
+
+    std::wcout << std::format(L"[RHI][{}]{}[{}]{}[{}]\n", apiS, colorS, severityS, AnsiReset, message);
 
     if (severity == TiRHI::RhiMessageSeverity::Fatal || severity == TiRHI::RhiMessageSeverity::Error)
         error = true;

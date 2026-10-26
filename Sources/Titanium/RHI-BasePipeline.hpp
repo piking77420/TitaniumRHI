@@ -1,9 +1,10 @@
 #ifndef TITANIUM_PIPELINE_H
 #define TITANIUM_PIPELINE_H
 
-#include <span>
 #include <memory>
+#include <span>
 #include <vector>
+#include <ranges>
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
@@ -50,10 +51,21 @@ namespace TiRHI
             static_assert(std::derived_from<T, BasePipeline<T, TRHI>>);
         }
 
-        BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size)
+        BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size,
+                                std::string entryPoint)
         {
-            m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data)});
+            m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
             return static_cast<T&>(*this);
+        }
+
+        BasePipeline& addModule(ShaderStage shaderStage, const std::span<const std::byte>& code, std::string entryPoint)
+        {
+           const uint32_t size = static_cast<uint32_t>(code.size());
+
+           std::unique_ptr data = std::make_unique<uint8_t[]>(size);
+           std::memcpy(data.get(), code.data(), size);
+           m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
+           return static_cast<T&>(*this);
         }
 
     protected:
@@ -62,6 +74,7 @@ namespace TiRHI
             ShaderStage stage;
             uint32_t size;
             std::unique_ptr<uint8_t[]> data;
+            std::string entryPoint;
         };
 
         std::span<const BinaryModule> getModules()
@@ -89,6 +102,7 @@ namespace TiRHI
         std::vector<BinaryModule> m_binaryModule;
     };
 
+    // TODO fix typo
     template<typename T, typename TRHI, typename TRenderPassDescriptor>
     class BaseGraphicPipiline : public BasePipeline<T, TRHI>
     {
@@ -117,7 +131,7 @@ namespace TiRHI
 
         T& setPrimitiveTopology(PrimitiveTopology primitiveTopology)
         {
-            m_primitiveTopology = m_primitiveTopology;
+            m_primitiveTopology = primitiveTopology;
             return static_cast<T&>(*this);
         }
 

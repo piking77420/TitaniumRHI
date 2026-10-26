@@ -15,6 +15,10 @@ set(RHI_BACKENDS
     DirectX12
     Metal
 )
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+    set(TITANIUM_RHI_BACKEND "Metal" CACHE STRING "RHI backend")
+endif()
+
 set(TITANIUM_RHI_BACKEND "Vulkan" CACHE STRING "RHI backend")
 set_property(CACHE TITANIUM_RHI_BACKEND PROPERTY STRINGS ${RHI_BACKENDS})
 option(TITANIUM_USE_PIX "Enable PIX instrumentation for DirectX 12" OFF)
@@ -26,6 +30,7 @@ if(NOT TITANIUM_RHI_BACKEND IN_LIST RHI_BACKENDS)
 endif()
 
 add_library(TitaniumRHI STATIC)
+target_compile_features(TitaniumRHI PUBLIC cxx_std_23)
 
 ## Enable Validation Layer
 if (VALIDATION_LAYER)
@@ -146,7 +151,7 @@ endif()
 elseif(TITANIUM_RHI_BACKEND STREQUAL "Metal")
     message(STATUS "RHI Backend: Metal")
         target_compile_definitions(TitaniumRHI PUBLIC TITANIUM_METAL=1)
-    set(ABSOLUTE_METAL_CPP_DIR "${CMAKE_SOURCE_DIR}/ThirdParty/metal-cpp/")
+    set(ABSOLUTE_METAL_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/metal-cpp")
     add_subdirectory(Sources/Metal)
 endif()
 
