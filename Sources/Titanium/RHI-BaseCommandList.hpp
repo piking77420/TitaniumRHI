@@ -56,7 +56,6 @@ namespace TiRHI
 
         BaseCommandList() = delete;
         ~BaseCommandList() = default;
-        RHI_MOVE_ONLY(BaseCommandList)
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -218,6 +217,8 @@ namespace TiRHI
                         RhiApi::None);
                 }
             }
+
+            return true;
         }
 
         void setRenderPassRenderTargetState(bool isSettingRenderState)

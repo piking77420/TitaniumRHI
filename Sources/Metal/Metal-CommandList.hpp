@@ -17,7 +17,6 @@ namespace TiRHI::Metal
     public:
         CommandList() = delete;
         ~CommandList();
-        RHI_MOVE_ONLY(CommandList)
         CommandList(RHI& rhi);
 
         bool build(Device& device);

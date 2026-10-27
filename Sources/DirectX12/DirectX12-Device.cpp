@@ -122,14 +122,15 @@ namespace TiRHI::DirectX12
     {
         if (IDXGIFactory6* factory = getRHI().getNativeFactory())
         {
-            const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
-
+            onBuild(adapters, index);
             const auto& nativeAdapter = Internal::getAllNativeAdapters(factory);
 #undef min;
             if (adaptaterIndex >= nativeAdapter.size())
                 return false;
-
-            return createDevice(nativeAdapter[adaptaterIndex]);
+                
+            const bool success = createDevice(nativeAdapter[adaptaterIndex]);
+            onCreateDeviceSuccess(adapters[m_adapterIndex], success);
+            return success;
         }
         RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);
         return false;

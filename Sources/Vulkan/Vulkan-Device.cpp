@@ -57,8 +57,7 @@ namespace TiRHI::Vulkan
     bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                        std::optional<size_t> index)
     {
-        const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
-
+        onBuild(adapters, index);
         const std::vector<vk::PhysicalDevice> nativePhysicalDevice = rhi.getNativeInstance().enumeratePhysicalDevices();
 #undef min;
         if (adaptaterIndex >= nativePhysicalDevice.size())
@@ -207,21 +206,14 @@ namespace TiRHI::Vulkan
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(getDeviceExtensionName.size());
         deviceCreateInfo.ppEnabledExtensionNames = getDeviceExtensionName.data();
 
-        m_device = physicalDevice.createDeviceUnique(deviceCreateInfo);
-        RHI_LOG_INFO(std::format(L"Create Device success {}",
-                                 [&]()
-                                 {
-                                     const std::string_view name = adapter.getName();
-                                     return std::wstring(name.begin(), name.end());
-                                 }()),
-                     RhiApi::Vulkan);
-
+        m_device = physicalDevice.createDeviceUnique(deviceCreateInfo);            
+        onCreateDeviceSuccess(adapter, m_device != VK_NULL_HANDLE);
         m_graphicQueue = m_device->getQueue(allPropertiesQueuIndex, 0);
         m_graphicQueueIndex = allPropertiesQueuIndex;
         m_presentQueue = m_graphicQueue;
         m_presentQueueIndex = m_graphicQueueIndex;
 
-        return m_graphicQueue && m_presentQueue;
+        return m_device && m_graphicQueue && m_presentQueue;
     }
 
     bool Device::createSynchronisationPrimitives()

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/RhiToMetal.cpp
+        Private/RhiToMetal.hpp
         Metal-AcquiredFrame.cpp
         Metal-AcquiredFrame.hpp
         Metal-CommandList.cpp

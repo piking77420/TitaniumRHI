@@ -3,8 +3,10 @@
 
 #include <memory>
 #include <span>
-#include <vector>
 #include <ranges>
+#include <optional>
+#include <string>
+#include <vector>
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
@@ -26,14 +28,14 @@ namespace TiRHI
     X(ClosestHit)                                                                                                      \
     X(Miss)                                                                                                            \
     X(Intersection)                                                                                                    \
-    X(Callable)
+    X(Callable)                                                                                                        \
+    X(Count)
 
     enum struct ShaderStage : uint8_t
     {
 #define X(name) name,
         RHI_SHADER_STAGE_LIST(X)
 #undef X
-            Count
     };
 
     IMPLEMENT_TO_STRING_TITANIUM(ShaderStage, RHI_SHADER_STAGE_LIST)
@@ -96,6 +98,15 @@ namespace TiRHI
 
             *module = &(*it);
             return true;
+        }
+
+        template<ShaderStage stage>
+        std::optional<const BinaryModule*> getModule()
+        {
+            const BinaryModule* module {nullptr};
+            const bool success = getModule<stage>(&module);
+            
+            return success ?  std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
         }
 
     private:

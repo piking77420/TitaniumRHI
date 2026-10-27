@@ -14,7 +14,6 @@ namespace TiRHI::Metal
     public:
         RenderTargets() = delete;
         ~RenderTargets();
-        RHI_MOVE_ONLY(RenderTargets)
         RenderTargets(RHI& rhi);
     private:
     };

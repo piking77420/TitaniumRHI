@@ -1,5 +1,6 @@
 #include <Metal/Metal-Device.hpp>
 #include <Metal/Metal-RHI.hpp>
+#include <Titanium/Log.hpp>
 
 namespace TiRHI::Metal
 {
@@ -17,6 +18,26 @@ namespace TiRHI::Metal
     bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                        std::optional<size_t> index)
     {
+        onBuild(adapters, index);
+        RHI_LOG_INFO(L"Build device", RhiApi::Metal);
+        NS::Array* devices = MTL::CopyAllDevices();
+
+        if (m_adapterIndex >= devices->count())
+        {
+            devices->release();
+            return false;
+        }
+        
+        MTL::Device* selectedDevice = devices->object<MTL::Device>(m_adapterIndex);
+        if (!selectedDevice)
+        {
+            devices->release();
+            return false;
+        }
+        m_device = selectedDevice;
+        m_device->retain();
+        devices->release();
+        onCreateDeviceSuccess(adapters[m_adapterIndex], m_device);
         return true;
     }
 

@@ -43,7 +43,7 @@ namespace TiRHI::Metal
     private:
         friend Private;
 
-        MTL::Device* m_device;
+        MTL::Device* m_device = nullptr;
 
         std::vector<CommandList*> m_pendingCommandList;
     };

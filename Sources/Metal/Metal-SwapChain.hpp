@@ -8,6 +8,7 @@
 namespace CA
 {
     class MetalLayer;
+    class MetalDrawable;
 } // namespace CA
 
 namespace TiRHI::Metal
@@ -29,6 +30,8 @@ namespace TiRHI::Metal
 
     private:
         CA::MetalLayer* m_metalLayer{nullptr};
+
+        CA::MetalDrawable* m_drawable {nullptr};
     };
 } // namespace TiRHI::Metal
 
