@@ -46,7 +46,7 @@ namespace TiRHI
     public:
         BasePipeline() = delete;
         ~BasePipeline() = default;
-        RHI_MOVE_ONLY(BasePipeline)
+        RHI_MOVE_CONSTRUCT_ONLY(BasePipeline)
         BasePipeline(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -122,7 +122,7 @@ namespace TiRHI
 
         BaseGraphicPipiline() = delete;
         ~BaseGraphicPipiline() = default;
-        RHI_MOVE_ONLY(BaseGraphicPipiline)
+        RHI_MOVE_CONSTRUCT_ONLY(BaseGraphicPipiline)
         BaseGraphicPipiline(TRHI& rhi)
             : BasePipeline<T, TRHI>(rhi)
         {

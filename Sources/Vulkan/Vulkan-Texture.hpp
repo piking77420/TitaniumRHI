@@ -15,7 +15,7 @@ namespace TiRHI::Vulkan
     public:
         Texture() = delete;
         ~Texture() = default;
-        RHI_MOVE_ONLY(Texture)
+        RHI_MOVE_CONSTRUCT_ONLY(Texture)
         Texture(RHI& rhi);
 
         struct Private

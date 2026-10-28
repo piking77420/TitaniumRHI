@@ -60,15 +60,15 @@ namespace TiRHI::Vulkan
         onBuild(adapters, index);
         const std::vector<vk::PhysicalDevice> nativePhysicalDevice = rhi.getNativeInstance().enumeratePhysicalDevices();
 #undef min;
-        if (adaptaterIndex >= nativePhysicalDevice.size())
+        if (m_adapterIndex >= nativePhysicalDevice.size())
             return false;
 
         assert(adapters.size() == nativePhysicalDevice.size());
         std::vector<Adapter::Features> finalFeatures;
 
         // clang-format off
-        return checkExtensionToEnableValid(adapters[adaptaterIndex], finalFeatures) &&
-               createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(), adapters[adaptaterIndex], finalFeatures) &&
+        return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
+               createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
                createSynchronisationPrimitives();
         // clang-format on
@@ -206,8 +206,8 @@ namespace TiRHI::Vulkan
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(getDeviceExtensionName.size());
         deviceCreateInfo.ppEnabledExtensionNames = getDeviceExtensionName.data();
 
-        m_device = physicalDevice.createDeviceUnique(deviceCreateInfo);            
-        onCreateDeviceSuccess(adapter, m_device != VK_NULL_HANDLE);
+        m_device = physicalDevice.createDeviceUnique(deviceCreateInfo);
+        onCreateDeviceSuccess(adapter, m_device.get() != VK_NULL_HANDLE);
         m_graphicQueue = m_device->getQueue(allPropertiesQueuIndex, 0);
         m_graphicQueueIndex = allPropertiesQueuIndex;
         m_presentQueue = m_graphicQueue;

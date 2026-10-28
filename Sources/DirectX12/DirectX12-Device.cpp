@@ -125,10 +125,10 @@ namespace TiRHI::DirectX12
             onBuild(adapters, index);
             const auto& nativeAdapter = Internal::getAllNativeAdapters(factory);
 #undef min;
-            if (adaptaterIndex >= nativeAdapter.size())
+            if (m_adapterIndex >= nativeAdapter.size())
                 return false;
-                
-            const bool success = createDevice(nativeAdapter[adaptaterIndex]);
+
+            const bool success = createDevice(nativeAdapter[m_adapterIndex]);
             onCreateDeviceSuccess(adapters[m_adapterIndex], success);
             return success;
         }

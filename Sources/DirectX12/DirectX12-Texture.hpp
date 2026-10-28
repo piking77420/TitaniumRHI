@@ -15,7 +15,7 @@ namespace TiRHI::DirectX12
     public:
         Texture() = delete;
         ~Texture();
-        RHI_MOVE_ONLY(Texture);
+        RHI_MOVE_CONSTRUCT_ONLY(Texture);
         Texture(RHI& rhi);
 
         struct Private

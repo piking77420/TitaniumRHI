@@ -21,7 +21,7 @@ namespace TiRHI::DirectX12
     public:
         CommandList() = delete;
         ~CommandList() = default;
-        RHI_MOVE_ONLY(CommandList)
+        RHI_MOVE_CONSTRUCT_ONLY(CommandList)
         CommandList(RHI& rhi);
 
         bool build(Device& device);

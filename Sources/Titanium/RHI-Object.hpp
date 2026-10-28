@@ -6,10 +6,10 @@
 
 namespace TiRHI
 {
-#define RHI_MOVE_ONLY(Type)                                 \
-    Type(const Type&) = delete;                             \   
-    Type& operator=(const Type&) = delete;                  \
-    Type(Type&&) noexcept = default;                        \
+#define RHI_MOVE_CONSTRUCT_ONLY(Type)                                                                                            \
+    Type(const Type&) = delete;                                                                                        \
+    Type& operator=(const Type&) = delete;                                                                             \
+    Type(Type&&) noexcept = default;                                                                                   \
     Type& operator=(Type&&) noexcept = default;
 
     template<typename T, typename TRHI>
@@ -18,7 +18,7 @@ namespace TiRHI
     public:
         Object() = delete;
         ~Object() = default;
-        RHI_MOVE_ONLY(Object)
+        RHI_MOVE_CONSTRUCT_ONLY(Object)
         Object(TRHI& rhi)
             : m_rhi(rhi)
         {

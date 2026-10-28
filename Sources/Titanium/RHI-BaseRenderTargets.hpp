@@ -22,6 +22,7 @@ namespace TiRHI
 
         BaseRenderTargets() = delete;
         ~BaseRenderTargets() = default;
+        RHI_MOVE_CONSTRUCT_ONLY(BaseRenderTargets)
         BaseRenderTargets(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -107,7 +108,7 @@ namespace TiRHI
 
         T& bindDepthAttachement(_Texture& textureToBind, size_t bindingSlot)
         {
-            m_depthAttachement = textureToBind;
+            m_depthAttachement = &textureToBind;
             return reinterpret_cast<T&>(*this);
         }
 

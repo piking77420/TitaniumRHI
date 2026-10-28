@@ -20,7 +20,7 @@ namespace TiRHI::DirectX12
     public:
         Device() = delete;
         ~Device();
-        RHI_MOVE_ONLY(Device)
+        RHI_MOVE_CONSTRUCT_ONLY(Device)
         Device(RHI& rhi);
 
         struct Private

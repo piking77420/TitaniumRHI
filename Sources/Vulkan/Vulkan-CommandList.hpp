@@ -23,7 +23,7 @@ namespace TiRHI::Vulkan
     public:
         CommandList() = delete;
         ~CommandList() = default;
-        RHI_MOVE_ONLY(CommandList)
+        RHI_MOVE_CONSTRUCT_ONLY(CommandList)
         explicit CommandList(RHI& rhi);
 
         bool build(Device& device);

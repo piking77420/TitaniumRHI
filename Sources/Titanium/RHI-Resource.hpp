@@ -13,7 +13,7 @@ namespace TiRHI
     public:
         Resource() = default;
         ~Resource() = default;
-        RHI_MOVE_ONLY(Resource)
+        RHI_MOVE_CONSTRUCT_ONLY(Resource)
         Resource(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

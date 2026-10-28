@@ -15,7 +15,7 @@ namespace TiRHI::DirectX12
     public:
         GraphicPipeline() = delete;
         ~GraphicPipeline() = default;
-        RHI_MOVE_ONLY(GraphicPipeline)
+        RHI_MOVE_CONSTRUCT_ONLY(GraphicPipeline)
         explicit GraphicPipeline(RHI& rhi);
 
         struct Private

@@ -16,7 +16,7 @@ namespace TiRHI::DirectX12
     {
     }
 
-    SwapChain::~SwapChain()²
+    SwapChain::~SwapChain()
     {
     }
 

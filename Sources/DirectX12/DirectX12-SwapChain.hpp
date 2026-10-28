@@ -23,7 +23,7 @@ namespace TiRHI::DirectX12
     public:
         SwapChain() = delete;
         ~SwapChain();
-        RHI_MOVE_ONLY(SwapChain)
+        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
         SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);

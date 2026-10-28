@@ -15,7 +15,7 @@ namespace TiRHI::Vulkan
     public:
         GraphicPipeline() = delete;
         ~GraphicPipeline() = default;
-        RHI_MOVE_ONLY(GraphicPipeline)
+        RHI_MOVE_CONSTRUCT_ONLY(GraphicPipeline)
         GraphicPipeline(RHI& rhi)
             : BaseGraphicPipiline(rhi)
         {
