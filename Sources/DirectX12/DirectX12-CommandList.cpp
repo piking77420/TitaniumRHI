@@ -38,8 +38,12 @@ namespace TiRHI::DirectX12
                 D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
             if (FAILED(hrCmdAllocCreated))
             {
+                const std::wstring name =
+                    std::format(L"CommandAlloc {} [{}]", (getName().empty() ? L"" : getNameW()), i);
+                cmdAlloc->SetName(name.c_str());
+
                 RHI_LOG_ERROR(
-                    std::format(L"Create Command Allocator {} failed!\n Error Code: {}", i, hrCmdAllocCreated),
+                    std::format(L"Create Command Allocator {} failed!\n Error Code: {}", name, hrCmdAllocCreated),
                     RhiApi::DirectX12);
                 return false;
             }
@@ -49,7 +53,7 @@ namespace TiRHI::DirectX12
                     std::format(L"CommandAlloc {} [{}]", (getName().empty() ? L"" : getNameW()), i);
                 cmdAlloc->SetName(name.c_str());
 
-                RHI_LOG_INFO(std::format(L"Create Command Allocator {} success! name : {}", hrCmdAllocCreated, name),
+                RHI_LOG_INFO(std::format(L"Create Command Allocator {} success! name : {}", i, name),
                              RhiApi::DirectX12);
             }
         }

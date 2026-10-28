@@ -30,6 +30,7 @@ target_sources(
         RHI-EnumFlag.hpp
         RHI-EnumToString.hpp
         RHI-Object.hpp
+        RHI-SpecialMembers.hpp
         RHI-BaseRenderTargets.cpp
         RHI-BaseRenderTargets.hpp
         RHI-Resource.cpp

@@ -1,6 +1,7 @@
 #ifndef TITANIUM_METAL_RENDER_PASS_DESCRIPTOR_H
 #define TITANIUM_METAL_RENDER_PASS_DESCRIPTOR_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseRenderPassDescriptor.hpp>
 
 namespace TiRHI::Metal
@@ -13,7 +14,7 @@ namespace TiRHI::Metal
     public:
         RenderPassDescriptor() = delete;
         ~RenderPassDescriptor();
-        RHI_MOVE_ONLY(RenderPassDescriptor)
+        RHI_MOVE_ONLY(RenderPassDescriptor);
         RenderPassDescriptor(RHI& rhi);
 
         bool build();

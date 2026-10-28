@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_SWAPCHAIN_H
 #define TITANIUM_DIRECTX12_SWAPCHAIN_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <array>
 
 #include <d3d12.h>
@@ -23,7 +24,7 @@ namespace TiRHI::DirectX12
     public:
         SwapChain() = delete;
         ~SwapChain();
-        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
+        RHI_MOVE_ONLY(SwapChain);
         SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);

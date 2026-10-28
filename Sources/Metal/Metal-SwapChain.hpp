@@ -1,6 +1,7 @@
 #ifndef TITANIUM_METAL_SWAPCHAIN_H
 #define TITANIUM_METAL_SWAPCHAIN_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Metal/Metal-RenderPassDescriptor.hpp>
 #include <Metal/Metal-RenderTargets.hpp>
@@ -23,7 +24,7 @@ namespace TiRHI::Metal
     public:
         SwapChain() = delete;
         ~SwapChain();
-        RHI_MOVE_ONLY(SwapChain)
+        RHI_MOVE_ONLY(SwapChain);
         SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);

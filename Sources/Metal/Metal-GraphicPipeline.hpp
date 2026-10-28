@@ -1,6 +1,7 @@
 #ifndef TITANIUM_METAL_GRAPHIC_PIPELINE_H
 #define TITANIUM_METAL_GRAPHIC_PIPELINE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BasePipeline.hpp>
 
 namespace MTL
@@ -19,7 +20,7 @@ namespace TiRHI::Metal
     public:
         GraphicPipeline() = delete;
         ~GraphicPipeline();
-        RHI_MOVE_ONLY(GraphicPipeline)
+        RHI_MOVE_ONLY(GraphicPipeline);
         GraphicPipeline(RHI& rhi);
 
         struct Private

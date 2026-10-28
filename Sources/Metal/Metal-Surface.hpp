@@ -1,6 +1,7 @@
 #ifndef TITANIUM_METAL_SURFACE_H
 #define TITANIUM_METAL_SURFACE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHITypes.hpp>
 #include <Titanium/RHI-Surface.hpp>
 
@@ -13,7 +14,7 @@ namespace TiRHI::Metal
     public:
         Surface() = delete;
         ~Surface();
-        RHI_MOVE_ONLY(Surface)
+        RHI_MOVE_ONLY(Surface);
         Surface(RHI& rhi)
             : BaseSurface(rhi)
         {

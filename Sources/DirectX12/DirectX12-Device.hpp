@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_DEVICE_H
 #define TITANIUM_DIRECTX12_DEVICE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 
@@ -20,7 +21,7 @@ namespace TiRHI::DirectX12
     public:
         Device() = delete;
         ~Device();
-        RHI_MOVE_CONSTRUCT_ONLY(Device)
+        RHI_MOVE_ONLY(Device);
         Device(RHI& rhi);
 
         struct Private

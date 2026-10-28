@@ -1,6 +1,7 @@
 #ifndef TITANIUM_METAL_DEVICE_H
 #define TITANIUM_METAL_DEVICE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <vector>
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Metal/Metal-Header.hpp>
@@ -18,7 +19,7 @@ namespace TiRHI::Metal
     public:
         Device() = delete;
         ~Device();
-        RHI_MOVE_ONLY(Device)
+        RHI_MOVE_ONLY(Device);
         Device(RHI& rhi);
         
         struct Private

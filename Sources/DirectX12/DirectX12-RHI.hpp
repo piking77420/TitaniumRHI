@@ -5,6 +5,7 @@
 // for FromVulkanToDirectX12
 // https://github.com/mrouffet/FromVulkanToDirectX12/blob/main/Sources/mainDX12.cpp
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <stdint.h>
 #include <d3d12.h>
 #include <dxgidebug.h>
@@ -24,7 +25,7 @@ namespace TiRHI::DirectX12
     {
     public:
         RHI(const RhiCreate& rhiCreate);
-        RHI_MOVE_CONSTRUCT_ONLY(RHI)
+        RHI_MOVE_ONLY(RHI);
         ~RHI() = default;
 
         [[nodiscard]] Device newDevice();

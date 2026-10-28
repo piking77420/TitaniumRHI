@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_PRIVATE_DESCRIPTOR_ALLOCATOR_H
 #define TITANIUM_DIRECTX12_PRIVATE_DESCRIPTOR_ALLOCATOR_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <bitset>
 #include <memory>
 #include <array>
@@ -41,7 +42,7 @@ namespace TiRHI::DirectX12::Private
     {
     public:
         DescriptorAllocator() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(DescriptorAllocator);
+        RHI_MOVE_ONLY(DescriptorAllocator);
         ~DescriptorAllocator() = default;
 
         bool build(Device& device);
@@ -57,7 +58,7 @@ namespace TiRHI::DirectX12::Private
         struct Pool
         {
             Pool() = default;
-            RHI_MOVE_CONSTRUCT_ONLY(Pool);
+            RHI_MOVE_ONLY(Pool);
             ~Pool() = default;
 
             static constexpr uint64_t BaseCapacity = 64;

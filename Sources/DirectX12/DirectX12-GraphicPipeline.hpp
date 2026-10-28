@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_GRAPHIC_PIPELINE_H
 #define TITANIUM_DIRECTX12_GRAPHIC_PIPELINE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BasePipeline.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 
@@ -15,7 +16,7 @@ namespace TiRHI::DirectX12
     public:
         GraphicPipeline() = delete;
         ~GraphicPipeline() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(GraphicPipeline)
+        RHI_MOVE_ONLY(GraphicPipeline);
         explicit GraphicPipeline(RHI& rhi);
 
         struct Private

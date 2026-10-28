@@ -1,6 +1,7 @@
 #ifndef TITANIUM_METAL_TEXTURE_H
 #define TITANIUM_METAL_TEXTURE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
 
 namespace TiRHI::Metal
@@ -12,7 +13,7 @@ namespace TiRHI::Metal
     public:
         Texture() = delete;
         ~Texture();
-        RHI_MOVE_ONLY(Texture)
+        RHI_MOVE_ONLY(Texture);
         Texture(RHI& rhi);
 
         bool build();

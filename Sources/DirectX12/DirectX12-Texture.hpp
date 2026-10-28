@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_TEXTURE_H
 #define TITANIUM_DIRECTX12_TEXTURE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
@@ -15,7 +16,7 @@ namespace TiRHI::DirectX12
     public:
         Texture() = delete;
         ~Texture();
-        RHI_MOVE_CONSTRUCT_ONLY(Texture);
+        RHI_MOVE_ONLY(Texture);
         Texture(RHI& rhi);
 
         struct Private
