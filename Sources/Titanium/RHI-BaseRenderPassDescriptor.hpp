@@ -16,7 +16,10 @@ namespace TiRHI
     public:
         BaseRenderPassDescriptor() = delete;
         ~BaseRenderPassDescriptor() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseRenderPassDescriptor)
+        BaseRenderPassDescriptor(const BaseRenderPassDescriptor&) = delete;
+        BaseRenderPassDescriptor& operator=(const BaseRenderPassDescriptor&) = delete;
+        BaseRenderPassDescriptor(BaseRenderPassDescriptor&&) noexcept = default;
+        BaseRenderPassDescriptor& operator=(BaseRenderPassDescriptor&&) noexcept = default;
         BaseRenderPassDescriptor(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

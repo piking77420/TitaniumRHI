@@ -15,8 +15,13 @@ namespace TiRHI::Vulkan
     class Instance
     {
     public:
-        Instance(const RHI& rhi);
+        Instance() = delete;
         ~Instance();
+        Instance(const Instance&) = delete;
+        Instance& operator=(const Instance&) = delete;
+        Instance(Instance&&) noexcept;
+        Instance& operator=(Instance&&) noexcept;
+        Instance(const RHI& rhi);
 
         vk::Instance getInstance() noexcept
         {
@@ -24,6 +29,8 @@ namespace TiRHI::Vulkan
         }
 
     private:
+        void destroy();
+
         vk::Instance m_instance;
 
         vk::DebugUtilsMessengerEXT m_debugUtilsMessenger;

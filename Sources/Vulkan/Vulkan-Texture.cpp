@@ -9,9 +9,35 @@ namespace TiRHI::Vulkan
     {
     }
 
+    Texture::~Texture()
+    {
+    }
+
+    Texture::Texture(Texture&& other) noexcept
+        : BaseTexture<Texture, RHI>(std::move(other))
+        , m_image(std::exchange(other.m_image, vk::Image{}))
+        , m_uniqueView(std::move(other.m_uniqueView))
+        , m_allocation(std::exchange(other.m_allocation, nullptr))
+    {
+    }
+
+    Texture& Texture::operator=(Texture&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        destroy();
+        BaseTexture<Texture, RHI>::operator=(std::move(other));
+        m_image = std::exchange(other.m_image, vk::Image{});
+        m_uniqueView = std::move(other.m_uniqueView);
+        m_allocation = std::exchange(other.m_allocation, nullptr);
+
+        return *this;
+    }
+
     bool Texture::build(Device& device)
     {
-        return getImage() != VK_NULL_HANDLE;
+        return m_image != VK_NULL_HANDLE;
     }
 
     bool Texture::build(Device& device, vk::Image image, vk::Format format)
@@ -29,7 +55,25 @@ namespace TiRHI::Vulkan
 
         m_uniqueView = device.getNativeDevice().createImageViewUnique(viewInfo);
 
-        return getImage() != VK_NULL_HANDLE;
+        return m_image != VK_NULL_HANDLE;
+    }
+
+    void Texture::destroy()
+    {
+        // Destroy the view before the underlying image.
+        m_uniqueView.reset();
+
+        // Only VMA-allocated textures own their VkImage.
+        // Swapchain images are owned by VkSwapchainKHR.
+        // That allow swap chian to be used as an texture and particulary useful for command list tracking
+        if (m_allocation)
+        {
+            // vmaDestroyImage(
+            //, static_cast<VkImage>(m_image), m_allocation);
+        }
+
+        m_image = vk::Image{};
+        m_allocation = nullptr;
     }
 
 } // namespace TiRHI::Vulkan

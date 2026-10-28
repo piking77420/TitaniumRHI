@@ -18,6 +18,34 @@ namespace TiRHI::Vulkan
     {
     }
 
+    SwapChain::~SwapChain() = default;
+
+    SwapChain::SwapChain(SwapChain&& other) noexcept
+        : SwapChain(other.getRHI())
+    {
+        *this = std::move(other);
+    }
+
+    SwapChain& SwapChain::operator=(SwapChain&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        assert(&getRHI() == &other.getRHI());
+        m_renderTargets.clear();
+        m_textures.clear();
+        BaseSwapChain::operator=(std::move(other));
+        m_swapchain = std::move(other.m_swapchain);
+        m_currentFormat = other.m_currentFormat;
+        m_swapChainSupportDetails = std::move(other.m_swapChainSupportDetails);
+        m_synchronisations = std::move(other.m_synchronisations);
+        m_imageIndex = std::exchange(other.m_imageIndex, 0);
+        m_presentQueue = std::exchange(other.m_presentQueue, vk::Queue{});
+        for (auto& target : m_renderTargets)
+            target.setRenderPassDescriptor(&m_renderPassDescriptor);
+        return *this;
+    }
+
     bool SwapChain::build(Device& device, Surface& surface)
     {
         if (!BaseSwapChain::build())

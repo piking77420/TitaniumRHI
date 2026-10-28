@@ -13,6 +13,22 @@ namespace TiRHI::Vulkan
     {
     }
 
+    CommandList& CommandList::operator=(CommandList&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        BaseCommandList::operator=(std::move(other));
+        // Free buffers while their original pool still exists.
+        m_commandBuffer.clear();
+        m_commandPool = std::move(other.m_commandPool);
+        m_commandBuffer = std::move(other.m_commandBuffer);
+        m_volkTable = std::exchange(other.m_volkTable, std::nullopt);
+        m_vulkanStorage = std::move(other.m_vulkanStorage);
+        other.m_recordState.reset();
+        return *this;
+    }
+
     bool CommandList::build(Device& device)
     {
         vk::CommandPoolCreateInfo vkCommandPoolCreateInfo{};
@@ -47,7 +63,7 @@ namespace TiRHI::Vulkan
             return false;
         }
 
-        m_volkTable = &device.getVolkTable();
+        m_volkTable = device.getVolkTable();
         return true;
     }
 

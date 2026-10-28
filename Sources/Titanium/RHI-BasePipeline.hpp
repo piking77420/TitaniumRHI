@@ -46,7 +46,10 @@ namespace TiRHI
     public:
         BasePipeline() = delete;
         ~BasePipeline() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BasePipeline)
+        BasePipeline(const BasePipeline&) = delete;
+        BasePipeline& operator=(const BasePipeline&) = delete;
+        BasePipeline(BasePipeline&&) noexcept = default;
+        BasePipeline& operator=(BasePipeline&&) noexcept = default;
         BasePipeline(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -62,12 +65,12 @@ namespace TiRHI
 
         BasePipeline& addModule(ShaderStage shaderStage, const std::span<const std::byte>& code, std::string entryPoint)
         {
-           const uint32_t size = static_cast<uint32_t>(code.size());
+            const uint32_t size = static_cast<uint32_t>(code.size());
 
-           std::unique_ptr data = std::make_unique<uint8_t[]>(size);
-           std::memcpy(data.get(), code.data(), size);
-           m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
-           return static_cast<T&>(*this);
+            std::unique_ptr data = std::make_unique<uint8_t[]>(size);
+            std::memcpy(data.get(), code.data(), size);
+            m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
+            return static_cast<T&>(*this);
         }
 
     protected:
@@ -103,10 +106,10 @@ namespace TiRHI
         template<ShaderStage stage>
         std::optional<const BinaryModule*> getModule()
         {
-            const BinaryModule* module {nullptr};
+            const BinaryModule* module{nullptr};
             const bool success = getModule<stage>(&module);
-            
-            return success ?  std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
+
+            return success ? std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
         }
 
     private:
@@ -122,7 +125,10 @@ namespace TiRHI
 
         BaseGraphicPipiline() = delete;
         ~BaseGraphicPipiline() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseGraphicPipiline)
+        BaseGraphicPipiline(const BaseGraphicPipiline&) = delete;
+        BaseGraphicPipiline& operator=(const BaseGraphicPipiline&) = delete;
+        BaseGraphicPipiline(BaseGraphicPipiline&&) noexcept = default;
+        BaseGraphicPipiline& operator=(BaseGraphicPipiline&&) noexcept = default;
         BaseGraphicPipiline(TRHI& rhi)
             : BasePipeline<T, TRHI>(rhi)
         {

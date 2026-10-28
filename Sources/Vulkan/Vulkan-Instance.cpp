@@ -257,6 +257,11 @@ namespace TiRHI::Vulkan
 
     Instance::~Instance()
     {
+        destroy();
+    }
+
+    void Instance::destroy()
+    {
 #if defined(TITANIUM_VALIDATION_LAYER)
 
         if (m_debugUtilsMessenger)
@@ -274,6 +279,23 @@ namespace TiRHI::Vulkan
             vkDestroyInstance(static_cast<VkInstance>(m_instance), nullptr);
             m_instance = nullptr;
         }
+    }
+
+    Instance::Instance(Instance&& other) noexcept
+        : m_instance(std::exchange(other.m_instance, vk::Instance{}))
+        , m_debugUtilsMessenger(std::exchange(other.m_debugUtilsMessenger, vk::DebugUtilsMessengerEXT{}))
+    {
+    }
+
+    Instance& Instance::operator=(Instance&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        destroy();
+        m_instance = std::exchange(other.m_instance, vk::Instance{});
+        m_debugUtilsMessenger = std::exchange(other.m_debugUtilsMessenger, vk::DebugUtilsMessengerEXT{});
+        return *this;
     }
 
 } // namespace TiRHI::Vulkan

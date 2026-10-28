@@ -15,7 +15,10 @@ namespace TiRHI::Vulkan
     public:
         RenderTargets() = delete;
         ~RenderTargets() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(RenderTargets);
+        RenderTargets(const RenderTargets&) = delete;
+        RenderTargets& operator=(const RenderTargets&) = delete;
+        RenderTargets(RenderTargets&&) noexcept = default;
+        RenderTargets& operator=(RenderTargets&& other) noexcept = default;
 
         RenderTargets(RHI& rhi)
             : BaseRenderTargets(rhi)

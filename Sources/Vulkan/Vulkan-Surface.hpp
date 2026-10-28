@@ -14,7 +14,8 @@ namespace TiRHI::Vulkan
     public:
         Surface() = delete;
         ~Surface();
-        RHI_MOVE_CONSTRUCT_ONLY(Surface)
+        Surface(Surface&& other);
+        Surface& operator=(Surface&& other);
         Surface(RHI& rhi)
             : BaseSurface(rhi)
         {
@@ -26,6 +27,8 @@ namespace TiRHI::Vulkan
 
     private:
         vk::SurfaceKHR m_surface = VK_NULL_HANDLE;
+
+        void destroy();
     };
 } // namespace TiRHI::Vulkan
 

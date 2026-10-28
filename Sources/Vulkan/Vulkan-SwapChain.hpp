@@ -20,8 +20,11 @@ namespace TiRHI::Vulkan
     {
     public:
         SwapChain() = delete;
-        ~SwapChain() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(SwapChain)
+        ~SwapChain();
+        SwapChain(const SwapChain&) = delete;
+        SwapChain& operator=(const SwapChain&) = delete;
+        SwapChain(SwapChain&&) noexcept;
+        SwapChain& operator=(SwapChain&&) noexcept;
         explicit SwapChain(RHI& rhi);
 
         bool build(Device& device, Surface& surface);

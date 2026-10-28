@@ -2,8 +2,9 @@
 #define TITANIUM_VULKAN_TEXTURE_H
 
 #include <variant>
-#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
+#include <Vulkan/Vulkan-Header.hpp>
+#include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
 {
@@ -14,8 +15,9 @@ namespace TiRHI::Vulkan
     {
     public:
         Texture() = delete;
-        ~Texture() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(Texture)
+        ~Texture();
+        Texture(Texture&& other) noexcept;
+        Texture& operator=(Texture&& other) noexcept;
         Texture(RHI& rhi);
 
         struct Private
@@ -27,7 +29,7 @@ namespace TiRHI::Vulkan
 
             static vk::Image getImage(Texture& texture)
             {
-                return texture.getImage();
+                return texture.m_image;
             }
 
             static vk::ImageView getImageView(Texture& texture)
@@ -41,20 +43,15 @@ namespace TiRHI::Vulkan
     private:
         friend Private;
 
-        //
-        std::variant<std::monostate, vk::UniqueImage, vk::Image> m_image;
+        vk::Image m_image = VK_NULL_HANDLE;
 
         vk::UniqueImageView m_uniqueView;
 
-        vk::Image getImage() const
-        {
-            return std::visit(overloads{[](auto&& v) -> vk::Image { return VK_NULL_HANDLE; },
-                                        [](const vk::UniqueImage& image) -> vk::Image { return image.get(); },
-                                        [](vk::Image image) -> vk::Image { return image; }},
-                              m_image);
-        };
+        VmaAllocation m_allocation = nullptr;
 
         bool build(Device& device, vk::Image image, vk::Format format);
+
+        void destroy();
     };
 }
 

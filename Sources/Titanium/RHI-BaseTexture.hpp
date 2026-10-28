@@ -27,7 +27,8 @@ namespace TiRHI
     public:
         BaseTexture() = delete;
         ~BaseTexture() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseTexture)
+        BaseTexture(BaseTexture&&) noexcept = default;
+        BaseTexture& operator=(BaseTexture&&) noexcept = default;
         BaseTexture(TRHI& rhi)
             : Resource<T, TRHI>(rhi)
         {

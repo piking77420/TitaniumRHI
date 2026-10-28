@@ -21,6 +21,10 @@ namespace TiRHI
 
         BaseSwapChain() = delete;
         ~BaseSwapChain() = default;
+        BaseSwapChain(const BaseSwapChain&) = delete;
+        BaseSwapChain& operator=(const BaseSwapChain&) = delete;
+        BaseSwapChain(BaseSwapChain&&) noexcept = default;
+        BaseSwapChain& operator=(BaseSwapChain&&) noexcept = default;
         BaseSwapChain(TRHI& rhi)
             : Object<T, TRHI>(rhi)
             , m_renderPassDescriptor(rhi)

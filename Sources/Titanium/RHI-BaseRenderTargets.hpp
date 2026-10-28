@@ -22,7 +22,11 @@ namespace TiRHI
 
         BaseRenderTargets() = delete;
         ~BaseRenderTargets() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseRenderTargets)
+        BaseRenderTargets(const BaseRenderTargets&) = delete;
+        BaseRenderTargets& operator=(const BaseRenderTargets&) = delete;
+        BaseRenderTargets(BaseRenderTargets&&) noexcept = default;
+        BaseRenderTargets& operator=(BaseRenderTargets&& other) noexcept = default;
+
         BaseRenderTargets(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

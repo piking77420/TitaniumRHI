@@ -14,8 +14,12 @@ namespace TiRHI::Vulkan
     {
     public:
         GraphicPipeline() = delete;
-        ~GraphicPipeline() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(GraphicPipeline)
+        ~GraphicPipeline();
+        GraphicPipeline(const GraphicPipeline&) = delete;
+        GraphicPipeline& operator=(const GraphicPipeline&) = delete;
+        GraphicPipeline(GraphicPipeline&&) noexcept;
+        GraphicPipeline& operator=(GraphicPipeline&&) noexcept;
+
         GraphicPipeline(RHI& rhi)
             : BaseGraphicPipiline(rhi)
         {
@@ -34,9 +38,13 @@ namespace TiRHI::Vulkan
     private:
         friend Private;
 
+        vk::Device m_device = VK_NULL_HANDLE;
+
         vk::PipelineLayout m_pipelineLayout;
 
         vk::Pipeline m_pipeline;
+
+        void destroy();
     };
 
 } // namespace TiRHI::Vulkan

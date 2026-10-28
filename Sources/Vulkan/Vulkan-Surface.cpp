@@ -27,8 +27,31 @@ namespace TiRHI::Vulkan
 {
     Surface::~Surface()
     {
+        destroy();
+    }
+
+    Surface::Surface(Surface&& other)
+        : BaseSurface<Surface, RHI>(std::move(other))
+        , m_surface(std::exchange(other.m_surface, vk::SurfaceKHR{}))
+    {
+    }
+
+    Surface& Surface::operator=(Surface&& other)
+    {
+        if (this == &other)
+            return *this;
+        destroy();
+        BaseSurface<Surface, RHI>::operator=(std::move(other));
+        m_surface = std::exchange(other.m_surface, vk::SurfaceKHR{});
+
+        return *this;
+    }
+
+    void Surface::destroy()
+    {
         if (m_surface)
             getRHI().getNativeInstance().destroySurfaceKHR(m_surface);
+        m_surface = vk::SurfaceKHR{};
     }
 
     bool Surface::build(WindowHandle windowHandle)

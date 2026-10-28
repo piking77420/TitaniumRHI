@@ -56,6 +56,10 @@ namespace TiRHI
 
         BaseCommandList() = delete;
         ~BaseCommandList() = default;
+        BaseCommandList(const BaseCommandList&) = delete;
+        BaseCommandList& operator=(const BaseCommandList&) = delete;
+        BaseCommandList(BaseCommandList&&) noexcept = default;
+        BaseCommandList& operator=(BaseCommandList&&) noexcept = default;
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

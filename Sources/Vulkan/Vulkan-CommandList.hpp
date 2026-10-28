@@ -23,7 +23,11 @@ namespace TiRHI::Vulkan
     public:
         CommandList() = delete;
         ~CommandList() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(CommandList)
+        CommandList(const CommandList&) = delete;
+        CommandList& operator=(const CommandList&) = delete;
+        CommandList(CommandList&&) noexcept = default;
+        CommandList& operator=(CommandList&& other) noexcept;
+
         explicit CommandList(RHI& rhi);
 
         bool build(Device& device);
@@ -61,7 +65,8 @@ namespace TiRHI::Vulkan
 
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
-        const VolkDeviceTable* m_volkTable = nullptr;
+        // Keep dispatch functions valid when the Device wrapper moves.
+        std::optional<VolkDeviceTable> m_volkTable;
 
         struct VulkanStorage
         {

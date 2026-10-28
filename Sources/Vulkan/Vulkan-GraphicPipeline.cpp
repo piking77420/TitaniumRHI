@@ -6,9 +6,40 @@
 
 namespace TiRHI::Vulkan
 {
+    GraphicPipeline::~GraphicPipeline()
+    {
+        destroy();
+    }
+
+    GraphicPipeline::GraphicPipeline(GraphicPipeline&& other) noexcept
+        : BaseGraphicPipiline(std::move(other))
+    {
+        m_device = std::exchange(other.m_device, vk::Device{});
+        m_pipelineLayout = std::exchange(other.m_pipelineLayout, vk::PipelineLayout{});
+        m_pipeline = std::exchange(other.m_pipeline, vk::Pipeline{});
+    }
+
+    GraphicPipeline& GraphicPipeline::operator=(GraphicPipeline&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        destroy();
+        BaseGraphicPipiline::operator=(std::move(other));
+        m_device = std::exchange(other.m_device, vk::Device{});
+        m_pipelineLayout = std::exchange(other.m_pipelineLayout, vk::PipelineLayout{});
+        m_pipeline = std::exchange(other.m_pipeline, vk::Pipeline{});
+
+        return *this;
+    }
+
     bool GraphicPipeline::build(Device& device)
     {
         if (!getRenderPassDescriptor())
+            return false;
+
+        m_device = device.getNativeDevice();
+        if (m_device == VK_NULL_HANDLE)
             return false;
 
         const BinaryModule* vertexBinary = nullptr;
@@ -43,7 +74,10 @@ namespace TiRHI::Vulkan
         // 2. Shader stages
         std::array<vk::PipelineShaderStageCreateInfo, 2> stages{};
 
-        stages[0].setStage(vk::ShaderStageFlagBits::eVertex).setModule(*vertexModule).setPName(vertexBinary->entryPoint.data());
+        stages[0]
+            .setStage(vk::ShaderStageFlagBits::eVertex)
+            .setModule(*vertexModule)
+            .setPName(vertexBinary->entryPoint.data());
 
         stages[1]
             .setStage(vk::ShaderStageFlagBits::eFragment)
@@ -115,4 +149,17 @@ namespace TiRHI::Vulkan
 
         return m_pipeline != VK_NULL_HANDLE;
     }
+
+    void GraphicPipeline::destroy()
+    {
+        if (m_device)
+        {
+            m_device.destroyPipelineLayout(m_pipelineLayout);
+            m_pipelineLayout = VK_NULL_HANDLE;
+
+            m_device.destroyPipeline(m_pipeline);
+            m_pipeline = VK_NULL_HANDLE;
+        }
+    }
+
 } // namespace TiRHI::Vulkan

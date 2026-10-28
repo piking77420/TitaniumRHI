@@ -19,7 +19,8 @@ namespace TiRHI
     public:
         BaseDevice() = delete;
         ~BaseDevice() = default;
-        RHI_MOVE_CONSTRUCT_ONLY(BaseDevice)
+        BaseDevice(BaseDevice&& other) = default;
+        BaseDevice& operator=(BaseDevice&& other) = default;
         BaseDevice(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -47,14 +48,14 @@ namespace TiRHI
 
         std::vector<Adapter::Features> m_featuresEnable;
 
-        void onBuild(const std::span<const Adapter>& adapters,
-                    std::optional<size_t> index = {})
+        void onBuild(const std::span<const Adapter>& adapters, std::optional<size_t> index = {})
         {
-           m_adapterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
-           if (m_adapterIndex >= adapters.size())
-           {
-                RHI_LOG_ERROR(std::format(L"Failed To Find adapter for device {}", this->getNameW()), this->getRHI().getApi());
-           }
+            m_adapterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
+            if (m_adapterIndex >= adapters.size())
+            {
+                RHI_LOG_ERROR(std::format(L"Failed To Find adapter for device {}", this->getNameW()),
+                              this->getRHI().getApi());
+            }
         }
 
         void onCreateDeviceSuccess(const Adapter& adapter, bool success)
@@ -62,23 +63,23 @@ namespace TiRHI
             if (success)
             {
                 RHI_LOG_INFO(std::format(L"Create Device success from adaptater {}",
-                            [&]()
-                            {
-                                const std::string_view name = adapter.getName();
-                                return std::wstring(name.begin(), name.end());
-                            }()),
-                this->getRHI().getApi());
+                                         [&]()
+                                         {
+                                             const std::string_view name = adapter.getName();
+                                             return std::wstring(name.begin(), name.end());
+                                         }()),
+                             this->getRHI().getApi());
             }
-            else{
+            else
+            {
                 RHI_LOG_INFO(std::format(L"Create Device failed from adaptater {}",
-                            [&]()
-                            {
-                                const std::string_view name = adapter.getName();
-                                return std::wstring(name.begin(), name.end());
-                            }()),
-                this->getRHI().getApi());
+                                         [&]()
+                                         {
+                                             const std::string_view name = adapter.getName();
+                                             return std::wstring(name.begin(), name.end());
+                                         }()),
+                             this->getRHI().getApi());
             }
-            
         }
 
         static int64_t getAdapterScore(const Adapter& adapter)

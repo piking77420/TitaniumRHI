@@ -11,6 +11,8 @@ namespace TiRHI
     public:
         BaseSurface() = delete;
         ~BaseSurface() = default;
+        BaseSurface(BaseSurface&& other) = default;
+        BaseSurface& operator=(BaseSurface&& other) = default;
         BaseSurface(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
