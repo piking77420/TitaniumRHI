@@ -71,10 +71,7 @@ namespace TiRHI::Vulkan
         struct VulkanStorage
         {
             std::vector<vk::ClearValue> clearValues;
-            std::array<std::vector<size_t>, ResourceStateCount * ResourceStateCount> transitionTexture;
         } m_vulkanStorage;
-
-        static vk::DependencyFlags getTransitionDependencyMask(ResourceState current, ResourceState target);
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
     };

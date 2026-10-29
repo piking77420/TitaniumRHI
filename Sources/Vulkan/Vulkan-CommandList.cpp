@@ -207,7 +207,7 @@ namespace TiRHI::Vulkan
         const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
 
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
-                                             getTransitionDependencyMask(currentState, state), {}, {}, barrier);
+                                             transitionData.dependencyFlags, {}, {}, barrier);
         texture.setState(state);
     }
 
@@ -232,11 +232,6 @@ namespace TiRHI::Vulkan
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();
-    }
-
-    vk::DependencyFlags CommandList::getTransitionDependencyMask(ResourceState current, ResourceState target)
-    {
-        return {};
     }
 
     vk::ImageMemoryBarrier CommandList::makeImageBarrier(Texture& texture, ResourceState current, ResourceState target)

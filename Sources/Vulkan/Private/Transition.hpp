@@ -9,7 +9,13 @@ namespace TiRHI::Vulkan::Private
     {
         vk::PipelineStageFlags srcPipelineStageFlag;
         vk::PipelineStageFlags dstPipelineStageFlag;
+        vk::DependencyFlags dependencyFlags;
     };
+
+    static constexpr vk::DependencyFlags dependencyFlagFromTo(ResourceState from, ResourceState to)
+    {
+        return {};
+    }
 
     static constexpr TransitionData getTransitionData(ResourceState from, ResourceState to)
     {
@@ -18,7 +24,7 @@ namespace TiRHI::Vulkan::Private
         transitionData.srcPipelineStageFlag =
             from == ResourceState::Undefined ? vk::PipelineStageFlagBits::eTopOfPipe : Private::getPipelineStage(from);
         transitionData.dstPipelineStageFlag = Private::getPipelineStage(to);
-
+        transitionData.dependencyFlags = dependencyFlagFromTo(from, to);
         return transitionData;
     }
 
