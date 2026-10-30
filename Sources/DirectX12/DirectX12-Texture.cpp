@@ -11,8 +11,10 @@ namespace TiRHI::DirectX12
 
     Texture::~Texture()
     {
-        if (m_device)
-            m_device->getDescriptorAllocator().release(m_rtvCpuHandle);
+        if (m_device && m_rtvCpuHandle)
+        {
+            Device::Private::getDescriptorAllocatorRTV(*m_device).release(*m_rtvCpuHandle);
+        }
     }
 
     bool Texture::build(Device& device)
@@ -32,32 +34,30 @@ namespace TiRHI::DirectX12
         const std::wstring name = getNameW();
         m_image->SetName(name.data());
 
-        D3D12_CPU_DESCRIPTOR_HANDLE h;
-        if (!getRtv(device, h))
+        m_rtvCpuHandle = Device::Private::getDescriptorAllocatorRTV(device).create(device);
+
+        if (!m_rtvCpuHandle)
             return false;
 
-        device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, h);
+        device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, m_rtvCpuHandle->nativeHandle);
 
         return m_image;
     }
 
     bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
     {
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> h =
-            device.getDescriptorAllocator().getOrCreate(device, m_rtvCpuHandle);
-        if (h)
-            handle = *h;
+        if (m_rtvCpuHandle)
+            handle = m_rtvCpuHandle->nativeHandle;
 
-        return h.has_value();
+        return m_rtvCpuHandle.has_value();
     }
 
     bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle) const
     {
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> h = device.getDescriptorAllocator().get(m_rtvCpuHandle);
-        if (h)
-            handle = *h;
+        if (m_rtvCpuHandle)
+            handle = m_rtvCpuHandle->nativeHandle;
 
-        return h.has_value();
+        return m_rtvCpuHandle.has_value();
     }
 
 } // namespace TiRHI::DirectX12

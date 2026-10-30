@@ -26,6 +26,15 @@ namespace TiRHI::DirectX12
 
         struct Private
         {
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorRTV(Device& device)
+            {
+                return device.m_descriptorAllocatorRtv;
+            }
+
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorSampler(Device& device)
+            {
+                return device.m_descriptorAllocatorSampler;
+            }
             // TODO
         };
 
@@ -46,11 +55,6 @@ namespace TiRHI::DirectX12
         MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue()
         {
             return m_graphicsQueue;
-        }
-
-        DirectX12::Private::DescriptorAllocator& getDescriptorAllocator()
-        {
-            return m_descriptorAllocator;
         }
 
         bool isValid() const
@@ -85,7 +89,8 @@ namespace TiRHI::DirectX12
 
         } m_synchronization;
 
-        DirectX12::Private::DescriptorAllocator m_descriptorAllocator;
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
 
@@ -95,6 +100,8 @@ namespace TiRHI::DirectX12
         bool createSynchronisation();
 
         bool queryOptions();
+
+        bool initDescriptorAllocator();
     };
 } // namespace TiRHI::DirectX12
 

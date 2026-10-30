@@ -395,4 +395,11 @@ namespace TiRHI::DirectX12
 
         m_synchronization.frameFenceValue[getRHI().getCurrentFrame()] = fenceValue;
     }
+
+    bool Device::initDescriptorAllocator()
+    {
+        return m_descriptorAllocatorSampler.setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).build(*this) &&
+               m_descriptorAllocatorSampler.setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER).build(*this);
+    }
+
 }

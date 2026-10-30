@@ -24,6 +24,8 @@ target_sources(
         DirectX12-GraphicPipeline.hpp
         DirectX12-RHI.cpp
         DirectX12-RHI.hpp
+        DirectX12-Sampler.cpp
+        DirectX12-Sampler.hpp
         DirectX12-Surface.cpp
         DirectX12-Surface.hpp
         DirectX12-SwapChain.cpp

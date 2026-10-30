@@ -67,6 +67,14 @@ namespace TiRHI::Vulkan::Private
 
     vk::FrontFace toVulkan(FrontFace frontFace);
 
+    vk::Filter toVulkan(Filter filter);
+
+    vk::SamplerMipmapMode toVulkanSamplerMipMapMode(Filter filter);
+
+    vk::SamplerAddressMode toVulkan(SamplerAddressMode samplerAddressMode);
+
+    vk::CompareOp toVulkan(CompareOp compareOp);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

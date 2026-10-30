@@ -448,6 +448,56 @@ namespace TiRHI
 
     IMPLEMENT_TO_STRING_TITANIUM(FrontFace, RHI_FRONT_FACE_LIST)
 
+#define RHI_FILTER_LIST(X)                                                                                             \
+    X(Nearest)                                                                                                         \
+    X(Linear)
+
+    enum class Filter
+    {
+#define X(name) name,
+        RHI_FILTER_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(Filter, RHI_FILTER_LIST)
+
+#define RHI_SAMPLER_ADDRESS_MODE_LIST(X)                                                                               \
+    X(Repeat)                                                                                                          \
+    X(MirroredRepeat)                                                                                                  \
+    X(ClampToEdge)                                                                                                     \
+    X(ClampToBorder)                                                                                                   \
+    X(MirrorClampToEdge)
+
+    enum class SamplerAddressMode
+    {
+#define X(name) name,
+        RHI_SAMPLER_ADDRESS_MODE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(SamplerAddressMode, RHI_SAMPLER_ADDRESS_MODE_LIST)
+
+    constexpr float LodClampNone = 1000.f;
+
+#define RHI_COMPARE_OP_LIST(X)                                                                                         \
+    X(eNever)                                                                                                          \
+    X(eLess)                                                                                                           \
+    X(eEqual)                                                                                                          \
+    X(eLessOrEqual)                                                                                                    \
+    X(eGreater)                                                                                                        \
+    X(eNotEqual)                                                                                                       \
+    X(eGreaterOrEqual)                                                                                                 \
+    X(eAlways)
+
+    enum class CompareOp
+    {
+#define X(name) name,
+        RHI_COMPARE_OP_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(CompareOp, RHI_COMPARE_OP_LIST)
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate

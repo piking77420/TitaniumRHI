@@ -21,6 +21,8 @@ target_sources(
         RHI-BaseCommandList.cpp
         RHI-BaseCommandList.hpp
         RHI-BaseRHI.hpp
+        RHI-BaseSampler.cpp
+        RHI-BaseSampler.hpp
         RHI-BaseSwapChain.cpp
         RHI-BaseSwapChain.hpp
         RHI-BaseTexture.cpp

@@ -340,4 +340,84 @@ namespace TiRHI::Vulkan::Private
         }
     }
 
+    vk::Filter toVulkan(Filter filter)
+    {
+        switch (filter)
+        {
+        case TiRHI::Filter::Nearest:
+            return vk::Filter::eNearest;
+        case TiRHI::Filter::Linear:
+            return vk::Filter::eLinear;
+        default:
+            break;
+        }
+        RHI_LOG_ERROR(std::format(L"Unsupported RHI Filter, Filer = {}", toWString(filter)), RhiApi::Vulkan);
+        return vk::Filter::eNearest;
+    }
+
+    vk::SamplerMipmapMode toVulkanSamplerMipMapMode(Filter filter)
+    {
+        switch (filter)
+        {
+        case TiRHI::Filter::Nearest:
+            return vk::SamplerMipmapMode::eNearest;
+        case TiRHI::Filter::Linear:
+            return vk::SamplerMipmapMode::eLinear;
+        default:
+            break;
+        }
+        RHI_LOG_ERROR(std::format(L"Unsupported RHI Filter, Filer = {}", toWString(filter)), RhiApi::Vulkan);
+        return vk::SamplerMipmapMode::eNearest;
+    }
+
+    vk::SamplerAddressMode toVulkan(SamplerAddressMode samplerAddressMode)
+    {
+        switch (samplerAddressMode)
+        {
+        case TiRHI::SamplerAddressMode::Repeat:
+            return vk::SamplerAddressMode::eRepeat;
+        case TiRHI::SamplerAddressMode::MirroredRepeat:
+            return vk::SamplerAddressMode::eMirroredRepeat;
+        case TiRHI::SamplerAddressMode::ClampToEdge:
+            return vk::SamplerAddressMode::eClampToEdge;
+        case TiRHI::SamplerAddressMode::ClampToBorder:
+            return vk::SamplerAddressMode::eClampToBorder;
+        case TiRHI::SamplerAddressMode::MirrorClampToEdge:
+            return vk::SamplerAddressMode::eMirrorClampToEdge;
+        default:
+            break;
+        }
+        RHI_LOG_ERROR(
+            std::format(L"Unsupported RHI SamplerAddressMode, SamplerAddressMode = {}", toWString(samplerAddressMode)),
+            RhiApi::Vulkan);
+        return vk::SamplerAddressMode::eRepeat;
+    }
+
+    vk::CompareOp toVulkan(CompareOp compareOp)
+    {
+        switch (compareOp)
+        {
+        case TiRHI::CompareOp::eNever:
+            return vk::CompareOp::eNever;
+        case TiRHI::CompareOp::eLess:
+            return vk::CompareOp::eLess;
+        case TiRHI::CompareOp::eEqual:
+            return vk::CompareOp::eEqual;
+        case TiRHI::CompareOp::eLessOrEqual:
+            return vk::CompareOp::eLessOrEqual;
+        case TiRHI::CompareOp::eGreater:
+            return vk::CompareOp::eGreater;
+        case TiRHI::CompareOp::eNotEqual:
+            return vk::CompareOp::eNotEqual;
+        case TiRHI::CompareOp::eGreaterOrEqual:
+            return vk::CompareOp::eGreaterOrEqual;
+        case TiRHI::CompareOp::eAlways:
+            return vk::CompareOp::eAlways;
+        default:
+            break;
+        }
+
+        return vk::CompareOp::eLess;
+    }
+
 }

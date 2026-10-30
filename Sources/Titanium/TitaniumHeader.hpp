@@ -11,6 +11,7 @@
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
+#include <Vulkan/Vulkan-Sampler.hpp>
 
 namespace TiRHI
 {
@@ -24,6 +25,7 @@ namespace TiRHI
     using RenderTargets = Vulkan::RenderTargets;
     using Texture = Vulkan::Texture;
     using GraphicPipeline = Vulkan::GraphicPipeline;
+    using Sampler = Vulkan::Sampler;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -37,6 +39,7 @@ namespace TiRHI
 #include <DirectX12/DirectX12-RenderTargets.hpp>
 #include <DirectX12/DirectX12-Texture.hpp>
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
+#include <DirectX12/DirectX12-Sampler.hpp>
 
 namespace TiRHI
 {
@@ -50,6 +53,7 @@ namespace TiRHI
     using RenderTargets = DirectX12::RenderTargets;
     using Texture = DirectX12::Texture;
     using GraphicPipeline = DirectX12::GraphicPipeline;
+    using Sampler = DirectX12::Sampler;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -175,6 +179,13 @@ namespace TiRHI::Contract
     concept GraphicPipelineContract = requires(T& graphicPipeline, Device& device) {
         { graphicPipeline.build(device) } -> std::same_as<bool>;
     } && std::derived_from<T, Object<T, RHI>>;*/
+
+    template<typename T>
+    concept SamplerContract = requires(T& sampler, Device& device) {
+        { sampler.build(device) } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, RHI>>;
+
+    static_assert(SamplerContract<Sampler>);
 
 } // TiRHI::Contracts
 
