@@ -8,10 +8,16 @@
 #include <optional>
 #include <tuple>
 #include <vector>
+#include <utility>
 
 #include <Titanium/Private/StrongTypeId.hpp>
 #include <Titanium/RHI-Object.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
+
+namespace TiRHI::DirectX12::Private
+{
+    class DescriptorAllocator;
+}
 
 namespace TiRHI::DirectX12
 {
@@ -27,10 +33,51 @@ namespace TiRHI::DirectX12
 
     struct CpuDescriptorHandle
     {
+        explicit CpuDescriptorHandle(Private::DescriptorAllocator& allocator)
+            : descriptorAllocator(&allocator)
+        {
+        }
+
+        ~CpuDescriptorHandle()
+        {
+            release();
+        }
+
+        CpuDescriptorHandle(const CpuDescriptorHandle&) = delete;
+        CpuDescriptorHandle& operator=(const CpuDescriptorHandle&) = delete;
+
+        CpuDescriptorHandle(CpuDescriptorHandle&& other) noexcept
+            : descriptorAllocator(std::exchange(other.descriptorAllocator, nullptr))
+            , poolIndex(std::exchange(other.poolIndex, PoolIndex{}))
+            , descriptorIndex(std::exchange(other.descriptorIndex, DesciptorIndex{}))
+            , generation(std::exchange(other.generation, 0))
+            , nativeHandle(std::exchange(other.nativeHandle, D3D12_CPU_DESCRIPTOR_HANDLE{0}))
+        {
+        }
+
+        CpuDescriptorHandle& operator=(CpuDescriptorHandle&& other) noexcept
+        {
+            if (this != &other)
+            {
+                release();
+
+                descriptorAllocator = std::exchange(other.descriptorAllocator, nullptr);
+                poolIndex = std::exchange(other.poolIndex, PoolIndex{});
+                descriptorIndex = std::exchange(other.descriptorIndex, DesciptorIndex{});
+                generation = std::exchange(other.generation, 0);
+                nativeHandle = std::exchange(other.nativeHandle, D3D12_CPU_DESCRIPTOR_HANDLE{0});
+            }
+
+            return *this;
+        }
+
+        void release() noexcept;
+
+        Private::DescriptorAllocator* descriptorAllocator = nullptr;
         PoolIndex poolIndex{};
         DesciptorIndex descriptorIndex{};
         size_t generation = 0;
-        D3D12_CPU_DESCRIPTOR_HANDLE nativeHandle;
+        D3D12_CPU_DESCRIPTOR_HANDLE nativeHandle{0};
     };
 
     class Device;
