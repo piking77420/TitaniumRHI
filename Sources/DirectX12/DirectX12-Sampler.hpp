@@ -16,15 +16,13 @@ namespace TiRHI::DirectX12
     public:
         Sampler() = delete;
         ~Sampler();
-        Sampler(Sampler&&) noexcept;
-        Sampler& operator=(Sampler&&) noexcept;
+        Sampler(Sampler&&) noexcept = default;
+        Sampler& operator=(Sampler&&) noexcept = default;
         explicit Sampler(RHI& rhi);
 
         bool build(Device& device);
 
     private:
-        Device* m_device = nullptr;
-
         std::optional<CpuDescriptorHandle> m_samplerCpuHandle;
     };
 

@@ -47,8 +47,6 @@ namespace TiRHI::DirectX12
     private:
         friend Private;
 
-        Device* m_device = nullptr;
-
         MComPtr<ID3D12Resource> m_image;
 
         std::optional<TiRHI::DirectX12::CpuDescriptorHandle> m_rtvCpuHandle;

@@ -4,6 +4,18 @@
 #include <Titanium/Log.hpp>
 #include <DirectX12/DirectX12-Device.hpp>
 
+namespace TiRHI::DirectX12
+{
+    void CpuDescriptorHandle::release() noexcept
+    {
+        if (descriptorAllocator)
+        {
+            descriptorAllocator->release(*this);
+            descriptorAllocator = nullptr;
+        }
+    }
+} // TiRHI::DirectX12
+
 namespace TiRHI::DirectX12::Private
 {
     bool DescriptorAllocator::build(Device& device)
@@ -17,7 +29,7 @@ namespace TiRHI::DirectX12::Private
 
     std::optional<CpuDescriptorHandle> DescriptorAllocator::create(Device& device)
     {
-        CpuDescriptorHandle cpuHandle;
+        CpuDescriptorHandle cpuHandle(*this);
         auto optAlloc = allocate(*device.getNativeDevice());
 
         if (!optAlloc)
@@ -70,7 +82,7 @@ namespace TiRHI::DirectX12::Private
         pool.m_availableMask |= bit;
         ++pool.generations[index];
 
-        handle = {};
+        handle = CpuDescriptorHandle(*this);
     }
 
     std::optional<std::tuple<DescriptorAllocator::Pool*, PoolIndex, DesciptorIndex>>

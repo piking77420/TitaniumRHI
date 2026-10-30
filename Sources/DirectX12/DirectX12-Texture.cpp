@@ -9,17 +9,10 @@ namespace TiRHI::DirectX12
     {
     }
 
-    Texture::~Texture()
-    {
-        if (m_device && m_rtvCpuHandle)
-        {
-            Device::Private::getDescriptorAllocatorRTV(*m_device).release(*m_rtvCpuHandle);
-        }
-    }
+    Texture::~Texture() = default;
 
     bool Texture::build(Device& device)
     {
-        m_device = &device;
         const std::wstring name = getNameW();
         m_image->SetName(name.c_str());
         RHI_LOG_WARNING(L"TODO", RhiApi::DirectX12);
@@ -28,8 +21,6 @@ namespace TiRHI::DirectX12
 
     bool Texture::build(Device& device, MComPtr<ID3D12Resource> image)
     {
-        m_device = &device;
-
         m_image = image;
         const std::wstring name = getNameW();
         m_image->SetName(name.data());

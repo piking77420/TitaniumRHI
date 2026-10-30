@@ -3,29 +3,7 @@
 
 namespace TiRHI::DirectX12
 {
-    Sampler::~Sampler()
-    {
-        // TODO create an class taht manage this automoaticly
-        if (m_device && m_samplerCpuHandle)
-        {
-            Device::Private::getDescriptorAllocatorSampler(*m_device).release(*m_samplerCpuHandle);
-        }
-    }
-
-    Sampler::Sampler(Sampler&& other) noexcept
-        : BaseSampler(std::move(other))
-    {
-        m_device = std::exchange(other.m_device, nullptr);
-        m_samplerCpuHandle = std::exchange(other.m_samplerCpuHandle, {});
-    }
-
-    Sampler& Sampler::operator=(Sampler&& other) noexcept
-    {
-        BaseSampler::operator=(std::move(other));
-        m_device = std::exchange(other.m_device, nullptr);
-        m_samplerCpuHandle = std::exchange(other.m_samplerCpuHandle, {});
-        return *this;
-    }
+    Sampler::~Sampler() = default;
 
     Sampler::Sampler(RHI& rhi)
         : BaseSampler(rhi)
@@ -37,8 +15,7 @@ namespace TiRHI::DirectX12
         if (device.getNativeDevice())
             return false;
 
-        m_device = &device;
-        m_samplerCpuHandle = Device::Private::getDescriptorAllocatorSampler(*m_device).create(*m_device);
+        m_samplerCpuHandle = Device::Private::getDescriptorAllocatorSampler(device).create(device);
 
         D3D12_SAMPLER_DESC samplerDesc{};
         samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
