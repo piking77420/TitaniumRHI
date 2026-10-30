@@ -30,6 +30,7 @@ namespace TiRHI::DirectX12
         PoolIndex poolIndex{};
         DesciptorIndex descriptorIndex{};
         size_t generation = 0;
+        D3D12_CPU_DESCRIPTOR_HANDLE nativeHandle;
     };
 
     class Device;
@@ -45,12 +46,20 @@ namespace TiRHI::DirectX12::Private
         RHI_MOVE_ONLY(DescriptorAllocator);
         ~DescriptorAllocator() = default;
 
+        D3D12_DESCRIPTOR_HEAP_TYPE getDescriptorHeapType()
+        {
+            return m_descriptorHeapType;
+        }
+
+        DescriptorAllocator& setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE type)
+        {
+            m_descriptorHeapType = type;
+            return *this;
+        }
+
         bool build(Device& device);
 
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> getOrCreate(Device& device,
-                                                               CpuDescriptorHandle& cpuDescriptorHandle);
-
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> get(const CpuDescriptorHandle& cpuDescriptorHandle);
+        std::optional<CpuDescriptorHandle> create(Device& device);
 
         void release(CpuDescriptorHandle& cpuDescriptorHandle);
 
@@ -73,10 +82,12 @@ namespace TiRHI::DirectX12::Private
 
             std::array<size_t, BaseCapacity> generations;
 
-            bool build(ID3D12Device& device);
+            bool build(ID3D12Device& device, D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType);
         };
 
         std::vector<std::unique_ptr<Pool>> m_pools;
+
+        D3D12_DESCRIPTOR_HEAP_TYPE m_descriptorHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
         std::optional<std::tuple<Pool*, PoolIndex, DesciptorIndex>> allocate(ID3D12Device& device);
     };

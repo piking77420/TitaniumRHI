@@ -26,6 +26,8 @@ target_sources(
         Vulkan-RenderTargets.hpp
         Vulkan-RHI.cpp
         Vulkan-RHI.hpp
+        Vulkan-Sampler.cpp
+        Vulkan-Sampler.hpp
         Vulkan-Surface.cpp
         Vulkan-Surface.hpp
         Vulkan-SwapChain.cpp
