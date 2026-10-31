@@ -5,6 +5,7 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
+        Private/HandleAllocator.hpp
         Private/StrongTypeId.cpp
         Private/StrongTypeId.hpp
         Log.hpp
@@ -20,6 +21,8 @@ target_sources(
         RHI-BaseRenderPassDescriptor.hpp
         RHI-BaseCommandList.cpp
         RHI-BaseCommandList.hpp
+        RHI-BaseDescriptorSet.cpp
+        RHI-BaseDescriptorSet.hpp
         RHI-BaseRHI.hpp
         RHI-BaseSampler.cpp
         RHI-BaseSampler.hpp

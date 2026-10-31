@@ -1,5 +1,7 @@
 #include <DirectX12/DirectX12-Texture.hpp>
 
+#include <Titanium/Log.hpp>
+
 #include <DirectX12/DirectX12-RHI.hpp>
 
 namespace TiRHI::DirectX12
@@ -25,30 +27,30 @@ namespace TiRHI::DirectX12
         const std::wstring name = getNameW();
         m_image->SetName(name.data());
 
-        m_rtvCpuHandle = Device::Private::getDescriptorAllocatorRTV(device).create(device);
+        m_cpuHandle = Device::Private::getDescriptorAllocatorRTV(device).create(device);
 
-        if (!m_rtvCpuHandle)
+        if (!m_cpuHandle)
             return false;
 
-        device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, m_rtvCpuHandle->nativeHandle);
+        device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, m_cpuHandle->nativeHandle);
 
         return m_image;
     }
 
     bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
     {
-        if (m_rtvCpuHandle)
-            handle = m_rtvCpuHandle->nativeHandle;
+        if (m_cpuHandle)
+            handle = m_cpuHandle->nativeHandle;
 
-        return m_rtvCpuHandle.has_value();
+        return m_cpuHandle.has_value();
     }
 
     bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle) const
     {
-        if (m_rtvCpuHandle)
-            handle = m_rtvCpuHandle->nativeHandle;
+        if (m_cpuHandle)
+            handle = m_cpuHandle->nativeHandle;
 
-        return m_rtvCpuHandle.has_value();
+        return m_cpuHandle.has_value();
     }
 
 } // namespace TiRHI::DirectX12

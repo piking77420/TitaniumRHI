@@ -14,6 +14,8 @@ target_sources(
         Vulkan-AcquiredFrame.hpp
         Vulkan-CommandList.cpp
         Vulkan-CommandList.hpp
+        Vulkan-DescriptorSet.cpp
+        Vulkan-DescriptorSet.hpp
         Vulkan-Device.cpp
         Vulkan-Device.hpp
         Vulkan-GraphicPipeline.cpp
