@@ -47,9 +47,9 @@ namespace TiRHI::DirectX12
 
         void beginFrame();
 
-        ID3D12Device* getNativeDevice()
+        MComPtr<ID3D12Device> getNativeDevice()
         {
-            return m_device.Get();
+            return m_device;
         }
 
         MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue()

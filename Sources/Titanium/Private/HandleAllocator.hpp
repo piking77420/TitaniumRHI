@@ -101,7 +101,7 @@ namespace TiRHI::Private
         {
             for (std::size_t i = 0; i < m_pools.size(); ++i)
             {
-                if (m_pools[i]->availableMask.any())
+                if (m_pools[i].availableMask.any())
                     return createFromPool(i);
             }
 
@@ -109,7 +109,7 @@ namespace TiRHI::Private
             if (!nativePool)
                 return std::nullopt;
 
-            m_pools.push_back(std::make_unique<PoolImpl>(std::move(*nativePool)));
+            m_pools.emplace_back(std::move(*nativePool));
 
             return createFromPool(m_pools.size() - 1);
         }
@@ -122,7 +122,7 @@ namespace TiRHI::Private
                 return false;
             }
 
-            PoolImpl& pool = *m_pools[handle.poolIndex];
+            PoolImpl& pool = m_pools[handle.poolIndex];
             const std::size_t index = handle.elementIndex;
 
             if (pool.availableMask.test(index) || pool.generations[index] != handle.generation)
@@ -156,7 +156,7 @@ namespace TiRHI::Private
 
         std::optional<Handle> createFromPool(std::size_t poolIndex)
         {
-            PoolImpl& pool = *m_pools[poolIndex];
+            PoolImpl& pool = m_pools[poolIndex];
 
             for (std::size_t index = 0; index < Capacity; ++index)
             {
@@ -178,7 +178,7 @@ namespace TiRHI::Private
 
         CreatePool m_createPool;
         InitializeHandle m_initializeHandle;
-        std::vector<std::unique_ptr<PoolImpl>> m_pools;
+        std::vector<PoolImpl> m_pools;
     };
 }
 

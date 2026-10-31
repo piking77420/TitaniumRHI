@@ -11,16 +11,17 @@ namespace TiRHI::DirectX12::Private
         if (!device.getNativeDevice())
             return false;
 
-        m_descriptorSize = device.getNativeDevice()->GetDescriptorHandleIncrementSize(m_descriptorHeapType);
+        Microsoft::WRL::ComPtr<ID3D12Device> nativeDevice = device.getNativeDevice();
+        m_descriptorSize = nativeDevice->GetDescriptorHandleIncrementSize(m_descriptorHeapType);
 
-        auto createPool = [this, &device]() -> std::optional<Pool>
+        auto createPool = [nativeDevice, heapType = m_descriptorHeapType]() -> std::optional<Pool>
         {
             D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
-            heapDesc.Type = m_descriptorHeapType;
+            heapDesc.Type = heapType;
             heapDesc.NumDescriptors = static_cast<UINT>(BaseCapacity);
             heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
             Pool pool;
-            const HRESULT result = device.getNativeDevice()->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&pool.heap));
+            const HRESULT result = nativeDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&pool.heap));
 
             if (FAILED(result))
             {
@@ -33,8 +34,8 @@ namespace TiRHI::DirectX12::Private
             return pool;
         };
 
-        auto initializeHandle =
-            [this, &device, size = m_descriptorSize](Pool& pool, std::size_t indexInPool) -> D3D12_CPU_DESCRIPTOR_HANDLE
+        auto initializeHandle = [size = m_descriptorSize](Pool& pool,
+                                                          std::size_t indexInPool) -> D3D12_CPU_DESCRIPTOR_HANDLE
         {
             D3D12_CPU_DESCRIPTOR_HANDLE handle = pool.baseCpuPtr;
             handle.ptr += static_cast<SIZE_T>(size) * indexInPool;
