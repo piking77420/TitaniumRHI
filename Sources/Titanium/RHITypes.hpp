@@ -112,6 +112,36 @@ namespace TiRHI
 
     IMPLEMENT_TO_STRING_TITANIUM(Format, RHI_FORMAT_LIST)
 
+#define RHI_SHADER_STAGE_FLAG_LIST(X)                                                                                  \
+    X(None, 0)                                                                                                         \
+    X(Vertex, 1u << 0)                                                                                                 \
+    X(Hull, 1u << 1)                                                                                                   \
+    X(Domain, 1u << 2)                                                                                                 \
+    X(Geometry, 1u << 3)                                                                                               \
+    X(Pixel, 1u << 4)                                                                                                  \
+    X(Compute, 1u << 5)                                                                                                \
+    X(Amplification, 1u << 6)                                                                                          \
+    X(Mesh, 1u << 7)                                                                                                   \
+    X(RayGen, 1u << 8)                                                                                                 \
+    X(AnyHit, 1u << 9)                                                                                                 \
+    X(ClosestHit, 1u << 10)                                                                                            \
+    X(Miss, 1u << 11)                                                                                                  \
+    X(Intersection, 1u << 12)                                                                                          \
+    X(Callable, 1u << 13)                                                                                              \
+    X(AllGraphics, 0x000000DFu)                                                                                        \
+    X(AllRayTracing, 0x00003F00u)                                                                                      \
+    X(All, 0xFFFFFFFFu)
+
+    enum struct ShaderStageFlags : uint32_t
+    {
+#define X(name, value) name = value,
+        RHI_SHADER_STAGE_FLAG_LIST(X)
+#undef X
+    };
+
+    RHI_DEFINE_ENUM_FLAGS(ShaderStageFlags)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(ShaderStageFlags, RHI_SHADER_STAGE_FLAG_LIST)
+
 #define RHI_LOAD_OP_LIST(X)                                                                                            \
     X(LoadOp)                                                                                                          \
     X(Clear)                                                                                                           \
@@ -497,6 +527,20 @@ namespace TiRHI
     };
 
     IMPLEMENT_TO_STRING_TITANIUM(CompareOp, RHI_COMPARE_OP_LIST)
+
+#define RHI_DESCRIPTOR_TYPE_LIST(X)                                                                                    \
+    X(UniformBuffer)                                                                                                   \
+    X(StorageBuffer)                                                                                                   \
+    X(SampledTexture)                                                                                                  \
+    X(StorageTexture)
+
+    enum class BufferType
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_TYPE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(BufferType, RHI_DESCRIPTOR_TYPE_LIST)
 
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 

@@ -49,7 +49,7 @@ namespace TiRHI::DirectX12
 
         MComPtr<ID3D12Resource> m_image;
 
-        std::optional<TiRHI::DirectX12::CpuDescriptorHandle> m_rtvCpuHandle;
+        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_cpuHandle;
 
         bool build(Device& device, MComPtr<ID3D12Resource> image);
 

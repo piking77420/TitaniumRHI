@@ -23,7 +23,7 @@ namespace TiRHI::DirectX12
         bool build(Device& device);
 
     private:
-        std::optional<CpuDescriptorHandle> m_samplerCpuHandle;
+        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_samplerCpuHandle;
     };
 
 }
