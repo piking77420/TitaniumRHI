@@ -29,26 +29,7 @@ namespace TiRHI::DirectX12
     {
         // Update frame index.
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
-
-        AcquiredFrame acquire(true);
-
-        acquire.setSwapChainImageIndex(m_swapchainFrameIndex);
-
-        return acquire;
-    }
-
-    bool SwapChain::present()
-    {
-        // Automatically present using internal present queue if possible.
-        const HRESULT hrPresent = m_swapchain->Present(m_vsync ? 1 : 0, 0);
-
-        if (FAILED(hrPresent))
-        {
-            RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent), RhiApi::DirectX12);
-            return false;
-        }
-
-        return true;
+        return AcquiredFrame(true, m_swapchain.Get(), m_vsync);
     }
 
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)

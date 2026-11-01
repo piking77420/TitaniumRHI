@@ -16,7 +16,7 @@ namespace TiRHI::DirectX12
     class Surface;
     class AcquiredFrame;
 
-    class Device : public BaseDevice<Device, RHI>
+    class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
         Device() = delete;
@@ -34,7 +34,7 @@ namespace TiRHI::DirectX12
 
         void wait();
 
-        void submit(std::span<const AcquiredFrame> acquiredFrame, std::span<CommandList*> commandList);
+        void submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc);
 
         void beginFrame();
 

@@ -16,7 +16,7 @@ namespace TiRHI::Vulkan
     class CommandList;
     class AcquiredFrame;
 
-    class Device : public BaseDevice<Device, RHI>
+    class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
         Device() = delete;

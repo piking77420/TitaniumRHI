@@ -369,15 +369,14 @@ namespace TiRHI::DirectX12
         }
     }
 
-    void Device::submit([[maybe_unused]] std::span<const AcquiredFrame> acquiredFrame,
-                        std::span<CommandList*> commandList)
+    void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)
     {
         // Execute cmd lists
         {
             std::vector<ID3D12CommandList*> cmdListsArr;
-            cmdListsArr.reserve(commandList.size());
-            for (auto& cml : commandList)
-                cmdListsArr.emplace_back(cml->getCommandListNative());
+            cmdListsArr.reserve(submitPresentDesc.size());
+            for (auto& submitPresentDesc : submitPresentDesc)
+                cmdListsArr.emplace_back(submitPresentDesc.commandList->getCommandListNative());
             m_graphicsQueue->ExecuteCommandLists(static_cast<UINT>(cmdListsArr.size()), cmdListsArr.data());
         }
 
@@ -394,5 +393,22 @@ namespace TiRHI::DirectX12
         }
 
         m_synchronization.frameFenceValue[getRHI().getCurrentFrame()] = fenceValue;
+
+        // Present
+        for (auto& submitPresentDesc : submitPresentDesc)
+        {
+            for (auto& acquireFrame : submitPresentDesc.acquireFrames)
+            {
+                // Automatically present using internal present queue if possible.
+                const HRESULT hrPresent =
+                    acquireFrame.getSwapChainNativeHandle()->Present(acquireFrame.getVsync() ? 1 : 0, 0);
+
+                if (FAILED(hrPresent))
+                {
+                    RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent),
+                                  RhiApi::DirectX12);
+                }
+            }
+        }
     }
 }

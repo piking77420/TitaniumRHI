@@ -13,7 +13,7 @@ namespace TiRHI
 {
     class Adapter;
 
-    template<typename T, typename TRHI>
+    template<typename T, typename TRHI, typename TAcquireFrame, typename TCommandList>
     class BaseDevice : public Object<T, TRHI>
     {
     public:
@@ -24,11 +24,17 @@ namespace TiRHI
         BaseDevice(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
+            static_assert(std::derived_from<T, BaseDevice<T, TRHI, TAcquireFrame, TCommandList>>);
         }
+
+        struct SubmitPresentDesc
+        {
+            TCommandList* commandList;
+            std::span<TAcquireFrame> acquireFrames;
+        };
 
         const Adapter& getSourceAdapter(const BaseRHI<TRHI>& rhi) const
         {
-            static_assert(std::derived_from<T, BaseDevice<T, TRHI>>);
             return rhi.getAdapters()[m_adapterIndex];
         }
 

@@ -27,11 +27,13 @@ namespace TiRHI::DirectX12
         RHI_MOVE_ONLY(SwapChain);
         SwapChain(RHI& rhi);
 
+        struct Private
+        {
+        };
+
         bool build(Device& device, Surface& surface);
 
         AcquiredFrame acquireNextImage(Device& device);
-
-        bool present();
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
@@ -44,7 +46,10 @@ namespace TiRHI::DirectX12
         Texture& getCurrentSwapChainTexture();
 
     private:
+        friend Private;
+
         MComPtr<IDXGISwapChain3> m_swapchain;
+
         uint32_t m_swapchainFrameIndex = 0u;
 
         bool createSwapChain(Device& device, Surface& surface);

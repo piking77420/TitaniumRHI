@@ -101,16 +101,15 @@ namespace TiRHI::Contract
     static_assert(SurfaceContract<Surface>);
     // Device
     template<typename T>
-    concept DeviceContract = requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
-                                      std::optional<size_t> index, std::span<const AcquiredFrame> acquiredFrames,
-                                      std::span<CommandList*> cmdLists) {
-        { device.beginFrame() } -> std::same_as<void>;
-        { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
-        { device.wait() } -> std::same_as<void>;
-        { device.submit(acquiredFrames, cmdLists) } -> std::same_as<void>;
-
-        { device.isValid() } -> std::same_as<bool>;
-    };
+    concept DeviceContract =
+        requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                 std::optional<size_t> index, std::span<const typename T::SubmitPresentDesc> submitPresentDescs) {
+            { device.beginFrame() } -> std::same_as<void>;
+            { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
+            { device.wait() } -> std::same_as<void>;
+            { device.submitPresent(submitPresentDescs) } -> std::same_as<void>;
+            { device.isValid() } -> std::same_as<bool>;
+        };
 
     static_assert(DeviceContract<Device>);
 
@@ -120,7 +119,6 @@ namespace TiRHI::Contract
                                          const RenderPassDescriptor&) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
         { swapChain.acquireNextImage(device) } -> std::same_as<AcquiredFrame>;
-        { swapChain.present() } -> std::same_as<bool>;
         { swapChain.recreateSwapChain(device, surface) } -> std::same_as<bool>;
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
         { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
