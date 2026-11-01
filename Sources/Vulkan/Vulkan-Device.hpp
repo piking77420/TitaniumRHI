@@ -32,7 +32,7 @@ namespace TiRHI::Vulkan
 
         void wait();
 
-        void submit(std::span<const AcquiredFrame> acquiredFrame, std::span<CommandList*> commandList);
+        void submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc);
 
         void beginFrame();
 

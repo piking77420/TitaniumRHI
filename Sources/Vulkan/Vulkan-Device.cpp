@@ -70,7 +70,7 @@ namespace TiRHI::Vulkan
     }
 
     Device::Device(RHI& rhi)
-        : BaseDevice<Device, RHI>(rhi)
+        : BaseDevice(rhi)
     {
     }
 
@@ -99,44 +99,74 @@ namespace TiRHI::Vulkan
         m_dispatch.vkDeviceWaitIdle(static_cast<VkDevice>(m_device.get()));
     }
 
-    void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> commandLists)
+    void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)
     {
-        const uint32_t minSubmit =
-            std::min(static_cast<uint32_t>(acquiredFrames.size()), static_cast<uint32_t>(commandLists.size()));
+        if (submitPresentDesc.empty())
+            return;
 
-        vk::SubmitInfo submitInfo{};
+        // TODO: Give each window its own frame slots and submission fences.
+        // A single shared frame fence couples all windows' progress.
+        // Schedule rendering and presentation independently so the debug window
+        // can update without waiting for the main renderer's frame.
 
-        std::vector<vk::Semaphore> waitSemaphores;
-        waitSemaphores.reserve(minSubmit);
-
-        std::vector<vk::PipelineStageFlags> waitStages;
-        waitStages.reserve(minSubmit);
-
-        std::vector<vk::CommandBuffer> commandBuffers;
-        commandBuffers.reserve(minSubmit);
-
-        std::vector<vk::Semaphore> signalSemaphores;
-        signalSemaphores.reserve(minSubmit);
-
-        for (size_t i = 0; i < minSubmit; i++)
+        struct SubmissionStorage
         {
-            const auto& ac = acquiredFrames[i];
-            waitSemaphores.emplace_back(ac.getImageAvailableSemaphore());
-            // TODO track command list last output
-            waitStages.emplace_back(
-                static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput));
-            commandBuffers.emplace_back(commandLists[i] ? commandLists[i]->getcurrentFrameCmb() : VK_NULL_HANDLE);
-            signalSemaphores.emplace_back(ac.getRenderFinishSemaphore());
-        }
-        // clang-format off
-        submitInfo
-            .setWaitSemaphores(waitSemaphores)
-            .setWaitDstStageMask(waitStages)
-            .setCommandBuffers(commandBuffers)
-            .setSignalSemaphores(signalSemaphores);
-        // clang-format on
+            std::vector<vk::Semaphore> waitSemaphores;
+            std::vector<vk::PipelineStageFlags> waitStages;
+            std::vector<vk::CommandBuffer> commandBuffers;
+            std::vector<vk::Semaphore> signalSemaphores;
+        };
 
-        getNativeGraphicQueue().submit(submitInfo, getNativeInFlightFence());
+        std::vector<SubmissionStorage> storage(submitPresentDesc.size());
+        std::vector<vk::SubmitInfo> submitInfos(submitPresentDesc.size());
+
+        std::vector<vk::Semaphore> presentWaitSemaphores;
+        std::vector<vk::SwapchainKHR> swapChains;
+        std::vector<uint32_t> swapImageIndices;
+
+        for (size_t i = 0; i < submitPresentDesc.size(); ++i)
+        {
+            const auto& desc = submitPresentDesc[i];
+            auto& data = storage[i];
+
+            if (desc.commandList)
+                data.commandBuffers.push_back(desc.commandList->getcurrentFrameCmb());
+
+            for (const auto& frame : desc.acquireFrames)
+            {
+                data.waitSemaphores.push_back(frame.getImageAvailableSemaphore());
+
+                data.waitStages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
+                const auto renderFinished = frame.getRenderFinishSemaphore();
+                data.signalSemaphores.push_back(renderFinished);
+
+                presentWaitSemaphores.push_back(renderFinished);
+                swapChains.push_back(frame.getSwapChain());
+                swapImageIndices.push_back(frame.getSwapChainImageIndex());
+            }
+
+            submitInfos[i]
+                .setWaitSemaphores(data.waitSemaphores)
+                .setWaitDstStageMask(data.waitStages)
+                .setCommandBuffers(data.commandBuffers)
+                .setSignalSemaphores(data.signalSemaphores);
+        }
+
+        // The current frame fence must already have been waited on and reset.
+        getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
+
+        if (!swapChains.empty())
+        {
+            vk::PresentInfoKHR presentInfo{};
+            presentInfo.setWaitSemaphores(presentWaitSemaphores)
+                .setSwapchains(swapChains)
+                .setImageIndices(swapImageIndices)
+                .setPResults(nullptr);
+
+            const vk::Result result = m_presentQueue.presentKHR(presentInfo);
+            VulkanCheckErrorStatus(result);
+        }
     }
 
     void Device::beginFrame()

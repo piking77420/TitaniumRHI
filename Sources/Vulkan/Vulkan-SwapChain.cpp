@@ -92,30 +92,10 @@ namespace TiRHI::Vulkan
         acquiredFrame
             .setImageAvailableSemaphore(getNativeImageAvailableSemaphore())
             .setRenderFinishSemaphore(getNativeRenderFinishedSemaphore())
-            .setSwapChainImageIndex(m_imageIndex);
+            .setSwapChainImageIndex(m_imageIndex)
+            .setSwapChain(m_swapchain.get());
         // clang-format on
         return acquiredFrame;
-    }
-
-    bool SwapChain::present()
-    {
-        std::array waitSemaphore = {getNativeRenderFinishedSemaphore()};
-        std::array swapChains = {m_swapchain.get()};
-        std::array swapImageIndicies = {m_imageIndex};
-
-        vk::PresentInfoKHR presentInfo{};
-        // clang-format off
-        presentInfo
-            .setWaitSemaphores(waitSemaphore)
-            .setSwapchains(swapChains)
-            .setImageIndices(swapImageIndicies)
-            .setPResults(nullptr); // opt
-        // clang-format on
-
-        const vk::Result result = m_presentQueue.presentKHR(presentInfo);
-        VulkanCheckErrorStatus(result);
-
-        return result == vk::Result::eSuccess;
     }
 
     vk::SwapchainCreateInfoKHR SwapChain::getSwapChainCreateInfo(Device& device, Surface& surface) const

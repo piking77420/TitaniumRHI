@@ -39,7 +39,7 @@ namespace TiRHI::Metal
 
         void wait();
 
-        void submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> cmdLists);
+        void submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc);
 
         bool isValid();
 
@@ -50,8 +50,10 @@ namespace TiRHI::Metal
 
         struct Frame
         {
-            std::vector<std::vector<CommandList*>> commandList;
-        } m_frame;
+            std::vector<CommandList*> pendingCommandList;
+        };
+
+        std::vector<Frame> m_frames;
 
         void waits(std::span<CommandList*> commandLists);
     };

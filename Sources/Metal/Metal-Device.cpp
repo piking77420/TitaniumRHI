@@ -1,5 +1,12 @@
+#include <span>
+#include <vector>
+
 #include <Metal/Metal-Device.hpp>
 #include <Metal/Metal-RHI.hpp>
+#include <Metal/Metal-CommandList.hpp>
+
+#include <Foundation/Foundation.hpp>
+#include <Metal/Metal.hpp>
 
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
@@ -18,7 +25,7 @@ namespace TiRHI::Metal
     void Device::beginFrame()
     {
         const size_t currentFrame = getRHI().getCurrentFrame();
-        auto& commandLists = m_frame.commandList[currentFrame];
+        auto& commandLists = m_frame[currentFrame].pendingCommandList;
         waits(commandLists);
         commandLists.clear();
     }
@@ -46,23 +53,23 @@ namespace TiRHI::Metal
         m_device->retain();
         devices->release();
         onCreateDeviceSuccess(adapters[m_adapterIndex], m_device);
-        m_frame.commandList.resize(rhi.getFrameInFlight());
+        m_frame.resize(rhi.getFrameInFlight());
         return true;
     }
 
     void Device::wait()
     {
-        for (std::vector<CommandList*> frameCommandList : m_frame.commandList)
+        for (Frame& frame : m_frames)
         {
-            waits(frameCommandList);
-            frameCommandList.clear();
+            waits(frame.pendingCommandList);
+            frame.pendingCommandList.clear();
         }
     }
 
-    void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> cmdLists)
+    void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)
     {
         const size_t currentFrame = getRHI().getCurrentFrame();
-        auto& commandLists = m_frame.commandList[currentFrame];
+        auto& commandLists = m_frames[currentFrame].pendingCommandList;
 
         commandLists.clear();
         commandLists.insert(commandLists.end(), cmdLists.begin(), cmdLists.end());
@@ -70,14 +77,14 @@ namespace TiRHI::Metal
 
     bool Device::isValid()
     {
-        return m_device;
+        return m_device != nullptr;
     }
 
     void Device::waits(std::span<CommandList*> commandLists)
     {
         for (CommandList* commandList : commandLists)
         {
-            if (commandList == nullptr || (!CommandList::Private::getNativeHandle(*commandList)))
+            if (commandList == nullptr || (CommandList::Private::getNativeHandle(*commandList) != nullptr))
                 continue;
 
             CommandList::Private::getNativeHandle(*commandList)->waitUntilCompleted();

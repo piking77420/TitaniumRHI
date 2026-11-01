@@ -31,8 +31,6 @@ namespace TiRHI::Vulkan
 
         AcquiredFrame acquireNextImage(Device& device);
 
-        bool present();
-
         bool recreateSwapChain(Device& device, Surface& surface);
 
         const RenderTargets& getCurrentRenderTargets() const;

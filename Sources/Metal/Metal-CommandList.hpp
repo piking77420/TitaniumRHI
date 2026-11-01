@@ -28,7 +28,7 @@ namespace TiRHI::Metal
         {
             static MTL::CommandBuffer* getNativeHandle(CommandList& commandList)
             {
-                return commandList.m_commandBuffer;
+                return commandList.m_cmd;
             }
         };
 
@@ -63,7 +63,7 @@ namespace TiRHI::Metal
     private:
         friend Private;
 
-        MTL::CommandBuffer* m_commandBuffer{nullptr};
+        MTL::CommandBuffer* m_cmd{nullptr};
     };
 } // namespace TiRHI::Metal
 
