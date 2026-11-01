@@ -17,7 +17,7 @@ namespace TiRHI::Metal
         RHI_MOVE_ONLY(RenderPassDescriptor);
         RenderPassDescriptor(RHI& rhi);
 
-        bool build();
+        bool build(Device& device);
 
     private:
     };

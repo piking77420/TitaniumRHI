@@ -84,7 +84,7 @@ namespace TiRHI
 
 namespace TiRHI::Contract
 {
-    /*
+
     template<typename T>
     concept RHIContract = requires(T& rhi) {
         { rhi.newDevice() } -> std::same_as<Device>;
@@ -110,7 +110,6 @@ namespace TiRHI::Contract
         { device.submit(acquiredFrames, cmdLists) } -> std::same_as<void>;
 
         { device.isValid() } -> std::same_as<bool>;
-        { device() } -> std::same_as<bool>;
     };
 
     static_assert(DeviceContract<Device>);
@@ -122,6 +121,7 @@ namespace TiRHI::Contract
         { swapChain.build(device, surface) } -> std::same_as<bool>;
         { swapChain.acquireNextImage(device) } -> std::same_as<AcquiredFrame>;
         { swapChain.present() } -> std::same_as<bool>;
+        { swapChain.recreateSwapChain(device, surface) } -> std::same_as<bool>;
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
         { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
         { swapChain.getCurrentRenderTargets() } -> std::same_as<RenderTargets&>;
@@ -174,7 +174,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept GraphicPipelineContract = requires(T& graphicPipeline, Device& device) {
         { graphicPipeline.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;*/
+    } && std::derived_from<T, Object<T, RHI>>;
 
 } // TiRHI::Contracts
 

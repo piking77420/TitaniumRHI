@@ -3,6 +3,8 @@
 
 #include <Titanium/RHI-SpecialMembers.hpp>
 #include <vector>
+#include <span>
+
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Metal/Metal-Header.hpp>
 
@@ -21,7 +23,7 @@ namespace TiRHI::Metal
         ~Device();
         RHI_MOVE_ONLY(Device);
         Device(RHI& rhi);
-        
+
         struct Private
         {
             static MTL::Device* getDevice(Device& device)
@@ -46,7 +48,12 @@ namespace TiRHI::Metal
 
         MTL::Device* m_device = nullptr;
 
-        std::vector<CommandList*> m_pendingCommandList;
+        struct Frame
+        {
+            std::vector<std::vector<CommandList*>> commandList;
+        } m_frame;
+
+        void waits(std::span<CommandList*> commandLists);
     };
 
 }

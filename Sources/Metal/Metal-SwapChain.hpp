@@ -5,6 +5,7 @@
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Metal/Metal-RenderPassDescriptor.hpp>
 #include <Metal/Metal-RenderTargets.hpp>
+#include <Metal/Metal-AcquiredFrame.hpp>
 
 namespace CA
 {
@@ -29,10 +30,28 @@ namespace TiRHI::Metal
 
         bool build(Device& device, Surface& surface);
 
+        AcquiredFrame acquireNextImage(Device& device);
+
+        bool present();
+
+        bool recreateSwapChain(Device& device, Surface& surface);
+
+        const RenderTargets& getCurrentRenderTargets() const;
+
+        RenderTargets& getCurrentRenderTargets();
+
+        const Texture& getCurrentSwapChainTexture() const;
+
+        Texture& getCurrentSwapChainTexture();
+
     private:
         CA::MetalLayer* m_metalLayer{nullptr};
 
-        CA::MetalDrawable* m_drawable {nullptr};
+        CA::MetalDrawable* m_drawable{nullptr};
+
+        bool initRenderPassDescriptor();
+
+        bool initRenderTargets();
     };
 } // namespace TiRHI::Metal
 

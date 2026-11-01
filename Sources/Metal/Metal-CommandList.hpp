@@ -3,6 +3,11 @@
 
 #include <Titanium/RHI-BaseCommandList.hpp>
 
+namespace MTL
+{
+    class CommandBuffer;
+} // namespace MTL
+
 namespace TiRHI::Metal
 {
     class RHI;
@@ -18,6 +23,14 @@ namespace TiRHI::Metal
         CommandList() = delete;
         ~CommandList();
         CommandList(RHI& rhi);
+
+        struct Private
+        {
+            static MTL::CommandBuffer* getNativeHandle(CommandList& commandList)
+            {
+                return commandList.m_commandBuffer;
+            }
+        };
 
         bool build(Device& device);
 
@@ -48,6 +61,9 @@ namespace TiRHI::Metal
                          uint32_t firstInstance);
 
     private:
+        friend Private;
+
+        MTL::CommandBuffer* m_commandBuffer{nullptr};
     };
 } // namespace TiRHI::Metal
 
