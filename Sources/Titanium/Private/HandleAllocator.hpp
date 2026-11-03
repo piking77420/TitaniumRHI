@@ -14,7 +14,7 @@
 
 namespace TiRHI::Private
 {
-    template<typename Pool, typename NativeHandle, std::size_t Capacity>
+    template<typename Pool, typename NativeHandle, typename UserData, std::size_t Capacity>
     class HandleAllocator
     {
         static_assert(Capacity > 0);
@@ -78,8 +78,9 @@ namespace TiRHI::Private
             HandleAllocator* allocator = nullptr;
         };
 
-        using CreatePool = std::function<std::optional<Pool>()>;
-        using InitializeHandle = std::function<std::optional<NativeHandle>(Pool&, std::size_t)>;
+        using CreatePool = std::optional<Pool> (*)(const UserData&);
+        using InitializeHandle = std::optional<NativeHandle> (*)(Pool&, std::size_t, const UserData&);
+        using OnRealeaseHandle = void (*)(Pool&, const UserData&);
 
         HandleAllocator() = default;
         ~HandleAllocator() = default;
@@ -89,12 +90,13 @@ namespace TiRHI::Private
         HandleAllocator(HandleAllocator&&) = delete;
         HandleAllocator& operator=(HandleAllocator&&) = delete;
 
-        bool build(CreatePool createPool, InitializeHandle initializeHandle)
+        bool build(CreatePool createPool, InitializeHandle initializeHandle, UserData* data)
         {
             m_createPool = createPool;
             m_initializeHandle = initializeHandle;
+            m_userData = data;
 
-            return m_createPool && m_initializeHandle;
+            return m_createPool && m_initializeHandle && m_userData;
         }
 
         std::optional<Handle> create()
@@ -105,7 +107,7 @@ namespace TiRHI::Private
                     return createFromPool(i);
             }
 
-            auto nativePool = m_createPool();
+            auto nativePool = m_createPool(m_userData);
             if (!nativePool)
                 return std::nullopt;
 
@@ -130,7 +132,9 @@ namespace TiRHI::Private
                 return false;
             }
 
-            ++pool.generations[index];
+            OnRealeaseHandle(pool, )
+
+                ++ pool.generations[index];
             pool.availableMask.set(index);
 
             // Invalidate this instance.
@@ -163,7 +167,7 @@ namespace TiRHI::Private
                 if (!pool.availableMask.test(index))
                     continue;
 
-                auto nativeHandle = m_initializeHandle(pool.pool, index);
+                auto nativeHandle = m_initializeHandle(pool.pool, index, m_userData);
                 if (!nativeHandle)
                     return std::nullopt;
 
@@ -178,7 +182,9 @@ namespace TiRHI::Private
 
         CreatePool m_createPool;
         InitializeHandle m_initializeHandle;
+        OnRealeaseHandle m_onRealeasePool;
         std::vector<PoolImpl> m_pools;
+        UserData* m_userData{nullptr};
     };
 }
 

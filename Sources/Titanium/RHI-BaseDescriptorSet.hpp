@@ -1,6 +1,8 @@
 #ifndef TITANIUM_DESCRIPTOR_SET_H
 #define TITANIUM_DESCRIPTOR_SET_H
 
+#include <algorithm>
+#include <ranges>
 #include <span>
 #include <variant>
 #include <vector>
@@ -21,14 +23,28 @@ namespace TiRHI
             uint32_t index{0};
             uint32_t count{0};
             ShaderStageFlags shaderStageFlag{0};
+
+            auto operator<=>(const BaseBinding&) = default;
+
+            uint32_t hash() const
+            {
+                uint32_t hashv = 0;
+                hashCombine(hashv, index);
+                hashCombine(hashv, count);
+                hashCombine(hashv, shaderStageFlag);
+
+                return hashv;
+            }
         };
 
         struct SampledTexture : public BaseBinding
         {
             Texture* texture{nullptr};
+            auto operator<=>(const BaseBinding&) = default;
         };
 
         using Binding = std::variant<SampledTexture>;
+        using BindingsLayout = std::vector<DescriptorSet::Binding>;
 
         BaseDescriptorSet() = delete;
         ~BaseDescriptorSet() = default;
@@ -49,10 +65,34 @@ namespace TiRHI
             sampledTexture.texture = texture;
 
             return static_cast<T&>(texture);
-        }
+        };
+
+        template<>
+        struct BindingsLayoutHash
+        {
+            std::size_t operator()(const std::vector<Binding>& bindings) const
+            {
+                size_t hash = 0;
+                // clang-format off
+                const auto getHash = overloads{
+                        [](auto&& binding) { 
+                           uint32_t hashB = binding.hash();
+                           hashCombine(hashB, VariantIndexV<decltype(binding), Binding>)
+                           return hashB;
+                        }
+                };
+
+                std::ranges::for_each(bindings, [&hash, &getHash](const Binding& binding) 
+                    {
+                        hashCombine(hash, getHash(binding));
+                    });
+                // clang-format on
+                return hash;
+            }
+        };
 
     protected:
-        std::span<const Binding> getBindings() const
+        const std::vector<Binding>& getBindings() const
         {
             return m_bindings;
         }

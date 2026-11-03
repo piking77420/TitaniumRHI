@@ -16,6 +16,29 @@ namespace TiRHI
         using Ts::operator()...;
     };
 
+    template<typename T, typename Variant>
+    struct VariantIndex;
+
+    template<typename T, typename... Ts>
+    struct VariantIndex<T, std::variant<Ts...>>
+    {
+        static constexpr std::size_t value = []
+        {
+            constexpr bool matches[] = {std::is_same_v<T, Ts>...};
+
+            for (std::size_t i = 0; i < sizeof...(Ts); ++i)
+                if (matches[i])
+                    return i;
+
+            return sizeof...(Ts);
+        }();
+
+        static_assert(value < sizeof...(Ts), "Type not found in variant");
+    };
+
+    template<typename T, typename Variant>
+    inline constexpr std::size_t VariantIndexV = VariantIndex<T, Variant>::value;
+
     enum struct RhiMessageSeverity
     {
         Verbose,
@@ -552,6 +575,13 @@ namespace TiRHI
     };
 
     using WindowHandle = void*;
+
+    template<class T>
+    inline void hashCombine(std::uint32_t& s, const T& v)
+    {
+        std::hash<T> h;
+        s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
+    }
 
 } // namespace TiRHI
 
