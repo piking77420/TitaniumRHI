@@ -25,9 +25,14 @@ namespace TiRHI::Vulkan
         Instance& operator=(Instance&&) noexcept;
         Instance(const RHI& rhi);
 
-        vk::Instance getInstance() noexcept
+        vk::Instance getInstance() const noexcept
         {
             return m_instance;
+        }
+
+        uint32_t getApiVersion() const noexcept
+        {
+            return m_apiVersion;
         }
 
     private:
@@ -36,6 +41,8 @@ namespace TiRHI::Vulkan
         vk::Instance m_instance;
 
         vk::DebugUtilsMessengerEXT m_debugUtilsMessenger;
+
+        uint32_t m_apiVersion = 0;
     };
 
 } // namespace TiRHI::Vulkan

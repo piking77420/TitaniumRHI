@@ -10,28 +10,14 @@
 #include <Vulkan/Vulkan-CommandList.hpp>
 #include <vulkan/Vulkan-AcquiredFrame.hpp>
 
+// #define VMA_STATIC_VULKAN_FUNCTIONS 0
+// #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1 for volk
+
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
+
 namespace TiRHI::Vulkan
 {
-    Device& Device::operator=(Device&& other) noexcept
-    {
-        if (this == &other)
-            return *this;
-
-        BaseDevice::operator=(std::move(other));
-        // Release fences
-        m_synchronisations.clear();
-        m_device = std::move(other.m_device);
-        m_physicalDevice = std::exchange(other.m_physicalDevice, vk::PhysicalDevice{});
-        m_queueProperties = std::move(other.m_queueProperties);
-        m_graphicQueue = std::exchange(other.m_graphicQueue, vk::Queue{});
-        m_graphicQueueIndex = std::exchange(other.m_graphicQueueIndex, 0);
-        m_presentQueue = std::exchange(other.m_presentQueue, vk::Queue{});
-        m_presentQueueIndex = std::exchange(other.m_presentQueueIndex, 0);
-        m_synchronisations = std::move(other.m_synchronisations);
-        m_dispatch = std::exchange(other.m_dispatch, VolkDeviceTable{});
-        return *this;
-    }
-
     std::vector<const char*> getDeviceVkExtensionName(const std::span<const Adapter::Features>& features)
     {
         std::vector<const char*> out;
@@ -69,9 +55,38 @@ namespace TiRHI::Vulkan
         return out;
     }
 
+    Device::~Device()
+    {
+        if (m_vmaAllocator)
+        {
+            vmaDestroyAllocator(m_vmaAllocator);
+            m_vmaAllocator = nullptr;
+        }
+    }
+
     Device::Device(RHI& rhi)
         : BaseDevice(rhi)
     {
+    }
+
+    Device& Device::operator=(Device&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        BaseDevice::operator=(std::move(other));
+        // Release fences
+        m_synchronisations.clear();
+        m_device = std::move(other.m_device);
+        m_physicalDevice = std::exchange(other.m_physicalDevice, vk::PhysicalDevice{});
+        m_queueProperties = std::move(other.m_queueProperties);
+        m_graphicQueue = std::exchange(other.m_graphicQueue, vk::Queue{});
+        m_graphicQueueIndex = std::exchange(other.m_graphicQueueIndex, 0);
+        m_presentQueue = std::exchange(other.m_presentQueue, vk::Queue{});
+        m_presentQueueIndex = std::exchange(other.m_presentQueueIndex, 0);
+        m_synchronisations = std::move(other.m_synchronisations);
+        m_dispatch = std::exchange(other.m_dispatch, VolkDeviceTable{});
+        return *this;
     }
 
     bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
@@ -212,7 +227,7 @@ namespace TiRHI::Vulkan
                               const std::vector<Adapter::Features>& featuresToEnable)
     {
         m_physicalDevice = physicalDevice;
-        m_queueProperties = Private::DeviceQueueProperties(physicalDevice, surface);
+        m_queueProperties = Vulkan::Private::DeviceQueueProperties(physicalDevice, surface);
         auto properties = m_queueProperties.getQueuProperties();
 
         size_t allPropertiesQueuIndex = std::numeric_limits<size_t>::max();
@@ -294,6 +309,34 @@ namespace TiRHI::Vulkan
             return false;
 
         volkLoadDeviceTable(&m_dispatch, m_device.get());
+
+        return true;
+    }
+
+    bool Device::initVmaAllocator(Vulkan::Instance& instance)
+    {
+        VmaAllocatorCreateInfo createInfo{};
+
+        createInfo.instance = static_cast<VkInstance>(instance.getInstance());
+        createInfo.physicalDevice = static_cast<VkPhysicalDevice>(m_physicalDevice);
+        createInfo.device = static_cast<VkDevice>(m_device.get());
+
+        // Must match your enabled/supported Vulkan API version.
+        createInfo.vulkanApiVersion = instance.getApiVersion();
+
+        VmaVulkanFunctions functions{};
+        functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+        functions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+
+        createInfo.pVulkanFunctions = &functions;
+
+        VkResult result = vmaCreateAllocator(&createInfo, &m_vmaAllocator);
+
+        if (result != VK_SUCCESS)
+        {
+            m_vmaAllocator = nullptr;
+            return false;
+        }
 
         return true;
     }

@@ -7,6 +7,7 @@
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
+#include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
 {
@@ -22,12 +23,20 @@ namespace TiRHI::Vulkan
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
 
         Device() = delete;
-        ~Device() = default;
+        ~Device();
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) noexcept = default;
         Device& operator=(Device&& other) noexcept;
         Device(RHI& rhi);
+
+        struct Private
+        {
+            VmaAllocator& getAllocator(Device& device)
+            {
+                return device.m_vmaAllocator;
+            }
+        };
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                    std::optional<size_t> index = {});
@@ -53,7 +62,7 @@ namespace TiRHI::Vulkan
             return m_device.get();
         }
 
-        const Private::DeviceQueueProperties& getQueueProperties() const
+        const Vulkan::Private::DeviceQueueProperties& getQueueProperties() const
         {
             return m_queueProperties;
         }
@@ -91,11 +100,13 @@ namespace TiRHI::Vulkan
         }
 
     private:
+        friend Private;
+
         vk::UniqueDevice m_device;
 
         vk::PhysicalDevice m_physicalDevice;
 
-        Private::DeviceQueueProperties m_queueProperties;
+        Vulkan::Private::DeviceQueueProperties m_queueProperties;
 
         vk::Queue m_graphicQueue;
 
@@ -114,6 +125,8 @@ namespace TiRHI::Vulkan
 
         VolkDeviceTable m_dispatch{};
 
+        VmaAllocator m_vmaAllocator;
+
         bool checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures);
 
         bool createDevice(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, const Adapter& adapter,
@@ -122,6 +135,8 @@ namespace TiRHI::Vulkan
         bool createSynchronisationPrimitives();
 
         bool initVolkTable();
+
+        bool initVmaAllocator(Vulkan::Instance& instance);
     };
 
 } // namespace TiRHI::Vulkan

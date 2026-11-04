@@ -147,6 +147,7 @@ namespace TiRHI::Vulkan
     }
 
     Instance::Instance(const RHI& rhi)
+        : m_apiVersion(VK_API_VERSION_1_3)
     {
         RHI_LOG_VERBOSE(L"volkInitialize", RhiApi::Vulkan);
         const vk::Result volkInitResult = static_cast<vk::Result>(volkInitialize());
@@ -185,7 +186,7 @@ namespace TiRHI::Vulkan
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "TitaniumRHI";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_3;
+        appInfo.apiVersion = m_apiVersion;
 
         vk::InstanceCreateInfo instanceCreateInfo = {};
         instanceCreateInfo.sType = vk::StructureType::eInstanceCreateInfo;

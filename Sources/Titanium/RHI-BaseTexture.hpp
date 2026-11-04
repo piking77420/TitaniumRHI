@@ -2,25 +2,9 @@
 #define TITANIUM_BASE_TEXTURE_H
 
 #include <Titanium/RHI-Resource.hpp>
-#include <Titanium/RHI-EnumFlag.hpp>
 
 namespace TiRHI
 {
-#define RHI_TEXTURE_FLAG_LIST(X)                                                                                       \
-    X(None, 0)                                                                                                         \
-    X(ShaderResource, 1u << 0)                                                                                         \
-    X(RenderTarget, 1u << 1)                                                                                           \
-    X(UnorderedAccess, 1u << 3)                                                                                        \
-    X(CopySource, 1u << 4)                                                                                             \
-    X(CopyDestination, 1u << 5)
-
-    enum struct TextureFlags : uint32_t
-    {
-#define X(name, value) name = value,
-        RHI_TEXTURE_FLAG_LIST(X)
-#undef X
-    };
-
     template<typename T, typename TRHI>
     class BaseTexture : public Resource<T, TRHI>
     {
@@ -34,23 +18,60 @@ namespace TiRHI
         {
         }
 
-        TextureFlags getFlag() const
+        uint32_t getWidth() const noexcept
+        {
+            return m_width;
+        }
+
+        T& setWidth(uint32_t width)
+        {
+            m_width = width;
+            return static_cast<T&>(*this);
+        }
+
+        uint32_t getHeight() const noexcept
+        {
+            return m_height;
+        }
+
+        T& setHeight(uint32_t height)
+        {
+            m_height = height;
+            return static_cast<T&>(*this);
+        }
+
+        TextureType getType() const noexcept
+        {
+            return m_type;
+        }
+
+        T& setType(TextureType type)
+        {
+            m_type = type;
+            return static_cast<T&>(*this);
+        }
+
+        TextureFlags getFlags() const noexcept
         {
             return m_flags;
         }
 
-        T& setFlag(TextureFlags newFlag)
+        T& setFlags(TextureFlags flags)
         {
-            m_flags = newFlag;
-            return reinterpret_cast<T&>(*this);
+            m_flags = flags;
+            return static_cast<T&>(*this);
         }
 
     protected:
+        uint32_t m_width = 0;
+
+        uint32_t m_height = 0;
+
+        TextureType m_type = TextureType::Texture2D;
+
         TextureFlags m_flags;
     };
 
-    RHI_DEFINE_ENUM_FLAGS(TextureFlags);
-    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(TextureFlags, RHI_TEXTURE_FLAG_LIST)
 } // namespace TiRHI
 
 #endif // TITANIUM_BASE_TEXTURE_H

@@ -578,6 +578,37 @@ namespace TiRHI
     };
     IMPLEMENT_TO_STRING_TITANIUM(DescriptorSetType, RHI_DESCRIPTOR_SET_TYPE_LIST)
 
+#define RHI_TEXTURE_FLAG_LIST(X)                                                                                       \
+    X(None, 0)                                                                                                         \
+    X(ShaderResource, 1u << 0)                                                                                         \
+    X(RenderTarget, 1u << 1)                                                                                           \
+    X(UnorderedAccess, 1u << 3)                                                                                        \
+    X(CopySource, 1u << 4)                                                                                             \
+    X(CopyDestination, 1u << 5)
+
+    enum struct TextureFlags : uint32_t
+    {
+#define X(name, value) name = value,
+        RHI_TEXTURE_FLAG_LIST(X)
+#undef X
+    };
+
+    RHI_DEFINE_ENUM_FLAGS(TextureFlags)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(TextureFlags, RHI_TEXTURE_FLAG_LIST)
+
+#define RHI_DESCRIPTOR_TEXTURE_TYPE_LIST(X)                                                                            \
+    X(Texture2D)                                                                                                       \
+    X(Texture3D)
+
+    enum struct TextureType : uint8_t
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_TEXTURE_TYPE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(TextureType, RHI_DESCRIPTOR_TEXTURE_TYPE_LIST)
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate
