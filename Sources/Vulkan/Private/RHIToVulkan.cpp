@@ -7,61 +7,61 @@ namespace TiRHI::Vulkan::Private
     {
         switch (format)
         {
-        case TiRHI::Format::R8_UNorm:
+        case TiRHI::Format::R8UNorm:
             return vk::Format::eR8Unorm;
 
-        case TiRHI::Format::R8G8_UNorm:
+        case TiRHI::Format::R8G8UNorm:
             return vk::Format::eR8G8Unorm;
 
-        case TiRHI::Format::R8G8B8A8_UNorm:
+        case TiRHI::Format::R8G8B8A8UNorm:
             return vk::Format::eR8G8B8A8Unorm;
 
-        case TiRHI::Format::R8G8B8A8_UNorm_SRGB:
+        case TiRHI::Format::R8G8B8A8UNormSRGB:
             return vk::Format::eR8G8B8A8Srgb;
 
-        case TiRHI::Format::B8G8R8A8_UNorm:
+        case TiRHI::Format::B8G8R8A8UNorm:
             return vk::Format::eB8G8R8A8Unorm;
 
-        case TiRHI::Format::B8G8R8A8_UNorm_SRGB:
+        case TiRHI::Format::B8G8R8A8UNormSRGB:
             return vk::Format::eB8G8R8A8Srgb;
 
-        case TiRHI::Format::R16_Float:
+        case TiRHI::Format::R16Float:
             return vk::Format::eR16Sfloat;
 
-        case TiRHI::Format::R16G16_Float:
+        case TiRHI::Format::R16G16Float:
             return vk::Format::eR16G16Sfloat;
 
-        case TiRHI::Format::R16G16B16A16_Float:
+        case TiRHI::Format::R16G16B16A16Float:
             return vk::Format::eR16G16B16A16Sfloat;
 
-        case TiRHI::Format::R32_Float:
+        case TiRHI::Format::R32Float:
             return vk::Format::eR32Sfloat;
 
-        case TiRHI::Format::R32G32_Float:
+        case TiRHI::Format::R32G32Float:
             return vk::Format::eR32G32Sfloat;
 
-        case TiRHI::Format::R32G32B32A32_Float:
+        case TiRHI::Format::R32G32B32A32Float:
             return vk::Format::eR32G32B32A32Sfloat;
 
-        case TiRHI::Format::R32_UInt:
+        case TiRHI::Format::R32UInt:
             return vk::Format::eR32Uint;
 
-        case TiRHI::Format::R32G32_UInt:
+        case TiRHI::Format::R32G32UInt:
             return vk::Format::eR32G32Uint;
 
-        case TiRHI::Format::R32G32B32A32_UInt:
+        case TiRHI::Format::R32G32B32A32UInt:
             return vk::Format::eR32G32B32A32Uint;
 
-        case TiRHI::Format::D16_UNorm:
+        case TiRHI::Format::D16UNorm:
             return vk::Format::eD16Unorm;
 
-        case TiRHI::Format::D24_UNorm_S8_UInt:
+        case TiRHI::Format::D24UNormS8UInt:
             return vk::Format::eD24UnormS8Uint;
 
-        case TiRHI::Format::D32_Float:
+        case TiRHI::Format::D32Float:
             return vk::Format::eD32Sfloat;
 
-        case TiRHI::Format::D32_Float_S8_UInt:
+        case TiRHI::Format::D32FloatS8UInt:
             return vk::Format::eD32SfloatS8Uint;
 
         default:

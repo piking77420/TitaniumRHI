@@ -126,7 +126,7 @@ namespace TiRHI
 
         uint32_t m_imageCount = 1;
 
-        Format m_format = Format::B8G8R8A8_UNorm;
+        Format m_format = Format::B8G8R8A8UNorm;
 
         TRenderPassDescriptor m_renderPassDescriptor;
 

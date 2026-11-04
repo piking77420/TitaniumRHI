@@ -62,6 +62,17 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
+        Format getFormat() const noexcept
+        {
+            return m_format;
+        }
+
+        T& setFormat(Format format)
+        {
+            m_format = format;
+            return static_cast<T&>(*this);
+        }
+
     protected:
         uint32_t m_width = 0;
 
@@ -70,6 +81,8 @@ namespace TiRHI
         TextureType m_type = TextureType::Texture2D;
 
         TextureFlags m_flags;
+
+        Format m_format = Format::R8G8B8A8UNorm;
     };
 
 } // namespace TiRHI

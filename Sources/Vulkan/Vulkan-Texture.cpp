@@ -40,7 +40,7 @@ namespace TiRHI::Vulkan
         return m_image != VK_NULL_HANDLE;
     }
 
-    bool Texture::build(Device& device, vk::Image image, vk::Format format)
+    bool Texture::build(Device& device, vk::Image image, Format format)
     {
         m_image = image;
 
@@ -48,7 +48,7 @@ namespace TiRHI::Vulkan
 
         viewInfo.setImage(image)
             .setViewType(vk::ImageViewType::e2D)
-            .setFormat(format)
+            .setFormat(Vulkan::Private::toVulkan(format))
             .setComponents({vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
                             vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity})
             .setSubresourceRange({vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});

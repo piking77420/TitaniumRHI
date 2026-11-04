@@ -107,25 +107,25 @@ namespace TiRHI
     IMPLEMENT_TO_STRING_TITANIUM(RhiApi, RHI_API_LIST)
 
 #define RHI_FORMAT_LIST(X)                                                                                             \
-    X(R8_UNorm)                                                                                                        \
-    X(R8G8_UNorm)                                                                                                      \
-    X(R8G8B8A8_UNorm)                                                                                                  \
-    X(R8G8B8A8_UNorm_SRGB)                                                                                             \
-    X(B8G8R8A8_UNorm)                                                                                                  \
-    X(B8G8R8A8_UNorm_SRGB)                                                                                             \
-    X(R16_Float)                                                                                                       \
-    X(R16G16_Float)                                                                                                    \
-    X(R16G16B16A16_Float)                                                                                              \
-    X(R32_Float)                                                                                                       \
-    X(R32G32_Float)                                                                                                    \
-    X(R32G32B32A32_Float)                                                                                              \
-    X(R32_UInt)                                                                                                        \
-    X(R32G32_UInt)                                                                                                     \
-    X(R32G32B32A32_UInt)                                                                                               \
-    X(D16_UNorm)                                                                                                       \
-    X(D24_UNorm_S8_UInt)                                                                                               \
-    X(D32_Float)                                                                                                       \
-    X(D32_Float_S8_UInt)
+    X(R8UNorm)                                                                                                         \
+    X(R8G8UNorm)                                                                                                       \
+    X(R8G8B8A8UNorm)                                                                                                   \
+    X(R8G8B8A8UNormSRGB)                                                                                               \
+    X(B8G8R8A8UNorm)                                                                                                   \
+    X(B8G8R8A8UNormSRGB)                                                                                               \
+    X(R16Float)                                                                                                        \
+    X(R16G16Float)                                                                                                     \
+    X(R16G16B16A16Float)                                                                                               \
+    X(R32Float)                                                                                                        \
+    X(R32G32Float)                                                                                                     \
+    X(R32G32B32A32Float)                                                                                               \
+    X(R32UInt)                                                                                                         \
+    X(R32G32UInt)                                                                                                      \
+    X(R32G32B32A32UInt)                                                                                                \
+    X(D16UNorm)                                                                                                        \
+    X(D24UNormS8UInt)                                                                                                  \
+    X(D32Float)                                                                                                        \
+    X(D32FloatS8UInt)
 
     enum struct Format
     {

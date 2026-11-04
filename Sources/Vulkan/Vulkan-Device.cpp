@@ -105,7 +105,8 @@ namespace TiRHI::Vulkan
         return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
                createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
-               createSynchronisationPrimitives();
+               createSynchronisationPrimitives() && 
+               initVmaAllocator(rhi.getInstance());
         // clang-format on
     }
 
@@ -334,6 +335,7 @@ namespace TiRHI::Vulkan
 
         if (result != VK_SUCCESS)
         {
+            RHI_LOG_ERROR(L"Failed to create vma allocator", RhiApi::Vulkan);
             m_vmaAllocator = nullptr;
             return false;
         }

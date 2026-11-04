@@ -9,61 +9,61 @@ namespace TiRHI::DirectX12::Private
     {
         switch (format)
         {
-        case Format::R8_UNorm:
+        case Format::R8UNorm:
             return DXGI_FORMAT_R8_UNORM;
 
-        case Format::R8G8_UNorm:
+        case Format::R8G8UNorm:
             return DXGI_FORMAT_R8G8_UNORM;
 
-        case Format::R8G8B8A8_UNorm:
+        case Format::R8G8B8A8UNorm:
             return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        case Format::R8G8B8A8_UNorm_SRGB:
+        case Format::R8G8B8A8UNormSRGB:
             return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
-        case Format::B8G8R8A8_UNorm:
+        case Format::B8G8R8A8UNorm:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        case Format::B8G8R8A8_UNorm_SRGB:
+        case Format::B8G8R8A8UNormSRGB:
             return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 
-        case Format::R16_Float:
+        case Format::R16Float:
             return DXGI_FORMAT_R16_FLOAT;
 
-        case Format::R16G16_Float:
+        case Format::R16G16Float:
             return DXGI_FORMAT_R16G16_FLOAT;
 
-        case Format::R16G16B16A16_Float:
+        case Format::R16G16B16A16Float:
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-        case Format::R32_Float:
+        case Format::R32Float:
             return DXGI_FORMAT_R32_FLOAT;
 
-        case Format::R32G32_Float:
+        case Format::R32G32Float:
             return DXGI_FORMAT_R32G32_FLOAT;
 
-        case Format::R32G32B32A32_Float:
+        case Format::R32G32B32A32Float:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
 
-        case Format::R32_UInt:
+        case Format::R32UInt:
             return DXGI_FORMAT_R32_UINT;
 
-        case Format::R32G32_UInt:
+        case Format::R32G32UInt:
             return DXGI_FORMAT_R32G32_UINT;
 
-        case Format::R32G32B32A32_UInt:
+        case Format::R32G32B32A32UInt:
             return DXGI_FORMAT_R32G32B32A32_UINT;
 
-        case Format::D16_UNorm:
+        case Format::D16UNorm:
             return DXGI_FORMAT_D16_UNORM;
 
-        case Format::D24_UNorm_S8_UInt:
+        case Format::D24UNormS8UInt:
             return DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-        case Format::D32_Float:
+        case Format::D32Float:
             return DXGI_FORMAT_D32_FLOAT;
 
-        case Format::D32_Float_S8_UInt:
+        case Format::D32FloatS8UInt:
             return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
         default:

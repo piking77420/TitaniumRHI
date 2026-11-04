@@ -22,7 +22,7 @@ namespace TiRHI::Vulkan
 
         struct Private
         {
-            static bool build(Texture& texture, Device& device, vk::Image image, vk::Format format)
+            static bool build(Texture& texture, Device& device, vk::Image image, Format format)
             {
                 return texture.build(device, image, format);
             }
@@ -64,7 +64,7 @@ namespace TiRHI::Vulkan
 
         VmaAllocation m_allocation = nullptr;
 
-        bool build(Device& device, vk::Image image, vk::Format format);
+        bool build(Device& device, vk::Image image, Format format);
 
         void destroy();
     };
