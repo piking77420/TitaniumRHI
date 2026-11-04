@@ -155,6 +155,9 @@ namespace TiRHI::Vulkan
         {
             m_imageCount = std::min(m_imageCount, m_swapChainSupportDetails.capabilities.maxImageCount);
         }
+        m_imageCount = std::clamp(m_imageCount, m_swapChainSupportDetails.capabilities.minImageCount,
+                                  m_swapChainSupportDetails.capabilities.maxImageCount);
+
         m_currentFormat = getSurfaceFormat();
 
         // render pass check
@@ -308,7 +311,7 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::createSyncObjects(vk::Device device)
     {
-        m_synchronisations.resize(getRHI().getFrameInFlight());
+        m_synchronisations.resize(m_imageCount);
 
         vk::SemaphoreCreateInfo semaphoreCreateInfo{};
         vk::FenceCreateInfo fenceCreateInfo{};
