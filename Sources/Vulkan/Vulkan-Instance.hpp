@@ -15,6 +15,8 @@ namespace TiRHI::Vulkan
     class Instance
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         Instance() = delete;
         ~Instance();
         Instance(const Instance&) = delete;

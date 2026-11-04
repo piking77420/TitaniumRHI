@@ -14,6 +14,8 @@ namespace TiRHI::Vulkan
     class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         DescriptorSet() = delete;
         ~DescriptorSet() = default;
         RHI_MOVE_ONLY(DescriptorSet);

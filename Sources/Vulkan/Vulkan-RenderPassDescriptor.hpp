@@ -12,6 +12,8 @@ namespace TiRHI::Vulkan
     class RenderPassDescriptor : public BaseRenderPassDescriptor<RenderPassDescriptor, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         RenderPassDescriptor() = delete;
         ~RenderPassDescriptor() = default;
         RenderPassDescriptor(const RenderPassDescriptor&) = delete;

@@ -1,6 +1,8 @@
 #ifndef TITANIUM_BASE_ACQUIRE_FRAME_H
 #define TITANIUM_BASE_ACQUIRE_FRAME_H
 
+#include <Titanium/RHITypes.hpp>
+
 namespace TiRHI
 {
     class BaseAcquiredFrame

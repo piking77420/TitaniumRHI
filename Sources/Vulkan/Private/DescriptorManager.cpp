@@ -60,6 +60,7 @@ namespace TiRHI::Vulkan::Private
 
         if (!vulkanLayoutPools)
             return {};
+
         return vulkanLayoutPools->descriptorSetAllocator.create();
     }
 
@@ -89,12 +90,12 @@ namespace TiRHI::Vulkan::Private
             std::make_unique<DescriporManager::VulkanLayoutPools>();
 
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
-        bindings.reserve(layout.size());
+        bindings.reserve(layout.bindings.size());
 
         std::vector<vk::DescriptorPoolSize> poolSize;
-        poolSize.reserve(layout.size());
+        poolSize.reserve(layout.bindings.size());
 
-        for (const auto& binding : layout)
+        for (const auto& binding : layout.bindings)
         {
             vk::DescriptorSetLayoutBinding vkBinding{};
             // clang-format off
@@ -103,7 +104,7 @@ namespace TiRHI::Vulkan::Private
                 {
                     using T = std::remove_cvref_t<decltype(value)>;
 
-                    vkBinding.binding = value.index;
+                    vkBinding.binding = value.bindingIndex;
                     vkBinding.descriptorCount = value.count;
                     vkBinding.stageFlags = Private::toVulkan(value.shaderStageFlag);
                     if constexpr (std::is_same_v<T, Vulkan::DescriptorSet::SampledTexture>)

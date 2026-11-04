@@ -19,6 +19,8 @@ namespace TiRHI::Vulkan
     class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         Device() = delete;
         ~Device() = default;
         Device(const Device&) = delete;

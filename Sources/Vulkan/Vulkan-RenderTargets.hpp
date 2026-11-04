@@ -13,6 +13,8 @@ namespace TiRHI::Vulkan
     class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, Vulkan::RenderPassDescriptor, Vulkan::Texture>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         RenderTargets() = delete;
         ~RenderTargets() = default;
         RenderTargets(const RenderTargets&) = delete;

@@ -21,6 +21,8 @@ namespace TiRHI::Vulkan
                                                Vulkan::GraphicPipeline>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         CommandList() = delete;
         ~CommandList() = default;
         CommandList(const CommandList&) = delete;

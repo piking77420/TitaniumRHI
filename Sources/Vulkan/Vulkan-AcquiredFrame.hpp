@@ -9,6 +9,8 @@ namespace TiRHI::Vulkan
     class AcquiredFrame : public BaseAcquiredFrame
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         explicit AcquiredFrame() = default;
         ~AcquiredFrame() = default;
         explicit AcquiredFrame(bool success)

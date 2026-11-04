@@ -4,6 +4,7 @@
 #include <concepts>
 #include <string>
 #include <cassert>
+#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
@@ -11,6 +12,8 @@ namespace TiRHI
     class Object
     {
     public:
+        static constexpr TiRHI::RhiApi DerivedRhiApi = T::Api;
+
         Object() = delete;
         ~Object() = default;
         Object(const Object&) = delete;

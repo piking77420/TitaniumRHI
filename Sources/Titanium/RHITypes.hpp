@@ -596,6 +596,8 @@ namespace TiRHI
         s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
     }
 
+    constexpr size_t MaxFramesInFlight = 3;
+
 } // namespace TiRHI
 
 #endif // TITANIUM_RHI_TYPES_H

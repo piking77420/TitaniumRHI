@@ -12,6 +12,8 @@ namespace TiRHI::Vulkan
     class RHI : public TiRHI::BaseRHI<RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         RHI(const RhiCreate& rhiCreate);
         ~RHI() = default;
 

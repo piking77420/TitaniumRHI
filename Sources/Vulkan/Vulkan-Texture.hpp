@@ -40,6 +40,21 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device);
 
+        bool isValid() const
+        {
+            return m_image != VK_NULL_HANDLE;
+        }
+
+        bool isInvalid() const
+        {
+            return m_image == VK_NULL_HANDLE;
+        }
+
+        operator bool() const
+        {
+            return isValid();
+        }
+
     private:
         friend Private;
 

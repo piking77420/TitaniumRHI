@@ -13,6 +13,8 @@ namespace TiRHI::Vulkan
     class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, RenderPassDescriptor>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         GraphicPipeline() = delete;
         ~GraphicPipeline();
         GraphicPipeline(const GraphicPipeline&) = delete;
