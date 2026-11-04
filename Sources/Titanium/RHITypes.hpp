@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <type_traits>
+#include <variant>
 
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHI-EnumFlag.hpp>
@@ -564,6 +565,18 @@ namespace TiRHI
 #undef X
     };
     IMPLEMENT_TO_STRING_TITANIUM(BufferType, RHI_DESCRIPTOR_TYPE_LIST)
+
+#define RHI_DESCRIPTOR_SET_TYPE_LIST(X)                                                                                \
+    X(Dynamic)                                                                                                         \
+    X(Immutable)
+
+    enum class DescriptorSetType
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_SET_TYPE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(DescriptorSetType, RHI_DESCRIPTOR_SET_TYPE_LIST)
 
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 

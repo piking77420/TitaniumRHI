@@ -1,5 +1,6 @@
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
+#include <Vulkan/Vulkan-Sampler.hpp>
 
 namespace TiRHI::Vulkan
 {

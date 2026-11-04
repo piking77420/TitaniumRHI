@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/DescriptorManager.cpp
+        Private/DescriptorManager.cpp
         Private/DeviceQueueFamily.cpp
         Private/DeviceQueueFamily.hpp
         Private/RHIToVulkan.cpp

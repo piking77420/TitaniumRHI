@@ -75,6 +75,8 @@ namespace TiRHI::Vulkan::Private
 
     vk::CompareOp toVulkan(CompareOp compareOp);
 
+    vk::ShaderStageFlags toVulkan(ShaderStageFlags shaderStageFlags);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

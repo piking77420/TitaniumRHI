@@ -420,4 +420,34 @@ namespace TiRHI::Vulkan::Private
         return vk::CompareOp::eLess;
     }
 
+    vk::ShaderStageFlags toVulkan(ShaderStageFlags shaderStageFlags)
+    {
+        vk::ShaderStageFlags flags{};
+
+        if ((shaderStageFlags & ShaderStageFlags::Vertex) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eVertex;
+
+        if ((shaderStageFlags & ShaderStageFlags::Hull) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eTessellationControl;
+
+        if ((shaderStageFlags & ShaderStageFlags::Domain) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eTessellationEvaluation;
+
+        if ((shaderStageFlags & ShaderStageFlags::Geometry) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eGeometry;
+
+        if ((shaderStageFlags & ShaderStageFlags::Pixel) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eFragment;
+
+        if ((shaderStageFlags & ShaderStageFlags::Compute) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eCompute;
+
+        if ((shaderStageFlags & ShaderStageFlags::Amplification) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eTaskEXT;
+
+        if ((shaderStageFlags & ShaderStageFlags::Mesh) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eMeshEXT;
+
+        return flags;
+    }
 }

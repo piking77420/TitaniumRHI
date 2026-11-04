@@ -12,11 +12,12 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TTexture>
+    template<typename T, typename TRHI, typename TTexture, typename TSampler>
     class BaseDescriptorSet : public Object<T, TRHI>
     {
     public:
         using Texture = TTexture;
+        using Sampler = TSampler;
 
         struct BaseBinding
         {
@@ -24,7 +25,7 @@ namespace TiRHI
             uint32_t count{0};
             ShaderStageFlags shaderStageFlag{0};
 
-            auto operator<=>(const BaseBinding&) = default;
+            auto operator<=>(const BaseBinding&) const = default;
 
             uint32_t hash() const
             {
@@ -40,11 +41,12 @@ namespace TiRHI
         struct SampledTexture : public BaseBinding
         {
             Texture* texture{nullptr};
-            auto operator<=>(const BaseBinding&) = default;
+            Sampler* sampler{nullptr};
+            auto operator<=>(const SampledTexture&) const = default;
         };
 
         using Binding = std::variant<SampledTexture>;
-        using BindingsLayout = std::vector<DescriptorSet::Binding>;
+        using BindingsLayout = std::vector<Binding>;
 
         BaseDescriptorSet() = delete;
         ~BaseDescriptorSet() = default;
@@ -52,42 +54,74 @@ namespace TiRHI
         BaseDescriptorSet(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BaseDescriptorSet<T, TRHI, TTexture>>);
+            static_assert(std::derived_from<T, BaseDescriptorSet<T, TRHI, TTexture, TSampler>>);
         }
 
-        T& bindSampledTexture(ShaderStageFlags shaderStageFlags, Texture& texture, uint32_t index, uint32_t count = 1)
+        T& bindSampledTexture(ShaderStageFlags shaderStageFlags, Texture& texture, Sampler& sampler, uint32_t index,
+                              uint32_t count = 1)
         {
             Binding& binding = m_bindings.emplace_back();
             SampledTexture& sampledTexture = binding.emplace<SampledTexture>();
             sampledTexture.index = index;
             sampledTexture.count = count;
             sampledTexture.shaderStageFlag = shaderStageFlags;
-            sampledTexture.texture = texture;
+            sampledTexture.texture = &texture;
+            sampledTexture.sampler = &sampler;
 
-            return static_cast<T&>(texture);
+            return static_cast<T&>(*this);
         };
 
-        template<>
+        DescriptorSetType getDescriptorSetType() const
+        {
+            return m_DescriptorSetType;
+        }
+
+        T& setDescriptorType(DescriptorSetType descriptorSetType)
+        {
+            m_DescriptorSetType = descriptorSetType;
+            return static_cast<T&>(*this);
+        }
+
         struct BindingsLayoutHash
         {
-            std::size_t operator()(const std::vector<Binding>& bindings) const
+            std::size_t operator()(const BindingsLayout& bindings) const
             {
-                size_t hash = 0;
-                // clang-format off
-                const auto getHash = overloads{
-                        [](auto&& binding) { 
-                           uint32_t hashB = binding.hash();
-                           hashCombine(hashB, VariantIndexV<decltype(binding), Binding>)
-                           return hashB;
-                        }
-                };
+                std::uint32_t hash = 0;
 
-                std::ranges::for_each(bindings, [&hash, &getHash](const Binding& binding) 
+                for (const Binding& binding : bindings)
+                {
+                    const uint32_t bindingHash = std::visit([](const auto& value) { return value.hash(); }, binding);
+
+                    hashCombine(hash, static_cast<uint32_t>(binding.index()));
+                    hashCombine(hash, bindingHash);
+                }
+
+                return static_cast<size_t>(hash);
+            }
+        };
+
+        struct BindingsLayoutEqual
+        {
+            bool operator()(const BindingsLayout& a, const BindingsLayout& b) const
+            {
+                if (a.size() != b.size())
+                    return false;
+
+                for (size_t i = 0; i < a.size(); ++i)
+                {
+                    if (a[i].index() != b[i].index())
+                        return false;
+
+                    auto getBase = [](const Binding& binding) -> const BaseBinding&
                     {
-                        hashCombine(hash, getHash(binding));
-                    });
-                // clang-format on
-                return hash;
+                        return std::visit([](const auto& value) -> const BaseBinding& { return value; }, binding);
+                    };
+
+                    if (getBase(a[i]) != getBase(b[i]))
+                        return false;
+                }
+
+                return true;
             }
         };
 
@@ -99,6 +133,8 @@ namespace TiRHI
 
     private:
         std::vector<Binding> m_bindings;
+
+        DescriptorSetType m_DescriptorSetType = DescriptorSetType::Dynamic;
     };
 
 } // namespace TiRHI

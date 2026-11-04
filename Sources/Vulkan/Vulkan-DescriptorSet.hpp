@@ -9,8 +9,9 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
     class Texture;
+    class Sampler;
 
-    class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture>
+    class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>
     {
     public:
         DescriptorSet() = delete;

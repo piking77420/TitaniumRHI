@@ -80,7 +80,7 @@ namespace TiRHI::Private
 
         using CreatePool = std::optional<Pool> (*)(const UserData&);
         using InitializeHandle = std::optional<NativeHandle> (*)(Pool&, std::size_t, const UserData&);
-        using OnRealeaseHandle = void (*)(Pool&, const UserData&);
+        using OnRealeaseHandle = void (*)(Pool&, NativeHandle& nativeHandle, const UserData&);
 
         HandleAllocator() = default;
         ~HandleAllocator() = default;
@@ -90,10 +90,12 @@ namespace TiRHI::Private
         HandleAllocator(HandleAllocator&&) = delete;
         HandleAllocator& operator=(HandleAllocator&&) = delete;
 
-        bool build(CreatePool createPool, InitializeHandle initializeHandle, UserData* data)
+        bool build(CreatePool createPool, InitializeHandle initializeHandle, OnRealeaseHandle onRealeaseHandle,
+                   UserData* data)
         {
             m_createPool = createPool;
             m_initializeHandle = initializeHandle;
+            m_onRealeasePool = onRealeaseHandle;
             m_userData = data;
 
             return m_createPool && m_initializeHandle && m_userData;
@@ -107,7 +109,7 @@ namespace TiRHI::Private
                     return createFromPool(i);
             }
 
-            auto nativePool = m_createPool(m_userData);
+            auto nativePool = m_createPool(*m_userData);
             if (!nativePool)
                 return std::nullopt;
 
@@ -132,9 +134,10 @@ namespace TiRHI::Private
                 return false;
             }
 
-            OnRealeaseHandle(pool, )
+            if (m_onRealeasePool)
+                m_onRealeasePool(pool.pool, handle.nativeHandle, *m_userData);
 
-                ++ pool.generations[index];
+            ++pool.generations[index];
             pool.availableMask.set(index);
 
             // Invalidate this instance.
@@ -167,7 +170,7 @@ namespace TiRHI::Private
                 if (!pool.availableMask.test(index))
                     continue;
 
-                auto nativeHandle = m_initializeHandle(pool.pool, index, m_userData);
+                auto nativeHandle = m_initializeHandle(pool.pool, index, *m_userData);
                 if (!nativeHandle)
                     return std::nullopt;
 
