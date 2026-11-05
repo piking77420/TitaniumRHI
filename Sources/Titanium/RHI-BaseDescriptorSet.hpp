@@ -116,7 +116,29 @@ namespace TiRHI
 
         BaseDescriptorSet() = delete;
         ~BaseDescriptorSet() = default;
-        RHI_MOVE_ONLY(BaseDescriptorSet);
+        BaseDescriptorSet(const BaseDescriptorSet&) = delete;
+        BaseDescriptorSet& operator=(const BaseDescriptorSet&) = delete;
+
+        BaseDescriptorSet(BaseDescriptorSet&& other) noexcept
+            : Object<T, TRHI>(std::move(other))
+            , m_bindingsLayout(std::exchange(other.m_bindingsLayout, {}))
+            , m_descriptorSetType(std::exchange(other.m_descriptorSetType, {}))
+            , m_isDirty(std::exchange(other.m_isDirty, {}))
+        {
+        }
+
+        BaseDescriptorSet& operator=(BaseDescriptorSet&& other) noexcept
+        {
+            if (this == &other)
+                return *this;
+            Object<T, TRHI>::operator=(std::move(other));
+            m_bindingsLayout = std::exchange(other.m_bindingsLayout, {});
+            m_descriptorSetType = std::exchange(other.m_descriptorSetType, {});
+            m_isDirty = std::exchange(other.m_isDirty, {});
+
+            return *this;
+        }
+
         BaseDescriptorSet(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -128,7 +150,7 @@ namespace TiRHI
         {
             if (texture && sampler)
             {
-                Binding& binding = m_bindings.emplace_back();
+                Binding& binding = m_bindingsLayout.bindings.emplace_back();
                 SampledTexture& sampledTexture = binding.emplace<SampledTexture>();
                 sampledTexture.bindingIndex = bindingIndex;
                 sampledTexture.count = count;
@@ -142,12 +164,12 @@ namespace TiRHI
 
         DescriptorSetType getDescriptorSetType() const
         {
-            return m_DescriptorSetType;
+            return m_descriptorSetType;
         }
 
         T& setDescriptorType(DescriptorSetType descriptorSetType)
         {
-            m_DescriptorSetType = descriptorSetType;
+            m_descriptorSetType = descriptorSetType;
             return static_cast<T&>(*this);
         }
 
@@ -162,11 +184,11 @@ namespace TiRHI
             if (!onUpdateBindingCheck())
                 return false;
 
-            if (!std::holds_alternative<SampledTexture>(m_bindings[index]))
+            if (!std::holds_alternative<SampledTexture>(m_bindingsLayout.bindings[index]))
             {
                 return false;
             }
-            SampledTexture& sampledTexture = std::get<SampledTexture>(m_bindings[index]);
+            SampledTexture& sampledTexture = std::get<SampledTexture>(m_bindingsLayout.bindings[index]);
             sampledTexture.texture = texture;
             sampledTexture.sampler = sampler;
 
@@ -174,21 +196,21 @@ namespace TiRHI
         }
 
     protected:
-        const std::vector<Binding>& getBindings() const
+        const BindingsLayout& getBindingsLayout() const
         {
-            return m_bindings;
+            return m_bindingsLayout;
         }
 
     private:
-        std::vector<Binding> m_bindings;
+        BindingsLayout m_bindingsLayout;
 
-        DescriptorSetType m_DescriptorSetType = DescriptorSetType::Dynamic;
+        DescriptorSetType m_descriptorSetType = DescriptorSetType::Dynamic;
 
         bool m_isDirty = false;
 
         bool onUpdateBindingCheck()
         {
-            if (m_DescriptorSetType != DescriptorSetType::Dynamic)
+            if (m_descriptorSetType != DescriptorSetType::Dynamic)
             {
                 RHI_LOG_ERROR(std::format(L"{} you cannot update an Immutable descriptor set", this->getNameW()),
                               Object::DerivedRhiApi);

@@ -5,6 +5,7 @@ target_sources(
     PRIVATE
         Private/DescriptorManager.cpp
         Private/DescriptorManager.cpp
+        Private/DescriptorSetHandle.hpp
         Private/DeviceQueueFamily.cpp
         Private/DeviceQueueFamily.hpp
         Private/RHIToVulkan.cpp

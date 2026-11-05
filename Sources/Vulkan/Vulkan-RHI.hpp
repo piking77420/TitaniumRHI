@@ -19,6 +19,11 @@ namespace TiRHI::Vulkan
 
         Device newDevice();
 
+        Instance& getInstance()
+        {
+            return m_instance;
+        }
+
         vk::Instance getNativeInstance()
         {
             return m_instance.getInstance();

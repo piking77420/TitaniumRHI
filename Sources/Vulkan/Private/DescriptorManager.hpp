@@ -1,9 +1,10 @@
 #ifndef TITANIUM_VULKAN_PRIVATE_DESCRIPTOR_MANAGER_H
 #define TITANIUM_VULKAN_PRIVATE_DESCRIPTOR_MANAGER_H
 
+#include <unordered_map>
+
 #include <Titanium/RHI-BaseDescriptorSet.hpp>
 #include <Titanium/Private/StrongTypeId.hpp>
-#include <Titanium/Private/HandleAllocator.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
 
@@ -14,6 +15,8 @@ namespace TiRHI::Vulkan
 
 namespace TiRHI::Vulkan::Private
 {
+    using BindingsLayout = Vulkan::DescriptorSet::BindingsLayout;
+
     class DescriporManager
     {
     public:
@@ -22,39 +25,45 @@ namespace TiRHI::Vulkan::Private
 
         static constexpr size_t CommandPoolCapacity = 64;
 
-        struct Pool
-        {
-            vk::UniqueDescriptorPool pool;
-        };
+        using DescriptorSetHandle = TiRHI::Vulkan::Private::DescriptorSetHandle;
 
-        struct VulkanLayoutPools;
-        // TODO may add more then one DescriptorSet per native handle
-        using DescriptorAllocator =
-            TiRHI::Private::HandleAllocator<Pool, vk::DescriptorSet, VulkanLayoutPools, CommandPoolCapacity>;
+        std::optional<DescriptorSetHandle> allocDescriptors(vk::Device device, const BindingsLayout& layout,
+                                                            size_t count);
 
-        struct VulkanLayoutPools
-        {
-            vk::UniqueDescriptorSetLayout layout;
-            DescriptorAllocator descriptorSetAllocator;
-            vk::Device device;
-            std::vector<vk::DescriptorPoolSize> descriptorPoolSizes;
-        };
-
-        std::optional<DescriptorAllocator::Handle>
-        createNewDescriptorSetHandle(vk::Device device, const Vulkan::DescriptorSet::BindingsLayout& layout);
+        void release(const BindingsLayout& layout, DescriptorSetHandle& descriptorSetHandle);
 
     private:
-        using DescriptorLayoutMap =
-            std::unordered_map<Vulkan::DescriptorSet::BindingsLayout, std::unique_ptr<VulkanLayoutPools>,
-                               Vulkan::DescriptorSet::BindingsLayoutHash, Vulkan::DescriptorSet::BindingsLayoutEqual>;
+        struct PoolCache
+        {
+            vk::UniqueDescriptorPool pool;
+            size_t remainingSize = CommandPoolCapacity;
+        };
 
-        DescriptorLayoutMap m_map;
+        struct LayoutCache
+        {
+            vk::UniqueDescriptorSetLayout layout;
+            std::vector<vk::DescriptorPoolSize> poolSize;
+        };
 
-        VulkanLayoutPools* tryGetOrCreateAllocator(vk::Device device,
-                                                   const Vulkan::DescriptorSet::BindingsLayout& layout);
+        using DescriptorLayoutCache =
+            std::unordered_map<BindingsLayout, LayoutCache, Vulkan::DescriptorSet::BaseType::BindingsLayoutHash,
+                               Vulkan::DescriptorSet::BaseType::BindingsLayoutEqual>;
 
-        std::unique_ptr<DescriporManager::VulkanLayoutPools>
-        vkLayoutFromRhiLayout(vk::Device device, const Vulkan::DescriptorSet::BindingsLayout& layout);
+        using DescriptorPoolCache = std::unordered_map<BindingsLayout, std::vector<PoolCache>,
+                                                       Vulkan::DescriptorSet::BaseType::BindingsLayoutHash,
+                                                       Vulkan::DescriptorSet::BaseType::BindingsLayoutEqual>;
+
+        vk::Device m_device = {};
+
+        DescriptorLayoutCache m_descriptorLayoutMap;
+
+        DescriptorPoolCache m_descriptorPoolMap;
+
+        std::optional<std::tuple<DescriporManager::PoolCache*, DescriporManager::LayoutCache*,
+                                 size_t>> // pool and index in vector cache
+        tryGetOrCreateAllocator(vk::Device device, const BindingsLayout& layout, size_t count);
+
+        DescriporManager::LayoutCache* vkLayoutFromRhiLayout(vk::Device device, const BindingsLayout& layout);
     };
 
 } // TiRHI::Vulkan::Private

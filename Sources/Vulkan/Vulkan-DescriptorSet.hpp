@@ -3,6 +3,12 @@
 
 #include <Titanium/RHI-BaseDescriptorSet.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Vulkan/Private/DescriptorSetHandle.hpp>
+
+namespace TiRHI::Vulkan::Private
+{
+    class DescriporManager;
+}
 
 namespace TiRHI::Vulkan
 {
@@ -15,10 +21,17 @@ namespace TiRHI::Vulkan
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+        using BaseType = typename BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>;
+        using BindingsLayout = typename BaseType::BindingsLayout;
 
         DescriptorSet() = delete;
         ~DescriptorSet() = default;
-        RHI_MOVE_ONLY(DescriptorSet);
+        DescriptorSet(const DescriptorSet&) = delete;
+        DescriptorSet& operator=(const DescriptorSet&) = delete;
+
+        DescriptorSet(DescriptorSet&& other) noexcept;
+        DescriptorSet& operator=(DescriptorSet&& other) noexcept;
+
         DescriptorSet(RHI& rhi)
             : BaseDescriptorSet(rhi)
         {
@@ -27,7 +40,11 @@ namespace TiRHI::Vulkan
         bool build(Device& device);
 
     private:
-        vk::UniqueDescriptorSet m_set;
+        TiRHI::Vulkan::Private::DescriporManager* m_descriptorManager{nullptr};
+
+        TiRHI::Vulkan::Private::DescriptorSetHandle m_handle{};
+
+        void reset();
     };
 
 } // namespace TiRHI::Vulkan

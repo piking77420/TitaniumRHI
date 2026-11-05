@@ -1,6 +1,7 @@
 #include <Vulkan/Vulkan-Texture.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -37,6 +38,9 @@ namespace TiRHI::Vulkan
 
     bool Texture::build(Device& device)
     {
+
+
+
         return m_image != VK_NULL_HANDLE;
     }
 

@@ -1,93 +1,140 @@
 #include <Vulkan/Private/DescriptorManager.hpp>
-#include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Titanium/Log.hpp>
+
+#include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Vulkan-DescriptorSet.hpp>
 
 namespace TiRHI::Vulkan::Private
 {
-    std::optional<DescriporManager::Pool> createPool(const DescriporManager::VulkanLayoutPools& userData)
+    std::optional<DescriporManager::DescriptorSetHandle>
+    DescriporManager::allocDescriptors(vk::Device device, const BindingsLayout& layout, size_t count)
     {
-        if (userData.device == VK_NULL_HANDLE)
-            return {};
-        DescriporManager::Pool pool;
-        vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo{};
-        descriptorPoolCreateInfo.setMaxSets(DescriporManager::CommandPoolCapacity)
-            .setPoolSizes(userData.descriptorPoolSizes)
-            .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-
-        pool.pool = userData.device.createDescriptorPoolUnique(descriptorPoolCreateInfo);
-
-        if (!pool.pool)
+        if (m_device == VK_NULL_HANDLE)
         {
-            return {};
+            m_device = device;
+        }
+        else if (m_device != device)
+        {
+            RHI_LOG_FATAL(L"DescriptorManager: Cannot use multiple Vulkan devices.", RhiApi::Vulkan);
         }
 
-        return pool;
+        std::optional<std::tuple<DescriporManager::PoolCache*, DescriporManager::LayoutCache*, size_t>> cache =
+            tryGetOrCreateAllocator(device, layout, count);
+
+        if (!cache)
+            return {};
+
+        DescriporManager::PoolCache* poolCache = std::get<DescriporManager::PoolCache*>(*cache);
+        DescriporManager::LayoutCache* layoutCache = std::get<DescriporManager::LayoutCache*>(*cache);
+
+        // allocate from pool
+        DescriptorSetHandle handle;
+        handle.descriptorCount = count;
+        handle.poolIndex = std::get<size_t>(*cache);
+
+        std::array<vk::DescriptorSetLayout, MaxFramesInFlight> layouts{};
+        layouts.fill(layoutCache->layout.get());
+
+        vk::DescriptorSetAllocateInfo allocInfo{};
+        allocInfo.setDescriptorPool(poolCache->pool.get())
+            .setDescriptorSetCount(static_cast<uint32_t>(count))
+            .setPSetLayouts(layouts.data());
+
+        vk::Result result = device.allocateDescriptorSets(&allocInfo, handle.descriptorSets.data());
+        if (result != vk::Result::eSuccess)
+        {
+            RHI_LOG_ERROR(L"Faile to allocated Descriptor set", RhiApi::Vulkan);
+            return std::nullopt;
+        }
+        poolCache->remainingSize -= count;
+
+        return handle;
     }
 
-    std::optional<vk::DescriptorSet> allocDescriptorSet(DescriporManager::Pool& pool, std::size_t pooInIndex,
-                                                        const DescriporManager::VulkanLayoutPools& userData)
+    void DescriporManager::release(const BindingsLayout& layout, DescriptorSetHandle& descriptorSetHandle)
     {
-        if (userData.device == VK_NULL_HANDLE || !pool.pool || !userData.layout)
-            return {};
-
-        vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo{};
-        descriptorSetAllocateInfo.setDescriptorPool(pool.pool.get())
-            .setDescriptorSetCount(1)
-            .setSetLayouts(userData.layout.get());
-
-        std::vector<vk::DescriptorSet> set = userData.device.allocateDescriptorSets(descriptorSetAllocateInfo);
-        if (!set.empty())
-            return {};
-
-        assert(set.size() == 1);
-        return set[0];
-    }
-
-    void releaseDescriptorSet(DescriporManager::Pool& pool, vk::DescriptorSet& descriptorSet,
-                              const DescriporManager::VulkanLayoutPools& userData)
-    { // TODO undle deffer destroy
-        if (userData.device == VK_NULL_HANDLE || !pool.pool || !userData.layout)
+        // TODO CALL THIS IN DEFFERED DESTROY
+        auto it = m_descriptorPoolMap.find(layout);
+        if (it == m_descriptorPoolMap.end())
             return;
-        userData.device.freeDescriptorSets(pool.pool.get(), descriptorSet);
-        descriptorSet = VK_NULL_HANDLE;
+
+        auto& pools = it->second;
+        if (descriptorSetHandle.poolIndex >= pools.size())
+            return;
+
+        if (m_device == VK_NULL_HANDLE)
+            return;
+
+        m_device.freeDescriptorSets(
+            pools[descriptorSetHandle.poolIndex].pool.get(),
+            std::span(descriptorSetHandle.descriptorSets.data(), descriptorSetHandle.descriptorCount));
+
+        pools[descriptorSetHandle.poolIndex].remainingSize += descriptorSetHandle.descriptorCount;
+
+        descriptorSetHandle = {}; // reset
     }
 
-    std::optional<DescriporManager::DescriptorAllocator::Handle>
-    DescriporManager::createNewDescriptorSetHandle(vk::Device device,
-                                                   const Vulkan::DescriptorSet::BindingsLayout& layout)
+    std::optional<std::tuple<DescriporManager::PoolCache*, DescriporManager::LayoutCache*, size_t>>
+    DescriporManager::tryGetOrCreateAllocator(vk::Device device, const Vulkan::DescriptorSet::BindingsLayout& layout,
+                                              size_t count)
     {
-        VulkanLayoutPools* vulkanLayoutPools = tryGetOrCreateAllocator(device, layout);
+        if (device == VK_NULL_HANDLE || count == 0 || count > MaxFramesInFlight || count > CommandPoolCapacity)
+        {
+            return std::nullopt;
+        }
 
-        if (!vulkanLayoutPools)
+        // look for existing layout
+        LayoutCache* layoutCache = vkLayoutFromRhiLayout(device, layout);
+        if (layoutCache == nullptr)
             return {};
 
-        return vulkanLayoutPools->descriptorSetAllocator.create();
-    }
+        auto& poolCache = m_descriptorPoolMap[layout];
+        if (!poolCache.empty())
+        {
+            size_t findIndex = std::numeric_limits<size_t>::max();
+            for (size_t i = 0; i < poolCache.size(); i++)
+            {
+                auto& pool = poolCache[i];
+                if (pool.remainingSize >= count)
+                {
+                    findIndex = i;
+                    break;
+                }
+            }
 
-    DescriporManager::VulkanLayoutPools*
-    DescriporManager::tryGetOrCreateAllocator(vk::Device device, const Vulkan::DescriptorSet::BindingsLayout& layout)
-    {
-        auto it = m_map.find(layout);
+            if (findIndex != std::numeric_limits<size_t>::max())
+            {
+                return std::tuple<DescriporManager::PoolCache*, DescriporManager::LayoutCache*, size_t>(
+                    &poolCache[findIndex], layoutCache, findIndex);
+            }
+        }
 
-        if (it != m_map.end())
-            return it->second.get();
+        // new pool
+        vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo{};
+        descriptorPoolCreateInfo.setMaxSets(DescriporManager::CommandPoolCapacity)
+            .setPoolSizes(layoutCache->poolSize)
+            .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-        // new
-        std::unique_ptr<DescriporManager::VulkanLayoutPools> pool = vkLayoutFromRhiLayout(device, layout);
-
+        vk::UniqueDescriptorPool pool = device.createDescriptorPoolUnique(descriptorPoolCreateInfo);
         if (!pool)
             return {};
 
-        auto& ref = m_map[layout];
-        ref = std::move(pool);
-        return ref.get();
+        auto& cachedPool = poolCache.emplace_back();
+        cachedPool.pool = std::move(pool);
+        cachedPool.remainingSize = CommandPoolCapacity;
+
+        return std::tuple<DescriporManager::PoolCache*, DescriporManager::LayoutCache*, size_t>(
+            &cachedPool, layoutCache, (poolCache.size() - 1));
     }
 
-    std::unique_ptr<DescriporManager::VulkanLayoutPools>
-    DescriporManager::vkLayoutFromRhiLayout(vk::Device device, const Vulkan::DescriptorSet::BindingsLayout& layout)
+    DescriporManager::LayoutCache* DescriporManager::vkLayoutFromRhiLayout(vk::Device device,
+                                                                           const BindingsLayout& layout)
     {
-        std::unique_ptr<DescriporManager::VulkanLayoutPools> pool =
-            std::make_unique<DescriporManager::VulkanLayoutPools>();
+        auto it = m_descriptorLayoutMap.find(layout);
+        if (it != m_descriptorLayoutMap.cend())
+        {
+            return &it->second;
+        }
 
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
         bindings.reserve(layout.bindings.size());
@@ -115,12 +162,14 @@ namespace TiRHI::Vulkan::Private
                     {
                         static_assert(false);
                     }
-
-                    // TODO avoid to empalce back each time may combine DescriptorPoolSize
-                    poolSize.emplace_back(
-                        vkBinding.descriptorType,
-                        vkBinding.descriptorCount * CommandPoolCapacity
-                    );
+                    if (vkBinding.descriptorCount > 0)
+                    {
+                        // TODO avoid to empalce back each time may combine DescriptorPoolSize
+                        poolSize.emplace_back(
+                            vkBinding.descriptorType,
+                            vkBinding.descriptorCount * CommandPoolCapacity
+                        );
+                    }
                 },
                 binding);
 
@@ -140,16 +189,13 @@ namespace TiRHI::Vulkan::Private
         if (!vkLayout)
         {
             RHI_LOG_ERROR(L"Failed to create UniqueDescriptorSetLayout", RhiApi::Vulkan);
-
-            return {};
+            return nullptr;
         }
 
-        if (!pool->descriptorSetAllocator.build(&createPool, &allocDescriptorSet, &releaseDescriptorSet, pool.get()))
-        {
-            return {};
-        }
-
-        return pool;
+        vk::DescriptorSetLayout outLayout = vkLayout.get();
+        auto& place = m_descriptorLayoutMap[layout];
+        place = LayoutCache{.layout = std::move(vkLayout), .poolSize = std::move(poolSize)};
+        return &place;
     }
 
 } // TiRHI::Vulkan::Private
