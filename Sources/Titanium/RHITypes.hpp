@@ -134,6 +134,32 @@ namespace TiRHI
 #undef X
     };
 
+#define RHI_SHADER_STAGE_LIST(X)                                                                                       \
+    X(Vertex)                                                                                                          \
+    X(Hull)                                                                                                            \
+    X(Domain)                                                                                                          \
+    X(Geometry)                                                                                                        \
+    X(Pixel)                                                                                                           \
+    X(Amplification)                                                                                                   \
+    X(Mesh)                                                                                                            \
+    X(Compute)                                                                                                         \
+    X(RayGeneration)                                                                                                   \
+    X(AnyHit)                                                                                                          \
+    X(ClosestHit)                                                                                                      \
+    X(Miss)                                                                                                            \
+    X(Intersection)                                                                                                    \
+    X(Callable)                                                                                                        \
+    X(Count)
+
+    enum struct ShaderStage : uint8_t
+    {
+#define X(name) name,
+        RHI_SHADER_STAGE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(ShaderStage, RHI_SHADER_STAGE_LIST)
+
     IMPLEMENT_TO_STRING_TITANIUM(Format, RHI_FORMAT_LIST)
 
 #define RHI_SHADER_STAGE_FLAG_LIST(X)                                                                                  \

@@ -7,6 +7,7 @@
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
+#include <Private/DescriptorManager.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
@@ -32,9 +33,14 @@ namespace TiRHI::Vulkan
 
         struct Private
         {
-            VmaAllocator& getAllocator(Device& device)
+            static VmaAllocator& getAllocator(Device& device)
             {
                 return device.m_vmaAllocator;
+            }
+
+            static TiRHI::Vulkan::Private::DescriporManager& getDescriptorManager(Device& device)
+            {
+                return device.m_descriporManager;
             }
         };
 
@@ -124,6 +130,8 @@ namespace TiRHI::Vulkan
         std::vector<Synchronisation> m_synchronisations;
 
         VolkDeviceTable m_dispatch{};
+
+        TiRHI::Vulkan::Private::DescriporManager m_descriporManager;
 
         VmaAllocator m_vmaAllocator;
 

@@ -4,6 +4,8 @@
 
 namespace TiRHI::Vulkan
 {
+    Sampler::~Sampler() = default;
+
     bool Sampler::build(Device& device)
     {
         vk::Device vkDevice = device.getNativeDevice();

@@ -27,8 +27,8 @@ namespace TiRHI::Vulkan::Private
 
         using DescriptorSetHandle = TiRHI::Vulkan::Private::DescriptorSetHandle;
 
-        std::optional<DescriptorSetHandle> allocDescriptors(vk::Device device, const BindingsLayout& layout,
-                                                            size_t count);
+        std::optional<DescriptorSetHandle> allocAndWriteDescriptors(vk::Device device, const BindingsLayout& layout,
+                                                                    size_t count);
 
         void release(const BindingsLayout& layout, DescriptorSetHandle& descriptorSetHandle);
 
@@ -64,6 +64,8 @@ namespace TiRHI::Vulkan::Private
         tryGetOrCreateAllocator(vk::Device device, const BindingsLayout& layout, size_t count);
 
         DescriporManager::LayoutCache* vkLayoutFromRhiLayout(vk::Device device, const BindingsLayout& layout);
+
+        void writeDescriptors(DescriptorSetHandle& handle, const BindingsLayout& layout, LayoutCache& layoutCache);
     };
 
 } // TiRHI::Vulkan::Private

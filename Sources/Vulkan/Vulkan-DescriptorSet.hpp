@@ -37,14 +37,34 @@ namespace TiRHI::Vulkan
         {
         }
 
+        struct Private
+        {
+            static const TiRHI::Vulkan::Private::DescriptorSetHandle&
+            getDescriptorSetHandle(const DescriptorSet& descriptorSet)
+            {
+                return descriptorSet.m_handle;
+            }
+
+            static vk::DescriptorSet getDescriptorSetFrame(const DescriptorSet& descriptorSet)
+            {
+                return descriptorSet.getDescriptorSetFrame();
+            }
+        };
+
         bool build(Device& device);
 
     private:
+        friend Private;
+
         TiRHI::Vulkan::Private::DescriporManager* m_descriptorManager{nullptr};
 
         TiRHI::Vulkan::Private::DescriptorSetHandle m_handle{};
 
         void reset();
+
+        size_t getNbrOfDescriptorSet();
+
+        vk::DescriptorSet getDescriptorSetFrame() const;
     };
 
 } // namespace TiRHI::Vulkan

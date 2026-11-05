@@ -33,6 +33,11 @@ namespace TiRHI::Vulkan
             {
                 return pipeline.m_pipeline;
             }
+
+            static vk::PipelineLayout getPipelineLayout(const GraphicPipeline& pipeline)
+            {
+                return pipeline.m_pipelineLayout;
+            }
         };
 
         bool build(Device& device);

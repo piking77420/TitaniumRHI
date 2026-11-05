@@ -5,6 +5,7 @@
 #include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Vulkan/Private/Transition.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
+#include <Vulkan/Vulkan-DescriptorSet.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -216,6 +217,19 @@ namespace TiRHI::Vulkan
         BaseCommandList::bindPipeline(graphicPipeline);
         getcurrentFrameCmb().bindPipeline(vk::PipelineBindPoint::eGraphics,
                                           GraphicPipeline::Private::getPipeline(*m_recordState.graphicPipeline));
+    }
+
+    void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
+    {
+        if (!m_recordState.graphicPipeline)
+            return;
+
+        std::array<vk::DescriptorSet, 1> descriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+
+        vk::CommandBuffer cmb = getcurrentFrameCmb();
+        cmb.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                               GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set,
+                               descriporSet, {});
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)

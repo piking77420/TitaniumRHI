@@ -3,11 +3,13 @@
 
 #include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
+#include <Vulkan/Vulkan-Texture.hpp>
+#include <Vulkan/Vulkan-Sampler.hpp>
 
 namespace TiRHI::Vulkan::Private
 {
     std::optional<DescriporManager::DescriptorSetHandle>
-    DescriporManager::allocDescriptors(vk::Device device, const BindingsLayout& layout, size_t count)
+    DescriporManager::allocAndWriteDescriptors(vk::Device device, const BindingsLayout& layout, size_t count)
     {
         if (m_device == VK_NULL_HANDLE)
         {
@@ -47,6 +49,8 @@ namespace TiRHI::Vulkan::Private
             return std::nullopt;
         }
         poolCache->remainingSize -= count;
+
+        writeDescriptors(handle, layout, *layoutCache);
 
         return handle;
     }
@@ -196,6 +200,57 @@ namespace TiRHI::Vulkan::Private
         auto& place = m_descriptorLayoutMap[layout];
         place = LayoutCache{.layout = std::move(vkLayout), .poolSize = std::move(poolSize)};
         return &place;
+    }
+
+    void DescriporManager::writeDescriptors(DescriptorSetHandle& handle, const BindingsLayout& layout,
+                                            LayoutCache& layoutCache)
+    {
+        // Count and reserver
+        // TODO HANDLE BUFFER
+        const size_t writeCount = handle.descriptorCount * layout.bindings.size();
+
+        std::vector<vk::WriteDescriptorSet> writes;
+        writes.reserve(writeCount);
+
+        std::vector<vk::DescriptorImageInfo> vkDescriptorImageInfos;
+        vkDescriptorImageInfos.reserve(writeCount);
+
+        for (size_t i = 0; i < handle.descriptorCount; i++)
+        {
+            for (const auto& binding : layout.bindings)
+            {
+                auto& descriptorWrite = writes.emplace_back();
+
+                std::visit(
+                    [&](auto&& element)
+                    {
+                        // TODO HANDLE ARRAY AN other
+                        descriptorWrite.setDstSet(handle.descriptorSets[i])
+                            .setDstBinding(element.bindingIndex)
+                            .setDstArrayElement(0)
+                            .setDescriptorCount(1);
+                        assert(element.count == 1);
+                    },
+                    binding);
+
+                std::visit(
+                    [&](const DescriptorSet::SampledTexture& sampledTexture)
+                    {
+                        vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+                        auto& descriptorImageInfo = vkDescriptorImageInfos.emplace_back();
+                        descriptorImageInfo.setSampler(Sampler::Private::getSampler(*sampledTexture.sampler))
+                            .setImageView(Texture::Private::getImageView(*sampledTexture.texture))
+                            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+                        descriptorWrite.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+                            .setPImageInfo(&descriptorImageInfo);
+                    },
+                    binding);
+            }
+        }
+
+        m_device.updateDescriptorSets(writes, {});
     }
 
 } // TiRHI::Vulkan::Private

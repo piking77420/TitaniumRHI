@@ -16,6 +16,7 @@ namespace TiRHI::Vulkan
     class Device;
     class RenderPassDescriptor;
     class GraphicPipeline;
+    class DescriptorSet;
 
     class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
                                                Vulkan::GraphicPipeline>
@@ -54,6 +55,8 @@ namespace TiRHI::Vulkan
         void transitionResource(Texture& texture, ResourceState state);
 
         void bindPipeline(const GraphicPipeline& graphicPipeline);
+
+        void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
 
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 

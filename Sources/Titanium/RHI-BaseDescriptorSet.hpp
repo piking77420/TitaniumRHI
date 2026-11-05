@@ -46,6 +46,7 @@ namespace TiRHI
             Sampler* sampler{nullptr};
             auto operator<=>(const SampledTexture&) const = default;
         };
+        // TODO add storage texrture for compute
 
         using Binding = std::variant<SampledTexture>;
 
