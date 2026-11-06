@@ -77,6 +77,12 @@ namespace TiRHI::Vulkan::Private
 
     vk::ShaderStageFlags toVulkan(ShaderStageFlags shaderStageFlags);
 
+    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags);
+
+    vk::ImageAspectFlags imageAspectFlagBitsFromFormat(Format format);
+
+    uint32_t pixelSizeFromFormat(Format format);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

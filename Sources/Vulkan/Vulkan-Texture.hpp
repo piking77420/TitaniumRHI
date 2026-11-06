@@ -14,6 +14,7 @@ namespace TiRHI::Vulkan
     class Texture : public BaseTexture<Texture, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
         Texture() = delete;
         ~Texture();
         Texture(Texture&& other) noexcept;

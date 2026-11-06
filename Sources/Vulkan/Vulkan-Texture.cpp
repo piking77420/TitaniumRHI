@@ -38,8 +38,49 @@ namespace TiRHI::Vulkan
 
     bool Texture::build(Device& device)
     {
+        vk::ImageCreateInfo imageCreateInfo{};
+        imageCreateInfo.setImageType(vk::ImageType::e2D)
+            .setExtent(vk::Extent3D{m_width, m_height, 1})
+            .setMipLevels(1)
+            .setArrayLayers(1)
+            .setFormat(Vulkan::Private::toVulkan(getFormat()))
+            .setSamples(vk::SampleCountFlagBits::e1)
+            .setTiling(vk::ImageTiling::eOptimal)
+            .setUsage(Vulkan::Private::toVulkan(m_flags))
+            .setSharingMode(vk::SharingMode::eExclusive)
+            .setInitialLayout(vk::ImageLayout::eUndefined);
 
+        VmaAllocationCreateInfo allocationInfo{};
+        allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocationInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
+        const VkImageCreateInfo nativeInfo = static_cast<VkImageCreateInfo>(imageCreateInfo);
+
+        const vk::Result result =
+            static_cast<vk::Result>(vmaCreateImage(Device::Private::getAllocator(device), &nativeInfo, &allocationInfo,
+                                                   reinterpret_cast<VkImage*>(&m_image), &m_allocation, nullptr));
+
+        if (result != vk::Result::eSuccess)
+        {
+            RHI_LOG_ERROR(std::format(L"Failed to create image : {} ", getNameW()), Api);
+        }
+
+        vk::ImageSubresourceRange imageSubresourceRange{};
+        imageSubresourceRange.setAspectMask(Vulkan::Private::imageAspectFlagBitsFromFormat(m_format))
+            .setBaseMipLevel(0)
+            .setLevelCount(1)
+            .setBaseArrayLayer(0)
+            .setLayerCount(1);
+
+        vk::ImageViewCreateInfo viewInfo{};
+        viewInfo.setImage(m_image)
+            .setViewType(vk::ImageViewType::e2D)
+            .setFormat(imageCreateInfo.format)
+            .setComponents({vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
+                            vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity})
+            .setSubresourceRange(imageSubresourceRange);
+
+        m_uniqueView = device.getNativeDevice().createImageViewUnique(viewInfo);
 
         return m_image != VK_NULL_HANDLE;
     }

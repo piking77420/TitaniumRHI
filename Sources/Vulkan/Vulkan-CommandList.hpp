@@ -65,6 +65,8 @@ namespace TiRHI::Vulkan
 
         // transfert
 
+        void upload2D(Device& device, Texture& texture, std::span<const std::byte> data);
+
         vk::CommandBuffer getcurrentFrameCmb() const;
 
     private:

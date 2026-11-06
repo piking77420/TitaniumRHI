@@ -2,10 +2,11 @@
 #include <Titanium/Log.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
-#include <Vulkan/Private/RHIToVulkan.hpp>
-#include <Vulkan/Private/Transition.hpp>
+#include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
+#include <Vulkan/Private/Transition.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -201,6 +202,9 @@ namespace TiRHI::Vulkan
         if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE)
             return;
 
+        if (state == ResourceState::CopyDestination)
+            assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
+
         using namespace Private;
 
         const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
@@ -241,6 +245,77 @@ namespace TiRHI::Vulkan
                                   int32_t vertexOffset, uint32_t firstInstance)
     {
         getcurrentFrameCmb().drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    }
+
+    void CommandList::upload2D(Device& device, Texture& texture, std::span<const std::byte> data)
+    {
+        assert(texture.getState() == ResourceState::CopyDestination);
+
+        const VkDeviceSize uploadSize =
+            static_cast<VkDeviceSize>(Vulkan::Private::pixelSizeFromFormat(texture.getFormat())) * texture.getWidth() *
+            texture.getHeight();
+
+        if (data.size() != uploadSize || uploadSize == 0)
+            return;
+
+        VmaAllocator allocator = Device::Private::getAllocator(device);
+
+        struct StagingBuffer
+        {
+            VkBuffer buffer = VK_NULL_HANDLE;
+            VmaAllocation allocation = VK_NULL_HANDLE;
+            void* mappedData = nullptr;
+            VkDeviceSize capacity = 0;
+        };
+
+        // Temporary test implementation: assumes one device.
+        static StagingBuffer staging{};
+
+        if (staging.buffer == VK_NULL_HANDLE)
+        {
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size = uploadSize;
+            bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            VmaAllocationCreateInfo allocationInfo{};
+            allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocationInfo.flags =
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+            VmaAllocationInfo resultInfo{};
+
+            if (vmaCreateBuffer(allocator, &bufferInfo, &allocationInfo, &staging.buffer, &staging.allocation,
+                                &resultInfo) != VK_SUCCESS)
+                return;
+
+            staging.mappedData = resultInfo.pMappedData;
+            staging.capacity = uploadSize;
+        }
+
+        if (uploadSize > staging.capacity)
+            return;
+
+        std::memcpy(staging.mappedData, data.data(), data.size());
+
+        vmaFlushAllocation(allocator, staging.allocation, 0, uploadSize);
+
+        std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
+        bufferImageCopy[0]
+            .setBufferOffset(0)
+            .setBufferRowLength(0)
+            .setBufferImageHeight(0)
+            .setImageSubresource(vk::ImageSubresourceLayers{}
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setMipLevel(0)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setImageOffset({0, 0, 0})
+            .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
+
+        getcurrentFrameCmb().copyBufferToImage(vk::Buffer(staging.buffer), Texture::Private::getImage(texture),
+                                               vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
