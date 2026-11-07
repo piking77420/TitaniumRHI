@@ -141,7 +141,7 @@ namespace TiRHI::Contract
     concept CommandListContract = requires(T& commandList, Device& device, const Viewport& viewport,
                                            const Rect2D& rect2D, const BeginRenderPass& beginRenderPass,
                                            RenderTargets& renderTargets, const GraphicPipeline& graphicPipeline,
-                                           uint32_t uint) {
+                                           void* ptr, uint32_t uint) {
         { commandList.build(device) } -> std::same_as<bool>;
         { commandList.beginRecord() } -> std::same_as<bool>;
         { commandList.endRecord() } -> std::same_as<bool>;
@@ -152,6 +152,7 @@ namespace TiRHI::Contract
         { commandList.bindPipeline(graphicPipeline) } -> std::same_as<void>;
         { commandList.draw(uint, uint, uint, uint) } -> std::same_as<void>;
         { commandList.drawIndexed(uint, uint, uint, uint, uint) } -> std::same_as<void>;
+        { commandList.pushConstant(ptr, uint) } -> std::same_as<void>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);

@@ -32,6 +32,8 @@ namespace TiRHI::Vulkan::Private
 
         void release(const BindingsLayout& layout, DescriptorSetHandle& descriptorSetHandle);
 
+        vk::DescriptorSetLayout getDescriptorSetLayout(const BindingsLayout& layout);
+
     private:
         struct PoolCache
         {

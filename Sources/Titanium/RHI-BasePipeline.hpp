@@ -14,10 +14,13 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI>
+    template<typename T, typename TRHI, typename TDescriptorSet>
     class BasePipeline : public Object<T, TRHI>
     {
     public:
+        using DescriptorSet = TDescriptorSet;
+        using BindingLayout = typename DescriptorSet::BaseDescriptorSet::BindingsLayout;
+
         BasePipeline() = delete;
         ~BasePipeline() = default;
         BasePipeline(const BasePipeline&) = delete;
@@ -27,8 +30,14 @@ namespace TiRHI
         BasePipeline(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BasePipeline<T, TRHI>>);
+            static_assert(std::derived_from<T, BasePipeline<T, TRHI, TDescriptorSet>>);
         }
+
+        struct PushConstant
+        {
+            ShaderStageFlags flag;
+            uint32_t size;
+        };
 
         BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size,
                                 std::string entryPoint)
@@ -45,6 +54,32 @@ namespace TiRHI
             std::memcpy(data.get(), code.data(), size);
             m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
             return static_cast<T&>(*this);
+        }
+
+        void setBindingsLayout(const std::span<const BindingLayout>& bindingLayouts)
+        {
+            m_layout.clear();
+            m_layout.reserve(bindingLayouts.size());
+            for (const auto& layout : bindingLayouts)
+            {
+                m_layout.emplace_back(layout);
+            }
+        }
+
+        std::span<const BindingLayout> getLayouts() const
+        {
+            return m_layout;
+        }
+
+        T& setPushConstant(PushConstant pushConstant)
+        {
+            m_pushConstant.emplace(pushConstant);
+            return static_cast<T&>(*this);
+        }
+
+        const std::optional<PushConstant>& getPushConstant() const
+        {
+            return m_pushConstant;
         }
 
     protected:
@@ -88,11 +123,15 @@ namespace TiRHI
 
     private:
         std::vector<BinaryModule> m_binaryModule;
+
+        std::vector<BindingLayout> m_layout;
+
+        std::optional<PushConstant> m_pushConstant;
     };
 
     // TODO fix typo
-    template<typename T, typename TRHI, typename TRenderPassDescriptor>
-    class BaseGraphicPipiline : public BasePipeline<T, TRHI>
+    template<typename T, typename TRHI, typename TDescriptorSet, typename TRenderPassDescriptor>
+    class BaseGraphicPipiline : public BasePipeline<T, TRHI, TDescriptorSet>
     {
     public:
         using _RenderPassDescriptor = TRenderPassDescriptor;
@@ -104,9 +143,9 @@ namespace TiRHI
         BaseGraphicPipiline(BaseGraphicPipiline&&) noexcept = default;
         BaseGraphicPipiline& operator=(BaseGraphicPipiline&&) noexcept = default;
         BaseGraphicPipiline(TRHI& rhi)
-            : BasePipeline<T, TRHI>(rhi)
+            : BasePipeline<T, TRHI, TDescriptorSet>(rhi)
         {
-            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI, TRenderPassDescriptor>>);
+            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI, TDescriptorSet, TRenderPassDescriptor>>);
         }
 
         T& setRenderPassDescritptor(const _RenderPassDescriptor* renderPassDescriptor)

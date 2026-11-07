@@ -247,6 +247,28 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
 
+    void CommandList::pushConstant(void* data, uint32_t size)
+    {
+        if (data == nullptr || size == 0)
+            return;
+
+        if (!m_recordState.graphicPipeline)
+            return;
+        vk::PipelineLayout layout = GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline);
+        if (layout == VK_NULL_HANDLE)
+        {
+            RHI_LOG_ERROR(L"vk::PipelineLayout was null", Api);
+            return;
+        }
+
+        if (std::optional<GraphicPipeline::PushConstant> pushConstant =
+                m_recordState.graphicPipeline->getPushConstant())
+        {
+            getcurrentFrameCmb().pushConstants(layout, Vulkan::Private::toVulkan(pushConstant->flag), 0u,
+                                               pushConstant->size, data);
+        }
+    }
+
     void CommandList::upload2D(Device& device, Texture& texture, std::span<const std::byte> data)
     {
         assert(texture.getState() == ResourceState::CopyDestination);

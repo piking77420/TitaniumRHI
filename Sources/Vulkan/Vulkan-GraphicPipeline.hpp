@@ -3,6 +3,7 @@
 
 #include <Titanium/RHI-BasePipeline.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Vulkan/Vulkan-DescriptorSet.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -10,7 +11,7 @@ namespace TiRHI::Vulkan
     class Device;
     class RenderPassDescriptor;
 
-    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, RenderPassDescriptor>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, DescriptorSet, RenderPassDescriptor>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;

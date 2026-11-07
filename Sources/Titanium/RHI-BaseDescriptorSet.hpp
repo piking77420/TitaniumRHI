@@ -196,7 +196,6 @@ namespace TiRHI
             return true;
         }
 
-    protected:
         const BindingsLayout& getBindingsLayout() const
         {
             return m_bindingsLayout;

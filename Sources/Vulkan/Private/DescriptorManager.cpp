@@ -78,6 +78,16 @@ namespace TiRHI::Vulkan::Private
         descriptorSetHandle = {}; // reset
     }
 
+    vk::DescriptorSetLayout DescriporManager::getDescriptorSetLayout(const BindingsLayout& layout)
+    {
+        auto it = m_descriptorLayoutMap.find(layout);
+
+        if (it == m_descriptorLayoutMap.end())
+            return VK_NULL_HANDLE;
+
+        return it->second.layout.get();
+    }
+
     std::optional<std::tuple<DescriporManager::PoolCache*, DescriporManager::LayoutCache*, size_t>>
     DescriporManager::tryGetOrCreateAllocator(vk::Device device, const Vulkan::DescriptorSet::BindingsLayout& layout,
                                               size_t count)

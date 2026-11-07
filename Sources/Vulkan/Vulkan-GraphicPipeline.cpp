@@ -126,8 +126,36 @@ namespace TiRHI::Vulkan
         vk::PipelineColorBlendStateCreateInfo colorBlending{};
         colorBlending.setAttachments(colorAttachment);
 
-        // 9. Pipeline layout (no descriptors)
+        std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+        descriptorSetLayouts.reserve(getLayouts().size());
+
+        for (auto& layout : getLayouts())
+        {
+            vk::DescriptorSetLayout descriptorSetLayout =
+                Device::Private::getDescriptorManager(device).getDescriptorSetLayout(layout);
+
+            if (descriptorSetLayout == VK_NULL_HANDLE)
+            {
+                RHI_LOG_ERROR(L"Failed to resolve descriptorSetLayout from pipieline", Api);
+                return false;
+            }
+            descriptorSetLayouts.emplace_back(descriptorSetLayout);
+        }
+
+        // Pipeline layout
         vk::PipelineLayoutCreateInfo layoutInfo{};
+        layoutInfo.setPSetLayouts(descriptorSetLayouts.data())
+            .setSetLayoutCount(static_cast<uint32_t>(descriptorSetLayouts.size()));
+
+        if (const std::optional<PushConstant>& pushConstant = getPushConstant())
+        {
+            vk::PushConstantRange pushConstantRange{};
+            pushConstantRange.setStageFlags(Vulkan::Private::toVulkan(pushConstant->flag))
+                .setOffset(0)
+                .setSize(sizeof(pushConstant->size));
+
+            layoutInfo.setPPushConstantRanges(&pushConstantRange).setPushConstantRangeCount(1);
+        }
 
         m_pipelineLayout = device.getNativeDevice().createPipelineLayout(layoutInfo);
 
