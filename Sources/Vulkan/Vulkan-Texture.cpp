@@ -12,10 +12,12 @@ namespace TiRHI::Vulkan
 
     Texture::~Texture()
     {
+        destroy();
     }
 
     Texture::Texture(Texture&& other) noexcept
         : BaseTexture<Texture, RHI>(std::move(other))
+        , m_device(std::exchange(other.m_device, nullptr))
         , m_image(std::exchange(other.m_image, vk::Image{}))
         , m_uniqueView(std::move(other.m_uniqueView))
         , m_allocation(std::exchange(other.m_allocation, nullptr))
@@ -29,6 +31,7 @@ namespace TiRHI::Vulkan
 
         destroy();
         BaseTexture<Texture, RHI>::operator=(std::move(other));
+        m_device = std::exchange(other.m_device, nullptr);
         m_image = std::exchange(other.m_image, vk::Image{});
         m_uniqueView = std::move(other.m_uniqueView);
         m_allocation = std::exchange(other.m_allocation, nullptr);
@@ -38,6 +41,8 @@ namespace TiRHI::Vulkan
 
     bool Texture::build(Device& device)
     {
+        m_device = &device;
+
         vk::ImageCreateInfo imageCreateInfo{};
         imageCreateInfo.setImageType(vk::ImageType::e2D)
             .setExtent(vk::Extent3D{m_width, m_height, 1})
@@ -88,6 +93,7 @@ namespace TiRHI::Vulkan
     bool Texture::build(Device& device, vk::Image image, Format format)
     {
         m_image = image;
+        m_device = &device;
 
         vk::ImageViewCreateInfo viewInfo{};
 
@@ -111,10 +117,9 @@ namespace TiRHI::Vulkan
         // Only VMA-allocated textures own their VkImage.
         // Swapchain images are owned by VkSwapchainKHR.
         // That allow swap chian to be used as an texture and particulary useful for command list tracking
-        if (m_allocation)
+        if (m_allocation && m_device)
         {
-            // vmaDestroyImage(
-            //, static_cast<VkImage>(m_image), m_allocation);
+            vmaDestroyImage(Device::Private::getAllocator(*m_device), static_cast<VkImage>(m_image), m_allocation);
         }
 
         m_image = vk::Image{};

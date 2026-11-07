@@ -59,6 +59,8 @@ namespace TiRHI::Vulkan
     private:
         friend Private;
 
+        Device* m_device = nullptr;
+
         vk::Image m_image = VK_NULL_HANDLE;
 
         vk::UniqueImageView m_uniqueView;
