@@ -1,6 +1,7 @@
 #ifndef TITANIUM_RHI_BASE_RHI_H
 #define TITANIUM_RHI_BASE_RHI_H
 
+#include <algorithm>
 #include <concepts>
 #include <span>
 
@@ -67,9 +68,7 @@ namespace TiRHI
 
         bool m_useDebugLabel = false;
     };
-#ifdef max
-#undef max
-#endif
+
     template<typename Derived>
     inline BaseRHI<Derived>::BaseRHI(const RhiCreate& rhiCreate)
         : m_framesInFlight(std::min(MaxFramesInFlight, rhiCreate.frameInFlight))

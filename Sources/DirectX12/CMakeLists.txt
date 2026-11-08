@@ -5,6 +5,10 @@ target_sources(
     PRIVATE
         Private/DescriptorAllocator.cpp
         Private/DescriptorAllocator.hpp
+        Private/DescriptorHandle.cpp
+        Private/DescriptorHandle.hpp
+        Private/DescriptorManager.cpp
+        Private/DescriptorManager.hpp
         Private/RhiToDirectX12.cpp
         Private/RhiToDirectX12.hpp
         DirectX12-AcquireFrame.cpp

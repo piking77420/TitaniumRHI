@@ -98,26 +98,10 @@ namespace TiRHI
             return m_binaryModule;
         }
 
-        template<ShaderStage stage>
-        bool getModule(const BinaryModule** const module)
-        {
-            auto it =
-                std::ranges::find_if(m_binaryModule, [](const BinaryModule& binary) { return binary.stage == stage; });
-
-            if (it == m_binaryModule.end())
-            {
-                *module = nullptr;
-                return false;
-            }
-
-            *module = &(*it);
-            return true;
-        }
-
         bool getModule(const BinaryModule** const module, ShaderStage stage)
         {
-            auto it =
-                std::ranges::find_if(m_binaryModule, [](const BinaryModule& binary) { return binary.stage == stage; });
+            auto it = std::ranges::find_if(m_binaryModule,
+                                           [&stage](const BinaryModule& binary) { return binary.stage == stage; });
 
             if (it == m_binaryModule.end())
             {
@@ -127,15 +111,6 @@ namespace TiRHI
 
             *module = &(*it);
             return true;
-        }
-
-        template<ShaderStage stage>
-        std::optional<const BinaryModule*> getModule()
-        {
-            const BinaryModule* module{nullptr};
-            const bool success = getModule<stage>(&module);
-
-            return success ? std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
         }
 
         std::optional<const BinaryModule*> getModule(ShaderStage stage)

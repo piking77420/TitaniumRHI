@@ -1,12 +1,15 @@
 #ifndef TITANIUM_DIRECTX12_DEVICE_H
 #define TITANIUM_DIRECTX12_DEVICE_H
 
+#include <span>
+
 #include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 
 #include <DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
+#include <DirectX12/Private/DescriptorManager.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -35,7 +38,11 @@ namespace TiRHI::DirectX12
             {
                 return device.m_descriptorAllocatorSampler;
             }
-            // TODO
+
+            static DirectX12::Private::DescriptorManager& getDescriptorManager(Device& device)
+            {
+                return device.m_descritproManager;
+            }
         };
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
@@ -91,6 +98,7 @@ namespace TiRHI::DirectX12
 
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
+        DirectX12::Private::DescriptorManager m_descritproManager;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
 

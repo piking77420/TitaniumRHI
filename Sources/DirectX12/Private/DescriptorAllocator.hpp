@@ -10,10 +10,10 @@
 #include <utility>
 
 #include <Titanium/RHI-SpecialMembers.hpp>
-#include <Titanium/Private/HandleAllocator.hpp>
 #include <Titanium/Private/StrongTypeId.hpp>
 #include <Titanium/RHI-Object.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
+#include <DirectX12/Private/DescriptorHandle.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -29,17 +29,21 @@ namespace TiRHI::DirectX12::Private
         ~DescriptorAllocator() = default;
         RHI_MOVE_ONLY(DescriptorAllocator);
 
-        static constexpr size_t BaseCapacity = 64;
+        static constexpr size_t Capacity = 64;
 
         struct Pool
         {
             D3D12_CPU_DESCRIPTOR_HANDLE baseCpuPtr;
 
             MComPtr<ID3D12DescriptorHeap> heap;
-        };
 
-        using Allocator = TiRHI::Private::HandleAllocator<Pool, D3D12_CPU_DESCRIPTOR_HANDLE, BaseCapacity>;
-        using Handle = Allocator::Handle;
+            std::bitset<Capacity> availableMask;
+
+            Pool()
+            {
+                availableMask.set();
+            }
+        };
 
         D3D12_DESCRIPTOR_HEAP_TYPE getDescriptorHeapType()
         {
@@ -54,19 +58,23 @@ namespace TiRHI::DirectX12::Private
 
         bool build(Device& device);
 
-        std::optional<Handle> create(Device& device);
+        std::optional<DescriptorHandle> create(Device& device);
 
-        void release(std::optional<Handle>& cpuDescriptorHandle);
+        void release(DescriptorHandle& cpuDescriptorHandle);
 
     private:
         D3D12_DESCRIPTOR_HEAP_TYPE m_descriptorHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
         UINT m_descriptorSize = 0;
 
-        TiRHI::Private::HandleAllocator<Pool, D3D12_CPU_DESCRIPTOR_HANDLE, 64> m_handleAllocator;
-    };
+        std::vector<Pool> m_pools;
 
-    using DescriptorHandle = DescriptorAllocator::Handle;
+        std::optional<DescriptorHandle> createFromPool(std::size_t poolIndex);
+
+        Pool createPool(MComPtr<ID3D12Device> device);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE initHandle(Pool& pool, size_t indexInPool);
+    };
 
 } // namespace TiRHI::DirectX12::Private
 

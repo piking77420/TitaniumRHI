@@ -44,6 +44,8 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device);
 
+        bool isValid() const;
+
     private:
         friend Private;
 

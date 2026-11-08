@@ -75,6 +75,40 @@ namespace TiRHI::DirectX12::Private
         }
         return DXGI_FORMAT_UNKNOWN;
     }
+
+    D3D12_SHADER_VISIBILITY toDirectX12(ShaderStageFlags flag)
+    {
+        const uint32_t value = static_cast<uint32_t>(flag);
+
+        switch (value)
+        {
+        case static_cast<uint32_t>(ShaderStageFlags::Vertex):
+            return D3D12_SHADER_VISIBILITY_VERTEX;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Hull):
+            return D3D12_SHADER_VISIBILITY_HULL;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Domain):
+            return D3D12_SHADER_VISIBILITY_DOMAIN;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Geometry):
+            return D3D12_SHADER_VISIBILITY_GEOMETRY;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Pixel):
+            return D3D12_SHADER_VISIBILITY_PIXEL;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Amplification):
+            return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Mesh):
+            return D3D12_SHADER_VISIBILITY_MESH;
+
+        default:
+            // Compute, RayTracing, and multi-stage masks.
+            return D3D12_SHADER_VISIBILITY_ALL;
+        }
+    }
+
     D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE toDirectX12(LoadOp loadOp)
     {
         switch (loadOp)

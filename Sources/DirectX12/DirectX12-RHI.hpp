@@ -7,10 +7,6 @@
 
 #include <Titanium/RHI-SpecialMembers.hpp>
 #include <stdint.h>
-#include <d3d12.h>
-#include <dxgidebug.h>
-
-#include <dxgi1_6.h>
 #include <DirectX12-Header.hpp>
 #include <DirectX12-Factory.hpp>
 #include <DirectX12-Device.hpp>

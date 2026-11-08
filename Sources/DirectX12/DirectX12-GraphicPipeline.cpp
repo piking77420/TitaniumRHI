@@ -13,43 +13,35 @@ namespace TiRHI::DirectX12
 
     bool GraphicPipeline::build(Device& device)
     {
-
-        // Empty root signature
-        D3D12_ROOT_SIGNATURE_DESC rootDesc{};
-        rootDesc.NumParameters = 0;
-        rootDesc.pParameters = nullptr;
-        rootDesc.NumStaticSamplers = 0;
-        rootDesc.pStaticSamplers = nullptr;
-        rootDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-        // Serialize and create the root signature
-        MComPtr<ID3DBlob> signatureBlob;
-        MComPtr<ID3DBlob> errorBlob;
-
-        HRESULT hr = D3D12SerializeRootSignature(&rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-
-        if (FAILED(hr))
+        if (!device.isValid())
             return false;
 
-        hr = device.getNativeDevice()->CreateRootSignature(
-            0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
+        std::span<const BindingLayout> bindingsLayout = getLayouts();
+        auto& descriptorManager = Device::Private::getDescriptorManager(device);
 
-        if (FAILED(hr))
-            return false;
+        if (!bindingsLayout.empty())
+        {
+            m_D3D12DescriptorRootSignatureLayout =
+                descriptorManager.getOrCreateD3D12DescriptorRootSignatureLayout(bindingsLayout);
+        }
+        else
+        {
+            m_D3D12DescriptorRootSignatureLayout = descriptorManager.getEmptyDescriptorRootSignatureLayout();
+        }
 
         // Graphics pipeline
         D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
-
-        desc.pRootSignature = m_rootSignature.Get();
+        desc.pRootSignature =
+            m_D3D12DescriptorRootSignatureLayout ? m_D3D12DescriptorRootSignatureLayout->rootSignature.Get() : nullptr;
 
         const BinaryModule* vertexModule = nullptr;
 
-        if (!getModule<ShaderStage::Vertex>(&vertexModule))
+        if (!getModule(&vertexModule, ShaderStage::Vertex))
             return false;
 
         const BinaryModule* pixel = nullptr;
 
-        if (!getModule<ShaderStage::Pixel>(&pixel))
+        if (!getModule(&pixel, ShaderStage::Pixel))
             return false;
 
         desc.VS = {vertexModule->data.get(), vertexModule->size};

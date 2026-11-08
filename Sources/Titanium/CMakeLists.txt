@@ -5,7 +5,6 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
-        Private/HandleAllocator.hpp
         Private/StrongTypeId.cpp
         Private/StrongTypeId.hpp
         Log.hpp

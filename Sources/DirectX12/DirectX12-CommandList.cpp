@@ -96,6 +96,7 @@ namespace TiRHI::DirectX12
         if (FAILED(hrCommandList))
             return false;
 
+        resetOnRecord();
         return true;
     }
 
@@ -306,9 +307,10 @@ namespace TiRHI::DirectX12
         if (!m_recordState.graphicPipeline)
             return;
 
-        ID3D12RootSignature* root = GraphicPipeline::Private::getSignature(*m_recordState.graphicPipeline);
+        const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
+            GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
 
-        m_commandList->SetGraphicsRootSignature(root);
+        bindRootSignature(root ? root->rootSignature.Get() : nullptr);
         ID3D12PipelineState* state = GraphicPipeline::Private::getPipelineState(*m_recordState.graphicPipeline);
         m_commandList->SetPipelineState(state);
 
@@ -324,6 +326,25 @@ namespace TiRHI::DirectX12
                                   int32_t vertexOffset, uint32_t firstInstance)
     {
         m_commandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    }
+
+    void CommandList::pushConstant(void* data, size_t size)
+    {
+        assert(false && "TODO");
+    }
+
+    void CommandList::resetOnRecord()
+    {
+        m_currentRootSignature = nullptr;
+    }
+
+    void CommandList::bindRootSignature(ID3D12RootSignature* rootSignature)
+    {
+        if (m_currentRootSignature == rootSignature)
+            return;
+
+        m_commandList->SetGraphicsRootSignature(rootSignature);
+        m_currentRootSignature = rootSignature;
     }
 
     bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)

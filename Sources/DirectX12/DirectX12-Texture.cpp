@@ -37,6 +37,11 @@ namespace TiRHI::DirectX12
         return m_image;
     }
 
+    bool Texture::isValid() const
+    {
+        return m_image && m_cpuHandle;
+    }
+
     bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
     {
         if (m_cpuHandle)

@@ -52,6 +52,8 @@ namespace TiRHI::DirectX12
         void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
                          uint32_t firstInstance);
 
+        void pushConstant(void* data, size_t size);
+
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
             return m_commandList.Get();
@@ -62,6 +64,11 @@ namespace TiRHI::DirectX12
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
+        ID3D12RootSignature* m_currentRootSignature = nullptr;
+
+        void resetOnRecord();
+
+        void bindRootSignature(ID3D12RootSignature* rootSignature);
 
         bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
     };
