@@ -42,6 +42,7 @@ namespace TiRHI
 #include <DirectX12/DirectX12-Texture.hpp>
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
 #include <DirectX12/DirectX12-Sampler.hpp>
+#include <DirectX12/DirectX12-DescriptorSet.hpp>
 
 namespace TiRHI
 {
@@ -56,6 +57,7 @@ namespace TiRHI
     using Texture = DirectX12::Texture;
     using GraphicPipeline = DirectX12::GraphicPipeline;
     using Sampler = DirectX12::Sampler;
+    using DescriptorSet = DirectX12::DescriptorSet;
 }
 
 #elif defined(TITANIUM_METAL)

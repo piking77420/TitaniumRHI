@@ -11,6 +11,8 @@ target_sources(
         DirectX12-AcquireFrame.hpp
         DirectX12-CommandList.cpp
         DirectX12-CommandList.hpp
+        DirectX12-DescriptorSet.cpp
+        DirectX12-DescriptorSet.hpp
         DirectX12-Device.cpp
         DirectX12-Device.hpp
         DirectX12-Header.hpp
