@@ -29,8 +29,6 @@ namespace TiRHI::Vulkan
             return m_instance.getInstance();
         }
 
-        std::vector<vk::PhysicalDevice> getValidPhysicalDevices();
-
         [[nodiscard]] RhiApi getApi() const
         {
             return RhiApi::Vulkan;
@@ -42,6 +40,8 @@ namespace TiRHI::Vulkan
         void enumerateAvailableAdatper();
 
         bool isPhysicalDeviceValid(vk::PhysicalDevice physicalDevice);
+
+        std::vector<vk::PhysicalDevice> getValidPhysicalDevices();
     };
 }
 

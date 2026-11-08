@@ -42,6 +42,13 @@ namespace TiRHI::Vulkan
             {
                 return device.m_descriporManager;
             }
+
+            static uint64_t getCompletedSubmissionValue(const Device& device)
+            {
+                return device.m_device->getSemaphoreCounterValue(device.m_timeLine.timeLineSemaphore.get());
+            }
+
+            static uint64_t getCurrentFrameSubmissionValue(const Device& device);
         };
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
@@ -128,6 +135,13 @@ namespace TiRHI::Vulkan
         };
 
         std::vector<Synchronisation> m_synchronisations;
+
+        struct TimeLine
+        {
+            vk::UniqueSemaphore timeLineSemaphore;
+            uint64_t nextSubmissionValue = 1;
+            std::array<uint64_t, MaxFramesInFlight> nextSubmissionValueFrames;
+        } m_timeLine;
 
         VolkDeviceTable m_dispatch{};
 

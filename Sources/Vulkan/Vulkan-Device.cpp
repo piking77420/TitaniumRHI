@@ -169,8 +169,32 @@ namespace TiRHI::Vulkan
                 .setSignalSemaphores(data.signalSemaphores);
         }
 
+        // https://vulkan.lunarg.com/doc/view/1.4.350.0/windows/antora/tutorial/latest/Synchronization/Frame_in_Flight/03_resource_lifetimes.html
+        const uint64_t submissionValue = m_timeLine.nextSubmissionValue++;
+        const vk::Semaphore semaphore = m_timeLine.timeLineSemaphore.get();
+        auto& last = storage.back();
+        last.signalSemaphores.push_back(semaphore);
+
+        // One value per signal semaphore; binary semaphore values are ignored.
+        std::vector<uint64_t> signalValues(last.signalSemaphores.size(), 0);
+        signalValues.back() = submissionValue;
+
+        vk::TimelineSemaphoreSubmitInfo timelineInfo{};
+        timelineInfo.setSignalSemaphoreValues(signalValues);
+        submitInfos.back().setSignalSemaphores(last.signalSemaphores).setPNext(&timelineInfo);
+
         // The current frame fence must already have been waited on and reset.
+
+        // wait fence
+        {
+            std::array fences = {getNativeInFlightFence()};
+            const VkFence* vkFences = reinterpret_cast<const VkFence*>(fences.data());
+            const uint32_t fencesCount = static_cast<uint32_t>(fences.size());
+            m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
+        }
         getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
+
+        m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
 
         if (!swapChains.empty())
         {
@@ -193,7 +217,6 @@ namespace TiRHI::Vulkan
 
         m_dispatch.vkWaitForFences(m_device.get(), fencesCount, vkFences, vk::True,
                                    std::numeric_limits<uint64_t>::max());
-        m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
     }
 
     bool Device::checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures)
@@ -262,9 +285,12 @@ namespace TiRHI::Vulkan
 
         std::vector<const char*> getDeviceExtensionName = getDeviceVkExtensionName(featuresToEnable);
 
+        vk::PhysicalDeviceTimelineSemaphoreFeatures enabledTimeline{};
+        enabledTimeline.setTimelineSemaphore(vk::True);
+
         vk::DeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = vk::StructureType::eDeviceCreateInfo;
-        deviceCreateInfo.pNext = nullptr;
+        deviceCreateInfo.pNext = &enabledTimeline;
         deviceCreateInfo.pQueueCreateInfos = queueCreateInfo.data();
         deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfo.size());
         deviceCreateInfo.pEnabledFeatures = nullptr;
@@ -296,7 +322,17 @@ namespace TiRHI::Vulkan
             isOk &= s.inFlightFence.get() != VK_NULL_HANDLE;
         }
 
-        return isOk;
+        //
+        vk::SemaphoreTypeCreateInfo typeInfo{};
+        typeInfo.setSemaphoreType(vk::SemaphoreType::eTimeline).setInitialValue(0);
+
+        vk::SemaphoreCreateInfo createInfo{};
+        createInfo.setPNext(&typeInfo);
+        m_timeLine.timeLineSemaphore = m_device->createSemaphoreUnique(createInfo);
+        m_timeLine.nextSubmissionValue = 1;
+        m_timeLine.nextSubmissionValueFrames.fill(0);
+
+        return isOk && m_timeLine.timeLineSemaphore;
     }
 
     vk::Fence Device::getNativeInFlightFence() const
@@ -341,6 +377,13 @@ namespace TiRHI::Vulkan
         }
 
         return true;
+    }
+
+    uint64_t Device::Private::getCurrentFrameSubmissionValue(const Device& device)
+    {
+        const size_t currentFrame = device.getRHI().getCurrentFrame();
+
+        return device.m_timeLine.nextSubmissionValueFrames[currentFrame];
     }
 
 } // namespace TiRHI::Vulkan
