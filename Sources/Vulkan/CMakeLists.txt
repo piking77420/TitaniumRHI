@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/DeferredDeletionQueue.cpp
+        Private/DeferredDeletionQueue.hpp
         Private/DescriptorManager.cpp
         Private/DescriptorManager.cpp
         Private/DescriptorSetHandle.hpp
@@ -11,6 +13,8 @@ target_sources(
         Private/RHIToVulkan.cpp
         Private/RHIToVulkan.hpp
         Private/Transition.hpp
+        Private/UploadManager.cpp
+        Private/UploadManager.hpp
         Private/VulkanToRHI.cpp
         Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp

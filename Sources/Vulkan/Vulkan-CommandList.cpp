@@ -15,6 +15,20 @@ namespace TiRHI::Vulkan
     {
     }
 
+    CommandList::~CommandList()
+    {
+        const vk::Device device = m_device->getNativeDevice();
+        const VmaAllocator allocator = Device::Private::getAllocator(*m_device);
+        Vulkan::Private::UploadManager& uploads = Device::Private::getUploadManager(*m_device);
+
+        // TODO kind of ugnly because there 2 peaple who delete staging buffer
+        // command list here and uplaod manager
+        for (auto& batch : m_pendingUploads)
+        {
+            uploads.retire(std::exchange(batch, Vulkan::Private::UploadBatch{}), m_lastSubmissionValue);
+        }
+    }
+
     CommandList& CommandList::operator=(CommandList&& other) noexcept
     {
         if (this == &other)
@@ -66,7 +80,8 @@ namespace TiRHI::Vulkan
         }
 
         m_volkTable = device.getVolkTable();
-        return true;
+        m_device = &device;
+        return m_device && m_volkTable;
     }
 
     bool CommandList::beginRecord()
@@ -280,64 +295,43 @@ namespace TiRHI::Vulkan
         if (data.size() != uploadSize || uploadSize == 0)
             return;
 
-        VmaAllocator allocator = Device::Private::getAllocator(device);
+        Vulkan::Private::UploadManager& uploads = Device::Private::getUploadManager(*m_device);
+        Vulkan::Private::StagingBuffer stagingBuffer = uploads.acquire(*m_device, uploadSize);
 
-        struct StagingBuffer
+        if (stagingBuffer) // Use an scop exit
         {
-            VkBuffer buffer = VK_NULL_HANDLE;
-            VmaAllocation allocation = VK_NULL_HANDLE;
+            VmaAllocator allocator = stagingBuffer.getAllocator();
             void* mappedData = nullptr;
-            VkDeviceSize capacity = 0;
-        };
+            {
+                const VkResult result = vmaMapMemory(allocator, stagingBuffer.getAllocation(), &mappedData);
+                VulkanCheckErrorStatus(result);
 
-        // Temporary test implementation: assumes one device.
-        static StagingBuffer staging{};
+                std::memcpy(mappedData, data.data(), data.size());
 
-        if (staging.buffer == VK_NULL_HANDLE)
-        {
-            VkBufferCreateInfo bufferInfo{};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            bufferInfo.size = uploadSize;
-            bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                const VkResult flushResult =
+                    vmaFlushAllocation(allocator, stagingBuffer.getAllocation(), 0, uploadSize);
+                VulkanCheckErrorStatus(flushResult);
+                vmaUnmapMemory(allocator, stagingBuffer.getAllocation());
+            }
 
-            VmaAllocationCreateInfo allocationInfo{};
-            allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
-            allocationInfo.flags =
-                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
+            bufferImageCopy[0]
+                .setBufferOffset(0)
+                .setBufferRowLength(0)
+                .setBufferImageHeight(0)
+                .setImageSubresource(vk::ImageSubresourceLayers{}
+                                         .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                         .setMipLevel(0)
+                                         .setBaseArrayLayer(0)
+                                         .setLayerCount(1))
+                .setImageOffset({0, 0, 0})
+                .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
 
-            VmaAllocationInfo resultInfo{};
-
-            if (vmaCreateBuffer(allocator, &bufferInfo, &allocationInfo, &staging.buffer, &staging.allocation,
-                                &resultInfo) != VK_SUCCESS)
-                return;
-
-            staging.mappedData = resultInfo.pMappedData;
-            staging.capacity = uploadSize;
+            getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), Texture::Private::getImage(texture),
+                                                   vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
         }
 
-        if (uploadSize > staging.capacity)
-            return;
-
-        std::memcpy(staging.mappedData, data.data(), data.size());
-
-        vmaFlushAllocation(allocator, staging.allocation, 0, uploadSize);
-
-        std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
-        bufferImageCopy[0]
-            .setBufferOffset(0)
-            .setBufferRowLength(0)
-            .setBufferImageHeight(0)
-            .setImageSubresource(vk::ImageSubresourceLayers{}
-                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                     .setMipLevel(0)
-                                     .setBaseArrayLayer(0)
-                                     .setLayerCount(1))
-            .setImageOffset({0, 0, 0})
-            .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
-
-        getcurrentFrameCmb().copyBufferToImage(vk::Buffer(staging.buffer), Texture::Private::getImage(texture),
-                                               vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
+        m_pendingUploads[getRHI().getCurrentFrame()].buffers.emplace_back(std::move(stagingBuffer));
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
@@ -359,8 +353,8 @@ namespace TiRHI::Vulkan
 
         vk::ImageMemoryBarrier barrier{};
 
-        barrier.oldLayout = Private::toVulkanImageLayout(current);
-        barrier.newLayout = Private::toVulkanImageLayout(target);
+        barrier.oldLayout = Vulkan::Private::toVulkanImageLayout(current);
+        barrier.newLayout = Vulkan::Private::toVulkanImageLayout(target);
 
         barrier.srcAccessMask = getAccessMask(current);
         barrier.dstAccessMask = getAccessMask(target);

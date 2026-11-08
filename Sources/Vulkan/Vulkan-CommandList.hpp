@@ -9,6 +9,7 @@
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
+#include <Vulkan/Private/UploadManager.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -25,11 +26,24 @@ namespace TiRHI::Vulkan
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
 
         CommandList() = delete;
-        ~CommandList() = default;
+        ~CommandList();
         CommandList(const CommandList&) = delete;
         CommandList& operator=(const CommandList&) = delete;
         CommandList(CommandList&&) noexcept = default;
         CommandList& operator=(CommandList&& other) noexcept;
+
+        struct Private
+        {
+            static std::array<Vulkan::Private::UploadBatch, MaxFramesInFlight>& getUploadBatch(CommandList& commandlist)
+            {
+                return commandlist.m_pendingUploads;
+            }
+
+            static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
+            {
+                commandlist.m_lastSubmissionValue = lastSubmissionValue;
+            }
+        };
 
         explicit CommandList(RHI& rhi);
 
@@ -70,6 +84,8 @@ namespace TiRHI::Vulkan
         vk::CommandBuffer getcurrentFrameCmb() const;
 
     private:
+        friend Private;
+
         vk::UniqueCommandPool m_commandPool;
 
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
@@ -81,6 +97,12 @@ namespace TiRHI::Vulkan
         {
             std::vector<vk::ClearValue> clearValues;
         } m_vulkanStorage;
+
+        Device* m_device{nullptr}; // TODO fix this ugly
+
+        std::array<Vulkan::Private::UploadBatch, MaxFramesInFlight> m_pendingUploads;
+
+        uint64_t m_lastSubmissionValue = 0;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
     };

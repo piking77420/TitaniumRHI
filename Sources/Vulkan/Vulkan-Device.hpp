@@ -8,6 +8,8 @@
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
 #include <Private/DescriptorManager.hpp>
+#include <Private/DeferredDeletionQueue.hpp>
+#include <Private/UploadManager.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
@@ -18,13 +20,28 @@ namespace TiRHI::Vulkan
     class CommandList;
     class AcquiredFrame;
 
+    struct Allocator
+    {
+        VmaAllocator vmaAllocator = VK_NULL_HANDLE;
+
+        Allocator() = default;
+        ~Allocator()
+        {
+            if (vmaAllocator)
+            {
+                vmaDestroyAllocator(vmaAllocator);
+                vmaAllocator = nullptr;
+            }
+        }
+    };
+
     class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
 
         Device() = delete;
-        ~Device();
+        ~Device() = default;
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
         Device(Device&&) noexcept = default;
@@ -35,7 +52,7 @@ namespace TiRHI::Vulkan
         {
             static VmaAllocator& getAllocator(Device& device)
             {
-                return device.m_vmaAllocator;
+                return device.m_vmaAllocator.vmaAllocator;
             }
 
             static TiRHI::Vulkan::Private::DescriporManager& getDescriptorManager(Device& device)
@@ -43,12 +60,17 @@ namespace TiRHI::Vulkan
                 return device.m_descriporManager;
             }
 
-            static uint64_t getCompletedSubmissionValue(const Device& device)
+            static uint64_t getCurrentFrameSubmissionValue(const Device& device);
+
+            static Vulkan::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
             {
-                return device.m_device->getSemaphoreCounterValue(device.m_timeLine.timeLineSemaphore.get());
+                return device.m_deferredDeletionQueue;
             }
 
-            static uint64_t getCurrentFrameSubmissionValue(const Device& device);
+            static Vulkan::Private::UploadManager& getUploadManager(Device& device)
+            {
+                return device.m_uploadManager;
+            }
         };
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
@@ -139,7 +161,7 @@ namespace TiRHI::Vulkan
         struct TimeLine
         {
             vk::UniqueSemaphore timeLineSemaphore;
-            uint64_t nextSubmissionValue = 1;
+            uint64_t nextSubmissionValue = 0;
             std::array<uint64_t, MaxFramesInFlight> nextSubmissionValueFrames;
         } m_timeLine;
 
@@ -147,7 +169,11 @@ namespace TiRHI::Vulkan
 
         TiRHI::Vulkan::Private::DescriporManager m_descriporManager;
 
-        VmaAllocator m_vmaAllocator;
+        Allocator m_vmaAllocator;
+
+        Vulkan::Private::DeferredDeletionQueue m_deferredDeletionQueue;
+
+        Vulkan::Private::UploadManager m_uploadManager;
 
         bool checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures);
 

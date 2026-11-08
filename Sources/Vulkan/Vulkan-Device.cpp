@@ -55,17 +55,9 @@ namespace TiRHI::Vulkan
         return out;
     }
 
-    Device::~Device()
-    {
-        if (m_vmaAllocator)
-        {
-            vmaDestroyAllocator(m_vmaAllocator);
-            m_vmaAllocator = nullptr;
-        }
-    }
-
     Device::Device(RHI& rhi)
         : BaseDevice(rhi)
+
     {
     }
 
@@ -170,7 +162,7 @@ namespace TiRHI::Vulkan
         }
 
         // https://vulkan.lunarg.com/doc/view/1.4.350.0/windows/antora/tutorial/latest/Synchronization/Frame_in_Flight/03_resource_lifetimes.html
-        const uint64_t submissionValue = m_timeLine.nextSubmissionValue++;
+        const uint64_t submissionValue = ++m_timeLine.nextSubmissionValue;
         const vk::Semaphore semaphore = m_timeLine.timeLineSemaphore.get();
         auto& last = storage.back();
         last.signalSemaphores.push_back(semaphore);
@@ -194,6 +186,16 @@ namespace TiRHI::Vulkan
         }
         getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
 
+        for (const auto& desc : submitPresentDesc)
+        {
+            if (desc.commandList)
+            {
+                CommandList::Private::setLastSubmissionValue(*desc.commandList, submissionValue);
+                Vulkan::Private::UploadBatch& batch =
+                    CommandList::Private::getUploadBatch(*desc.commandList)[getRHI().getCurrentFrame()];
+                m_uploadManager.retire(std::move(batch), submissionValue);
+            }
+        }
         m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
 
         if (!swapChains.empty())
@@ -217,6 +219,11 @@ namespace TiRHI::Vulkan
 
         m_dispatch.vkWaitForFences(m_device.get(), fencesCount, vkFences, vk::True,
                                    std::numeric_limits<uint64_t>::max());
+
+        // TODO COLLECT DATA
+        const uint64_t completed = m_device->getSemaphoreCounterValue(m_timeLine.timeLineSemaphore.get());
+        m_deferredDeletionQueue.collect(completed);
+        m_uploadManager.collect(*this, completed);
     }
 
     bool Device::checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures)
@@ -329,7 +336,6 @@ namespace TiRHI::Vulkan
         vk::SemaphoreCreateInfo createInfo{};
         createInfo.setPNext(&typeInfo);
         m_timeLine.timeLineSemaphore = m_device->createSemaphoreUnique(createInfo);
-        m_timeLine.nextSubmissionValue = 1;
         m_timeLine.nextSubmissionValueFrames.fill(0);
 
         return isOk && m_timeLine.timeLineSemaphore;
@@ -367,12 +373,11 @@ namespace TiRHI::Vulkan
 
         createInfo.pVulkanFunctions = &functions;
 
-        VkResult result = vmaCreateAllocator(&createInfo, &m_vmaAllocator);
+        VkResult result = vmaCreateAllocator(&createInfo, &m_vmaAllocator.vmaAllocator);
 
         if (result != VK_SUCCESS)
         {
-            RHI_LOG_ERROR(L"Failed to create vma allocator", RhiApi::Vulkan);
-            m_vmaAllocator = nullptr;
+            RHI_LOG_FATAL(L"Failed to create vma allocator", RhiApi::Vulkan);
             return false;
         }
 
