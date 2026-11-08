@@ -65,6 +65,7 @@ namespace TiRHI::Vulkan
 
     AcquiredFrame SwapChain::acquireNextImage(Device& device)
     {
+        // TODO CHECK IF SUBOTIMAL
         {
             const vk::ResultValue<uint32_t> result = device.getNativeDevice().acquireNextImageKHR(
                 m_swapchain.get(), std::numeric_limits<uint64_t>::max(), getNativeImageAvailableSemaphore());

@@ -56,7 +56,7 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
-        void setBindingsLayout(const std::span<const BindingLayout>& bindingLayouts)
+        T& setBindingsLayout(const std::span<const BindingLayout>& bindingLayouts)
         {
             m_layout.clear();
             m_layout.reserve(bindingLayouts.size());
@@ -64,6 +64,8 @@ namespace TiRHI
             {
                 m_layout.emplace_back(layout);
             }
+
+            return static_cast<T&>(*this);
         }
 
         std::span<const BindingLayout> getLayouts() const
@@ -112,11 +114,34 @@ namespace TiRHI
             return true;
         }
 
+        bool getModule(const BinaryModule** const module, ShaderStage stage)
+        {
+            auto it =
+                std::ranges::find_if(m_binaryModule, [](const BinaryModule& binary) { return binary.stage == stage; });
+
+            if (it == m_binaryModule.end())
+            {
+                *module = nullptr;
+                return false;
+            }
+
+            *module = &(*it);
+            return true;
+        }
+
         template<ShaderStage stage>
         std::optional<const BinaryModule*> getModule()
         {
             const BinaryModule* module{nullptr};
             const bool success = getModule<stage>(&module);
+
+            return success ? std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
+        }
+
+        std::optional<const BinaryModule*> getModule(ShaderStage stage)
+        {
+            const BinaryModule* module{nullptr};
+            const bool success = getModule(&module, stage);
 
             return success ? std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
         }
