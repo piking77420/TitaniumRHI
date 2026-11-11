@@ -22,6 +22,16 @@ namespace TiRHI::DirectX12
 
 namespace TiRHI::DirectX12::Private
 {
+    // TODO:
+    // - Use one large shader-visible ID3D12DescriptorHeap per heap type.
+    // - Store both CPU and GPU base descriptor handles.
+    // - Allocate descriptors using indexed slots.
+    // - Track occupied slots using std::bitset or a dynamic bitset.
+    // - Support contiguous descriptor ranges for descriptor tables.
+    // - Defer descriptor reuse until GPU execution has finished.
+    // - DescriptorHandle should contain CPU/GPU handles.
+    // - Keep allocation metadata inside DescriptorAllocator.
+
     class DescriptorAllocator
     {
     public:
