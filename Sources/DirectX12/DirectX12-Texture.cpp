@@ -17,7 +17,12 @@ namespace TiRHI::DirectX12
     {
         const std::wstring name = getNameW();
         m_image->SetName(name.c_str());
-        RHI_LOG_WARNING(L"TODO", RhiApi::DirectX12);
+
+        m_cpuHandle = Device::Private::getDescriptorAllocatorRTV(device).create(device);
+
+        RHI_LOG_FATAL(L"TODO", RhiApi::DirectX12);
+
+        device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, m_cpuHandle->nativeHandle);
         return false;
     }
 
@@ -40,22 +45,6 @@ namespace TiRHI::DirectX12
     bool Texture::isValid() const
     {
         return m_image && m_cpuHandle;
-    }
-
-    bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
-    {
-        if (m_cpuHandle)
-            handle = m_cpuHandle->nativeHandle;
-
-        return m_cpuHandle.has_value();
-    }
-
-    bool Texture::getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle) const
-    {
-        if (m_cpuHandle)
-            handle = m_cpuHandle->nativeHandle;
-
-        return m_cpuHandle.has_value();
     }
 
 } // namespace TiRHI::DirectX12

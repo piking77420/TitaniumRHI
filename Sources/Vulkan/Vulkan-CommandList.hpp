@@ -20,7 +20,7 @@ namespace TiRHI::Vulkan
     class DescriptorSet;
 
     class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
-                                               Vulkan::GraphicPipeline>
+                                               Vulkan::GraphicPipeline, DescriptorSet>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;

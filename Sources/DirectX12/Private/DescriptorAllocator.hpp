@@ -62,6 +62,8 @@ namespace TiRHI::DirectX12::Private
 
         void release(DescriptorHandle& cpuDescriptorHandle);
 
+        auto getPool(uint32_t index) const -> const Pool*;
+
     private:
         D3D12_DESCRIPTOR_HEAP_TYPE m_descriptorHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 

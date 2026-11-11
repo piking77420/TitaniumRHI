@@ -54,6 +54,11 @@ namespace TiRHI::DirectX12::Private
         handle = {};
     }
 
+    auto DescriptorAllocator::getPool(uint32_t index) const -> const Pool*
+    {
+        return (index < m_pools.size()) ? &m_pools[index] : nullptr;
+    }
+
     std::optional<DescriptorHandle> DescriptorAllocator::createFromPool(std::size_t poolIndex)
     {
         Pool& pool = m_pools[poolIndex];

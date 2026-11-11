@@ -31,14 +31,15 @@ namespace TiRHI::DirectX12
                 return texture.m_image.Get();
             }
 
-            static bool getRtv(Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+            static std::optional<TiRHI::DirectX12::Private::DescriptorHandle> getDescriptorHandle(Texture& texture)
             {
-                return texture.getRtv(device, handle);
+                return texture.m_cpuHandle;
             }
 
-            static bool getRtv(const Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+            static std::optional<TiRHI::DirectX12::Private::DescriptorHandle>
+            getDescriptorHandle(const Texture& texture)
             {
-                return texture.getRtv(device, handle);
+                return texture.m_cpuHandle;
             }
         };
 
@@ -54,10 +55,6 @@ namespace TiRHI::DirectX12
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_cpuHandle;
 
         bool build(Device& device, MComPtr<ID3D12Resource> image);
-
-        bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle);
-
-        bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle) const;
     };
 } // namespace TiRHI::DirectX12
 

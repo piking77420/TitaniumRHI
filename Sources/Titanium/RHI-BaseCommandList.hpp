@@ -46,13 +46,14 @@ namespace TiRHI
     };
 
     template<typename T, typename TRHI, typename TRenderTarget, typename TRenderPassDescriptor,
-             typename TGraphicPipeline>
+             typename TGraphicPipeline, typename TDescriptorSet>
     class BaseCommandList : public Object<T, TRHI>
     {
     public:
         using _RenderPassDescriptor = TRenderPassDescriptor;
         using _RenderTarget = TRenderTarget;
         using _GraphicPipeline = TGraphicPipeline;
+        using _DescriptorSet = TDescriptorSet;
 
         BaseCommandList() = delete;
         ~BaseCommandList() = default;
@@ -63,8 +64,8 @@ namespace TiRHI
         BaseCommandList(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(
-                std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget, TRenderPassDescriptor, TGraphicPipeline>>);
+            static_assert(std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget, TRenderPassDescriptor,
+                                                               TGraphicPipeline, TDescriptorSet>>);
         }
 
     protected:
@@ -75,6 +76,7 @@ namespace TiRHI
             const _RenderPassDescriptor* renderPassDescritptor = nullptr;
             _RenderTarget* renderTargets = nullptr;
             const _GraphicPipeline* graphicPipeline = nullptr;
+            const _DescriptorSet* descriptorSet = nullptr;
 
             void reset()
             {
@@ -83,6 +85,7 @@ namespace TiRHI
                 renderPassDescritptor = nullptr;
                 renderTargets = nullptr;
                 graphicPipeline = nullptr;
+                descriptorSet = nullptr;
             }
         } m_recordState;
 
@@ -249,6 +252,19 @@ namespace TiRHI
         void bindPipeline(const _GraphicPipeline& graphicPipeline)
         {
             m_recordState.graphicPipeline = &graphicPipeline;
+            m_recordState.descriptorSet = nullptr;
+        }
+
+        bool onBindDescriptorSet(const _DescriptorSet& _DescriptorSet)
+        {
+            if (!m_recordState.graphicPipeline)
+            {
+                RHI_LOG_ERROR(L"Try to bind descriptor set when no binded pipline", RhiApi::Common);
+                return false;
+            }
+
+            m_recordState.descriptorSet = &_DescriptorSet;
+            return true;
         }
     };
 

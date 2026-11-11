@@ -16,8 +16,10 @@ namespace TiRHI::DirectX12
     class Texture;
     class RenderPassDescriptor;
     class GraphicPipeline;
+    class DescriptorSet;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor, GraphicPipeline>
+    class CommandList
+        : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor, GraphicPipeline, DescriptorSet>
     {
     public:
         CommandList() = delete;
@@ -47,6 +49,8 @@ namespace TiRHI::DirectX12
 
         void bindPipeline(const _GraphicPipeline& graphicPipeline);
 
+        void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
         void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
@@ -60,10 +64,19 @@ namespace TiRHI::DirectX12
         }
 
     private:
+        struct SetGraphicsRootDescriptorTable
+        {
+            uint32_t rootParamIndex;
+            D3D12_CPU_DESCRIPTOR_HANDLE handle;
+        };
+
         Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
+        std::vector<ID3D12DescriptorHeap> m_descriptorHeaps;
+        std::vector<SetGraphicsRootDescriptorTable> m_setGraphicsRootDescriptorTables;
+
         ID3D12RootSignature* m_currentRootSignature = nullptr;
 
         void resetOnRecord();

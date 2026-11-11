@@ -43,6 +43,16 @@ namespace TiRHI::DirectX12::Private
         return true;
     }
 
+    std::vector<D3D12_DESCRIPTOR_RANGE1> getRanges(const std::span<const DescriptorSet::BindingsLayout>& layouts)
+    {
+        std::vector<D3D12_DESCRIPTOR_RANGE1> inRanges;
+        size_t count = 0;
+        for (const auto& layout : layouts)
+            count += layout.bindings.size();
+        inRanges.reserve(count);
+        return inRanges;
+    }
+
     auto DescriptorManager::getOrCreateD3D12DescriptorRootSignatureLayout(
         const std::span<const DescriptorSet::BindingsLayout>& layouts) -> D3D12DescriptorRootSignatureLayout*
     {
@@ -55,15 +65,7 @@ namespace TiRHI::DirectX12::Private
             return it->second.get();
         }
 
-        std::vector<D3D12_DESCRIPTOR_RANGE1> ranges = [&layouts]()
-        {
-            std::vector<D3D12_DESCRIPTOR_RANGE1> inRanges;
-            size_t count = 0;
-            for (const auto& layout : layouts)
-                count += layout.bindings.size();
-            inRanges.reserve(count);
-            return inRanges;
-        }();
+        std::vector<D3D12_DESCRIPTOR_RANGE1> ranges = getRanges(layouts);
 
         static_assert(static_cast<size_t>(ShaderStage::Count) == 14);
         static_assert(static_cast<size_t>(ShaderStageFlags::Callable) == 1u << 13);
