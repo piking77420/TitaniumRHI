@@ -22,6 +22,8 @@ namespace TiRHI::DirectX12
     class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         Device() = delete;
         ~Device();
         RHI_MOVE_ONLY(Device);
@@ -37,6 +39,11 @@ namespace TiRHI::DirectX12
             static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorSampler(Device& device)
             {
                 return device.m_descriptorAllocatorSampler;
+            }
+
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorCbvSrvUav(Device& device)
+            {
+                return device.m_descriptorAllocatorCbvSrvUav;
             }
 
             static DirectX12::Private::DescriptorManager& getDescriptorManager(Device& device)
@@ -98,6 +105,8 @@ namespace TiRHI::DirectX12
 
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorCbvSrvUav;
+
         DirectX12::Private::DescriptorManager m_descritproManager;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);

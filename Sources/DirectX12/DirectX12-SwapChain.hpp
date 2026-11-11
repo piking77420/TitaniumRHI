@@ -22,6 +22,8 @@ namespace TiRHI::DirectX12
     class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets, Texture>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         SwapChain() = delete;
         ~SwapChain();
         RHI_MOVE_ONLY(SwapChain);

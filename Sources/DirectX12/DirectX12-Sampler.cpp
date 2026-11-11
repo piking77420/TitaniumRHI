@@ -36,7 +36,7 @@ namespace TiRHI::DirectX12
         samplerDesc.MinLOD = 0.0f;
         samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 
-        device.getNativeDevice()->CreateSampler(&samplerDesc, m_samplerCpuHandle->nativeHandle);
+        device.getNativeDevice()->CreateSampler(&samplerDesc, m_samplerCpuHandle->cpuHandle);
 
         return true;
     }

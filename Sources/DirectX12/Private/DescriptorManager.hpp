@@ -11,8 +11,10 @@ namespace TiRHI::DirectX12::Private
     {
         uint32_t setIndex;
         uint32_t bindingIndex;
-        ShaderStage stage;
         uint32_t rootParameterIndex;
+        // tell as which index the binding is in the rhiDescriptorSet
+        uint32_t descriptorSetLocalBindingIndex;
+        ShaderStage stage;
     };
 
     struct D3D12DescriptorRootSignatureLayout

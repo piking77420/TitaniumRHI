@@ -4,6 +4,7 @@
 #include <functional>
 #include <type_traits>
 #include <variant>
+#include <format>
 
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHI-EnumFlag.hpp>
@@ -133,6 +134,8 @@ namespace TiRHI
         RHI_FORMAT_LIST(X)
 #undef X
     };
+
+    uint32_t pixelSizeFromFormat(Format format);
 
 #define RHI_SHADER_STAGE_LIST(X)                                                                                       \
     X(Vertex)                                                                                                          \

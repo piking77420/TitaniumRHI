@@ -9,6 +9,7 @@ namespace TiRHI::DirectX12::Private
         uint32_t setIndex;
         uint32_t bindingIndex;
         ShaderStage stage;
+        uint32_t descriptorSetLocalBindingIndex;
     };
 
     DescriptorManager::DescriptorManager()
@@ -70,13 +71,17 @@ namespace TiRHI::DirectX12::Private
         static_assert(static_cast<size_t>(ShaderStage::Count) == 14);
         static_assert(static_cast<size_t>(ShaderStageFlags::Callable) == 1u << 13);
 
-        std::array<std::vector<PendingRootParameter>, static_cast<size_t>(ShaderStage::Count)> parametersTable;
+        using PendingRooParameterTable =
+            std::array<std::vector<PendingRootParameter>, static_cast<size_t>(ShaderStage::Count)>;
+
+        PendingRooParameterTable parametersTable;
 
         {
             size_t spaceCounterIndex = 0;
             size_t rangeCounterIndex = 0;
             for (const auto& layout : layouts)
             {
+                size_t descriptorSetLocalBindingIndex = 0;
                 for (const auto& binding : layout.bindings)
                 {
                     D3D12_DESCRIPTOR_RANGE1& range = ranges[rangeCounterIndex++];
@@ -87,9 +92,35 @@ namespace TiRHI::DirectX12::Private
                         [&](const auto& value)
                         {
                             using T = std::remove_cvref_t<decltype(value)>;
-
                             range.NumDescriptors = value.count;
                             range.BaseShaderRegister = value.bindingIndex;
+
+                            auto generateParameterFlagFromRange =
+                                [&parametersTable](ShaderStageFlags rhiDescriptorflags, D3D12_DESCRIPTOR_RANGE1& range)
+                            {
+                                uint32_t flags = static_cast<uint32_t>(rhiDescriptorflags);
+                                while (flags != 0)
+                                {
+                                    const uint32_t index = std::countr_zero(flags);
+
+                                    flags &= flags - 1;
+
+                                    auto& entry = parametersTable[index].emplace_back();
+                                    entry.parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+
+                                    entry.parameter.ShaderVisibility =
+                                        toDirectX12(static_cast<ShaderStageFlags>(1u << index));
+
+                                    entry.parameter.DescriptorTable.NumDescriptorRanges = 1;
+                                    entry.parameter.DescriptorTable.pDescriptorRanges = &range;
+
+                                    entry.setIndex = static_cast<uint32_t>(spaceCounterIndex);
+                                    entry.bindingIndex = value.bindingIndex;
+                                    entry.stage = static_cast<ShaderStage>(index);
+                                    entry.descriptorSetLocalBindingIndex = descriptorSetLocalBindingIndex++;
+                                }
+                            };
+
                             if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::SampledTexture>)
                             {
                                 range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -97,29 +128,6 @@ namespace TiRHI::DirectX12::Private
                             else
                             {
                                 static_assert(sizeof(T) == 0, "Unsupported binding type");
-                            }
-                            uint32_t flags = static_cast<uint32_t>(range.Flags);
-                            while (flags != 0)
-                            {
-                                const uint32_t index = std::countr_zero(flags);
-
-                                flags &= flags - 1;
-
-                                if (index == 5 || index >= 8)
-                                    continue;
-
-                                auto& entry = parametersTable[index].emplace_back();
-                                entry.parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-
-                                entry.parameter.ShaderVisibility =
-                                    toDirectX12(static_cast<ShaderStageFlags>(1u << index));
-
-                                entry.parameter.DescriptorTable.NumDescriptorRanges = 1;
-                                entry.parameter.DescriptorTable.pDescriptorRanges = &range;
-
-                                entry.setIndex = static_cast<uint32_t>(spaceCounterIndex);
-                                entry.bindingIndex = value.bindingIndex;
-                                entry.stage = static_cast<ShaderStage>(index);
                             }
                         },
                         binding);
@@ -150,10 +158,12 @@ namespace TiRHI::DirectX12::Private
 
                 finalParameters.emplace_back(entry.parameter);
 
-                finalRootMapping.emplace_back(RootParameterMapping{.setIndex = entry.setIndex,
-                                                                   .bindingIndex = entry.bindingIndex,
-                                                                   .stage = entry.stage,
-                                                                   .rootParameterIndex = rootIndex});
+                finalRootMapping.emplace_back(
+                    RootParameterMapping{.setIndex = entry.setIndex,
+                                         .bindingIndex = entry.bindingIndex,
+                                         .rootParameterIndex = rootIndex,
+                                         .descriptorSetLocalBindingIndex = entry.descriptorSetLocalBindingIndex,
+                                         .stage = entry.stage});
             }
         }
 

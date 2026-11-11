@@ -10,22 +10,16 @@ namespace TiRHI::DirectX12::Private
 {
     struct DescriptorHandle
     {
-        static constexpr size_t InvalidIndex = std::numeric_limits<size_t>::max();
-
-        // index in the pool
-        size_t elementIndex = InvalidIndex;
-
-        // which pool index
-        size_t poolIndex = InvalidIndex;
-
         // how much consecutive descriptors:
-        size_t count = 0;
+        uint32_t count = 0;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE nativeHandle{};
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
+
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
 
         [[nodiscard]] explicit operator bool() const noexcept
         {
-            return elementIndex != InvalidIndex && poolIndex != InvalidIndex && count > 0;
+            return count > 0 && cpuHandle.ptr != 0 && gpuHandle.ptr != 0;
         }
     };
 

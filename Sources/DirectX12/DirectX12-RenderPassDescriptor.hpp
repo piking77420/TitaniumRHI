@@ -12,6 +12,8 @@ namespace TiRHI::DirectX12
     class RenderPassDescriptor : public BaseRenderPassDescriptor<RenderPassDescriptor, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         RenderPassDescriptor() = delete;
         ~RenderPassDescriptor() = default;
         RHI_MOVE_ONLY(RenderPassDescriptor);

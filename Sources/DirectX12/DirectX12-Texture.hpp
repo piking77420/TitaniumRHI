@@ -14,6 +14,8 @@ namespace TiRHI::DirectX12
     class Texture : public BaseTexture<Texture, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         Texture() = delete;
         ~Texture();
         RHI_MOVE_ONLY(Texture);
@@ -31,15 +33,16 @@ namespace TiRHI::DirectX12
                 return texture.m_image.Get();
             }
 
-            static std::optional<TiRHI::DirectX12::Private::DescriptorHandle> getDescriptorHandle(Texture& texture)
+            static const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>&
+            getRenderTargetViewHandle(const Texture& texture)
             {
-                return texture.m_cpuHandle;
+                return texture.m_renderTargetView;
             }
 
-            static std::optional<TiRHI::DirectX12::Private::DescriptorHandle>
-            getDescriptorHandle(const Texture& texture)
+            static const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>&
+            getShaderRenderViewHandle(const Texture& texture)
             {
-                return texture.m_cpuHandle;
+                return texture.m_shaderRenderView;
             }
         };
 
@@ -52,9 +55,13 @@ namespace TiRHI::DirectX12
 
         MComPtr<ID3D12Resource> m_image;
 
-        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_cpuHandle;
+        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_renderTargetView;
+
+        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_shaderRenderView;
 
         bool build(Device& device, MComPtr<ID3D12Resource> image);
+
+        bool createHandle(Device& device);
     };
 } // namespace TiRHI::DirectX12
 

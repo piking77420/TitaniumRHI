@@ -307,4 +307,52 @@ namespace TiRHI::DirectX12::Private
         }
     }
 
+    D3D12_RESOURCE_FLAGS textureFlagtoDirectX12(TextureFlags flag, Format format)
+    {
+        D3D12_RESOURCE_FLAGS dx12flag;
+
+        switch (format)
+        {
+        case Format::D16UNorm:
+        case Format::D32Float:
+        case Format::D24UNormS8UInt:
+        case Format::D32FloatS8UInt:
+            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+            break;
+
+        case Format::R8UNorm:
+        case Format::R8G8UNorm:
+        case Format::R8G8B8A8UNorm:
+        case Format::R8G8B8A8UNormSRGB:
+        case Format::B8G8R8A8UNorm:
+        case Format::B8G8R8A8UNormSRGB:
+        case Format::R16Float:
+        case Format::R16G16Float:
+        case Format::R16G16B16A16Float:
+        case Format::R32Float:
+        case Format::R32G32Float:
+        case Format::R32G32B32A32Float:
+        case Format::R32UInt:
+        case Format::R32G32UInt:
+        case Format::R32G32B32A32UInt:
+            break;
+
+        default:
+            RHI_LOG_ERROR(
+                std::format(L"Unsupported RHI Format for textureFlagtoDirectX12 , Format = {}", toWString(format)),
+                RhiApi::Vulkan);
+            return {};
+        }
+
+        if ((flag & TextureFlags::RenderTarget) != TextureFlags::None)
+        {
+            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        }
+
+        if ((flag & TextureFlags::UnorderedAccess) != TextureFlags::None)
+        {
+            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        }
+    }
+
 } // namespace TiRHI::DirectX12::Private
