@@ -67,19 +67,19 @@ namespace TiRHI::DirectX12
         struct SetGraphicsRootDescriptorTable
         {
             uint32_t rootParamIndex;
-            D3D12_CPU_DESCRIPTOR_HANDLE handle;
+            D3D12_GPU_DESCRIPTOR_HANDLE handle;
         };
 
         Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
-        std::vector<ID3D12DescriptorHeap> m_descriptorHeaps;
-        std::vector<SetGraphicsRootDescriptorTable> m_setGraphicsRootDescriptorTables;
 
         ID3D12RootSignature* m_currentRootSignature = nullptr;
 
         void resetOnRecord();
+
+        void bindDescriptorHeaps();
 
         void bindRootSignature(ID3D12RootSignature* rootSignature);
 

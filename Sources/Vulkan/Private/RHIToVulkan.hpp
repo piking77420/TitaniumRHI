@@ -81,8 +81,6 @@ namespace TiRHI::Vulkan::Private
 
     vk::ImageAspectFlags imageAspectFlagBitsFromFormat(Format format);
 
-    uint32_t pixelSizeFromFormat(Format format);
-
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

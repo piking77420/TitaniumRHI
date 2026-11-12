@@ -26,6 +26,8 @@ namespace TiRHI::DirectX12::Private
 
     BOOL toDirectX12(FrontFace frontFace);
 
+    D3D12_RESOURCE_FLAGS textureFlagtoDirectX12(TextureFlags flag, Format format);
+
 } // TiRHI::DirectX12::Private
 
 #endif // TITANIUM_DIRECTX12_PRIVATE_RHI_TO_DIRECTX12_H

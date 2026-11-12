@@ -20,6 +20,8 @@ namespace TiRHI::DirectX12
     class RHI : public TiRHI::BaseRHI<RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         RHI(const RhiCreate& rhiCreate);
         RHI_MOVE_ONLY(RHI);
         ~RHI() = default;

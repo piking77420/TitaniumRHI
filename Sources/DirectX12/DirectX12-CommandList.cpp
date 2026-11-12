@@ -101,6 +101,7 @@ namespace TiRHI::DirectX12
             return false;
 
         resetOnRecord();
+        bindDescriptorHeaps();
         return true;
     }
 
@@ -180,8 +181,8 @@ namespace TiRHI::DirectX12
                                                         const Texture& texture,
                                                         const AttachmentDescriptor& attachmentDescriptor)
         {
-            std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handle =
-                Texture::Private::getDescriptorHandle(texture);
+            const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& handle =
+                Texture::Private::getRenderTargetViewHandle(texture);
             if (!handle)
             {
                 RHI_LOG_ERROR(
@@ -190,7 +191,7 @@ namespace TiRHI::DirectX12
                 return;
             }
 
-            desc.cpuDescriptor = handle->nativeHandle;
+            desc.cpuDescriptor = handle->cpuHandle;
             desc.BeginningAccess.Type = Private::toDirectX12(attachmentDescriptor.loadOp);
 
             desc.BeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(attachmentDescriptor.format);
@@ -214,8 +215,8 @@ namespace TiRHI::DirectX12
         if (depthAtt)
         {
             const Texture& depthTexture = *depthTargetAttachement.value();
-            std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handle =
-                Texture::Private::getDescriptorHandle(depthTexture);
+            const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& handle =
+                Texture::Private::getRenderTargetViewHandle(depthTexture);
             if (!handle)
             {
                 RHI_LOG_ERROR(std::format(L"Failed to get D3D12_CPU_DESCRIPTOR_HANDLE fo the texture {}",
@@ -223,7 +224,7 @@ namespace TiRHI::DirectX12
                               RhiApi::DirectX12);
                 return false;
             }
-            depthDesc.cpuDescriptor = handle->nativeHandle;
+            depthDesc.cpuDescriptor = handle->cpuHandle;
             depthDesc.DepthBeginningAccess.Type = Private::toDirectX12(depthAtt->loadOp);
             depthDesc.DepthEndingAccess.Type = Private::toDirectX12(depthAtt->storeOp);
             depthDesc.StencilBeginningAccess.Type = Private::toDirectX12(depthAtt->stencilLoadOp);
@@ -330,7 +331,6 @@ namespace TiRHI::DirectX12
         if (!BaseCommandList::onBindDescriptorSet(descriptorSet))
             return;
 
-        /*
         const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
             GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
 
@@ -340,47 +340,8 @@ namespace TiRHI::DirectX12
         if (root->rootParameterBindings.size() < set)
             return;
 
-        auto& layout = descriptorSet.getBindingsLayout();
-        m_descriptorHeaps.clear();
-        m_setGraphicsRootDescriptorTables.clear();
-
-        for (const auto& binding : layout.bindings)
-        {
-            std::visit(
-                [&](const auto& value)
-                {
-                    using T = std::remove_cvref_t<decltype(value)>;
-
-                    if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::SampledTexture>)
-                    {
-                        if (!value.texture || !value.sampler)
-                            return;
-                        if (std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handle =
-                                DirectX12::Texture::Private::getDescriptorHandle(*value.texture))
-                        {
-                            DirectX12::Private::DescriptorAllocator& allocator =
-                                Device::Private::getDescriptorAllocatorRTV(*m_device);
-                            const DirectX12::Private::DescriptorAllocator::Pool* pool =
-                                allocator.getPool(handle->poolIndex);
-                            if (!pool || !pool->heap)
-                                return;
-                            m_descriptorHeaps.emplace_back(pool->heap.Get());
-                            m_setGraphicsRootDescriptorTables.emplace_back(value.bindingIndex, handle->nativeHandle);
-                        }
-                        else
-                        {
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        static_assert(sizeof(T) == 0, "Unsupported binding type");
-                    }
-                },
-                binding);
-        }
-
-        m_commandList->SetDescriptorHeaps(, m_descriptorHeaps.data());*/
+        m_commandList->SetGraphicsRootSignature(root->rootSignature.Get());
+        const auto& mapping = root->rootParameterBindings[set];
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -402,8 +363,17 @@ namespace TiRHI::DirectX12
     void CommandList::resetOnRecord()
     {
         m_currentRootSignature = nullptr;
-        m_descriptorHeaps.clear();
-        m_setGraphicsRootDescriptorTables.clear();
+    }
+
+    void CommandList::bindDescriptorHeaps()
+    {
+        assert(m_device);
+
+        ID3D12DescriptorHeap* heaps[] = {Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).getHeap().Get(),
+
+                                         Device::Private::getDescriptorAllocatorSampler(*m_device).getHeap().Get()};
+
+        m_commandList->SetDescriptorHeaps(2, heaps);
     }
 
     void CommandList::bindRootSignature(ID3D12RootSignature* rootSignature)

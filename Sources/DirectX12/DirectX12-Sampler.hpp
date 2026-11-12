@@ -14,6 +14,8 @@ namespace TiRHI::DirectX12
     class Sampler : public BaseSampler<Sampler, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         Sampler() = delete;
         ~Sampler();
         Sampler(Sampler&&) noexcept = default;

@@ -17,6 +17,8 @@ namespace TiRHI::DirectX12
     class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, RenderPassDescriptor, Texture>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         RenderTargets() = delete;
         ~RenderTargets() = default;
         RHI_MOVE_ONLY(RenderTargets);

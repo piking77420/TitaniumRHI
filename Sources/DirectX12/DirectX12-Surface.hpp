@@ -12,6 +12,8 @@ namespace TiRHI::DirectX12
     class Surface : public BaseSurface<Surface, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         Surface() = delete;
         ~Surface() = default;
         explicit Surface(RHI& rhi);
