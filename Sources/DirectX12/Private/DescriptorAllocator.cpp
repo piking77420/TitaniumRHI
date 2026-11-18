@@ -6,20 +6,24 @@
 
 namespace TiRHI::DirectX12::Private
 {
+    // for now it is hardocoded
+    // TODO be able to bind multiple heaps
     [[nodiscard]]
-    constexpr uint32_t getGuaranteedMaxDescriptorCount(D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible = true)
+    constexpr uint32_t getDescriptorCapacity(D3D12_DESCRIPTOR_HEAP_TYPE type)
     {
         switch (type)
         {
         case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-            return shaderVisible ? D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_1 : UINT32_MAX;
+            return 65'536;
 
         case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
-            return shaderVisible ? D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE : UINT32_MAX;
+            return 2'048;
 
         case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+            return 1'024;
+
         case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
-            return shaderVisible ? 0 : UINT32_MAX;
+            return 256;
 
         default:
             return 0;
@@ -34,7 +38,7 @@ namespace TiRHI::DirectX12::Private
         Microsoft::WRL::ComPtr<ID3D12Device> nativeDevice = device.getNativeDevice();
         m_descriptorSize = nativeDevice->GetDescriptorHandleIncrementSize(m_descriptorHeapType);
 
-        m_capacity = getGuaranteedMaxDescriptorCount(m_descriptorHeapType);
+        m_capacity = getDescriptorCapacity(m_descriptorHeapType);
         if (m_capacity == 0)
             return false;
 
