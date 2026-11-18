@@ -12,7 +12,7 @@ namespace TiRHI::DirectX12
 
     bool Sampler::build(Device& device)
     {
-        if (device.getNativeDevice())
+        if (!device.getNativeDevice())
             return false;
 
         m_samplerCpuHandle = Device::Private::getDescriptorAllocatorSampler(device).create(device);

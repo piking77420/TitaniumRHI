@@ -333,7 +333,7 @@ namespace TiRHI::DirectX12
 
         const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
             GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
-
+        /*
         if (root->rootParameterBindings.empty())
             return;
 
@@ -376,7 +376,7 @@ namespace TiRHI::DirectX12
             // Get the shader-visible descriptor handle
             // associated with this binding.
             const D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = descriptorSet.getGpuHandle(mapping.bindingIndex);
-        }
+        }*/
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)

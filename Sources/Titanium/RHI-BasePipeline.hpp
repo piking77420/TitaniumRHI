@@ -20,11 +20,7 @@ namespace TiRHI
     public:
         using DescriptorSet = TDescriptorSet;
         using BindingLayout = typename DescriptorSet::BaseDescriptorSet::BindingsLayout;
-        struct DescriptorSetLayoutEntry
-        {
-            BindingLayout layout;
-            uint32_t setIndex;
-        };
+        using DescriptorSetLayoutEntry = typename DescriptorSet::BaseDescriptorSet::DescriptorSetLayoutEntry;
 
         BasePipeline() = delete;
         ~BasePipeline() = default;

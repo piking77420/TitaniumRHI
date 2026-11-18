@@ -130,7 +130,16 @@ namespace TiRHI::DirectX12
 
             const bool success = createDevice(nativeAdapter[m_adapterIndex]);
             onCreateDeviceSuccess(adapters[m_adapterIndex], success);
-            return success && m_descriptorAllocatorRtv.build(*this) && m_descriptorAllocatorSampler.build(*this) &&
+            return success &&
+                   m_descriptorAllocatorRtv
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+                       .build(*this) &&
+                   m_descriptorAllocatorSampler
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+                       .build(*this) &&
+                   m_descriptorAllocatorCbvSrvUav
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+                       .build(*this) &&
                    m_descritproManager.build(m_device);
         }
         RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);

@@ -3,13 +3,85 @@
 
 namespace TiRHI::DirectX12::Private
 {
-    struct PendingRootParameter
+    struct DescriptorRangeKey
     {
-        D3D12_ROOT_PARAMETER1 parameter;
-        uint32_t setIndex;
+        D3D12_DESCRIPTOR_RANGE_TYPE type;
+        uint32_t count;
         uint32_t bindingIndex;
-        ShaderStage stage;
-        uint32_t descriptorSetLocalBindingIndex;
+        uint32_t setIndex;
+        D3D12_DESCRIPTOR_RANGE_FLAGS flags;
+        uint32_t offset;
+
+        bool operator==(const DescriptorRangeKey&) const = default;
+    };
+
+    struct DescriptorRangeKeyHash
+    {
+        uint32_t operator()(const DescriptorRangeKey& key) const noexcept
+        {
+            uint32_t hash = 0;
+
+            hashCombine(hash, static_cast<uint32_t>(key.type));
+            hashCombine(hash, key.count);
+            hashCombine(hash, key.bindingIndex);
+            hashCombine(hash, key.setIndex);
+            hashCombine(hash, static_cast<uint32_t>(key.flags));
+            hashCombine(hash, key.offset);
+
+            return hash;
+        }
+    };
+
+    struct RangeBuilder
+    {
+        struct PendingRangeReference
+        {
+            uint32_t rootParameterIndex;
+            uint32_t rangeIndex;
+        };
+
+        std::unordered_map<DescriptorRangeKey, uint32_t, DescriptorRangeKeyHash> rangeIndices;
+        std::vector<D3D12_DESCRIPTOR_RANGE1> ranges;
+        std::vector<PendingRangeReference> pendingRanges;
+
+        uint32_t getOrCreateRangeIndex(const DescriptorRangeKey& key)
+        {
+            if (auto it = rangeIndices.find(key); it != rangeIndices.end())
+            {
+                return it->second;
+            }
+
+            const uint32_t index = static_cast<uint32_t>(ranges.size());
+
+            ranges.push_back({.RangeType = key.type,
+                              .NumDescriptors = key.count,
+                              .BaseShaderRegister = key.bindingIndex,
+                              .RegisterSpace = key.setIndex,
+                              .Flags = key.flags,
+                              .OffsetInDescriptorsFromTableStart = key.offset});
+
+            rangeIndices.emplace(key, index);
+
+            return index;
+        }
+
+        void addReference(uint32_t rootParameterIndex, uint32_t rangeIndex)
+        {
+            pendingRanges.push_back({rootParameterIndex, rangeIndex});
+        }
+
+        void resolve(std::vector<D3D12_ROOT_PARAMETER1>& parameters) const
+        {
+            for (const auto& reference : pendingRanges)
+            {
+                auto& parameter = parameters[reference.rootParameterIndex];
+
+                parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+
+                parameter.DescriptorTable.NumDescriptorRanges = 1;
+                parameter.DescriptorTable.pDescriptorRanges = &ranges[reference.rangeIndex];
+            }
+        }
     };
 
     DescriptorManager::DescriptorManager()
@@ -44,86 +116,86 @@ namespace TiRHI::DirectX12::Private
         return true;
     }
 
-    std::vector<D3D12_DESCRIPTOR_RANGE1> getRanges(const std::span<const DescriptorSet::BindingsLayout>& layouts)
-    {
-        std::vector<D3D12_DESCRIPTOR_RANGE1> inRanges;
-        size_t count = 0;
-        for (const auto& layout : layouts)
-            count += layout.bindings.size();
-        inRanges.reserve(count);
-        return inRanges;
-    }
-
     auto DescriptorManager::getOrCreateD3D12DescriptorRootSignatureLayout(
-        const std::span<const DescriptorSet::BindingsLayout>& layouts) -> D3D12DescriptorRootSignatureLayout*
+        const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& DescriptorSetLayoutEntries)
+        -> D3D12DescriptorRootSignatureLayout*
     {
         if (!m_device)
             return nullptr;
 
-        auto it = m_rootSignatureMap.find(layouts);
+        auto it = m_rootSignatureMap.find(DescriptorSetLayoutEntries);
         if (it != m_rootSignatureMap.end())
         {
             return it->second.get();
         }
 
-        std::vector<D3D12_DESCRIPTOR_RANGE1> ranges = getRanges(layouts);
-
         static_assert(static_cast<size_t>(ShaderStage::Count) == 14);
         static_assert(static_cast<size_t>(ShaderStageFlags::Callable) == 1u << 13);
 
-        using PendingRooParameterTable =
-            std::array<std::vector<PendingRootParameter>, static_cast<size_t>(ShaderStage::Count)>;
+        RangeBuilder rangesBuilder;
+        SpaceDescriptor spaceDescriptor;
+        RootParameterTable& rootParameterTable = spaceDescriptor.rootParameterTable;
+        BindingsSetTableOffset& bindingsSetTableOffset = spaceDescriptor.bindingsSetTableOffset;
+        std::vector<D3D12_ROOT_PARAMETER1> parameters;
 
-        PendingRooParameterTable parametersTable;
-
+        // D3D12 has a 64-DWORD root signature limit. Each descriptor table root parameter costs one DWORD.
         {
-            size_t spaceCounterIndex = 0;
             size_t rangeCounterIndex = 0;
-            for (const auto& layout : layouts)
+            for (const auto& entry : DescriptorSetLayoutEntries)
             {
                 size_t descriptorSetLocalBindingIndex = 0;
-                for (const auto& binding : layout.bindings)
+                for (const auto& binding : entry.layout.bindings)
                 {
-                    D3D12_DESCRIPTOR_RANGE1& range = ranges[rangeCounterIndex++];
-                    range.RegisterSpace = static_cast<UINT>(spaceCounterIndex);
-                    range.OffsetInDescriptorsFromTableStart = 0;
-
                     std::visit(
-                        [&](const auto& value)
+                        [&](auto&& value)
                         {
                             using T = std::remove_cvref_t<decltype(value)>;
-                            range.NumDescriptors = value.count;
-                            range.BaseShaderRegister = value.bindingIndex;
-
-                            auto generateParameterFlagFromRange =
-                                [&parametersTable](ShaderStageFlags rhiDescriptorflags, D3D12_DESCRIPTOR_RANGE1& range)
-                            {
-                                uint32_t flags = static_cast<uint32_t>(rhiDescriptorflags);
-                                while (flags != 0)
-                                {
-                                    const uint32_t index = std::countr_zero(flags);
-
-                                    flags &= flags - 1;
-
-                                    auto& entry = parametersTable[index].emplace_back();
-                                    entry.parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-
-                                    entry.parameter.ShaderVisibility =
-                                        toDirectX12(static_cast<ShaderStageFlags>(1u << index));
-
-                                    entry.parameter.DescriptorTable.NumDescriptorRanges = 1;
-                                    entry.parameter.DescriptorTable.pDescriptorRanges = &range;
-
-                                    entry.setIndex = static_cast<uint32_t>(spaceCounterIndex);
-                                    entry.bindingIndex = value.bindingIndex;
-                                    entry.stage = static_cast<ShaderStage>(index);
-                                    entry.descriptorSetLocalBindingIndex = descriptorSetLocalBindingIndex++;
-                                }
-                            };
 
                             if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::SampledTexture>)
                             {
-                                range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+                                auto getKey = [&](D3D12_DESCRIPTOR_RANGE_TYPE type) -> DescriptorRangeKey
+                                {
+                                    DescriptorRangeKey descriptorRangeKey;
+                                    descriptorRangeKey.type = type;
+                                    descriptorRangeKey.count = value.count;
+                                    descriptorRangeKey.bindingIndex = value.bindingIndex;
+                                    descriptorRangeKey.setIndex = entry.setIndex;
+                                    descriptorRangeKey.flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
+                                    descriptorRangeKey.offset = 0;
+
+                                    return descriptorRangeKey;
+                                };
+
+                                const uint32_t textureRangeIndex = rangesBuilder.getOrCreateRangeIndex(
+                                    getKey(D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_SRV));
+
+                                const uint32_t samplerRangeIndex = rangesBuilder.getOrCreateRangeIndex(
+                                    getKey(D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER));
+
+                                forEachShaderStage(
+                                    value.shaderStageFlag,
+                                    [&](TiRHI::ShaderStageFlags flagBit, uint32_t index) -> void
+                                    {
+                                        auto& offsetAndCount = bindingsSetTableOffset[index].emplace_back();
+                                        offsetAndCount.offset = rootParameterTable[index].size();
+                                        offsetAndCount.count = 2;
+
+                                        rootParameterTable[index].resize(rootParameterTable[index].size() + 2);
+
+                                        const uint32_t textureParameterIndex = static_cast<uint32_t>(parameters.size());
+                                        const uint32_t samplerParameterIndex = textureParameterIndex + 1;
+                                        RootParameterMapping& rootParameterMappingTexture =
+                                            rootParameterTable[index][rootParameterTable[index].size() - 2];
+                                        RootParameterMapping& rootParameterMappingSampler =
+                                            rootParameterTable[index][rootParameterTable[index].size() - 1];
+                                        rootParameterMappingTexture.rootParameterIndex = textureParameterIndex;
+                                        rootParameterMappingSampler.rootParameterIndex = samplerParameterIndex;
+
+                                        parameters.resize(parameters.size() + 2);
+
+                                        rangesBuilder.addReference(textureParameterIndex, textureRangeIndex);
+                                        rangesBuilder.addReference(textureParameterIndex + 1, samplerRangeIndex);
+                                    });
                             }
                             else
                             {
@@ -132,44 +204,14 @@ namespace TiRHI::DirectX12::Private
                         },
                         binding);
                 }
-                spaceCounterIndex++;
             }
         }
 
-        size_t finalParamSize = 0;
-        {
-            for (const auto& table : parametersTable)
-            {
-                finalParamSize += table.size();
-            }
-        }
-        // flate array
-
-        std::vector<D3D12_ROOT_PARAMETER1> finalParameters;
-        finalParameters.reserve(finalParamSize);
-
-        std::vector<RootParameterMapping> finalRootMapping;
-
-        for (const auto& table : parametersTable)
-        {
-            for (const auto& entry : table)
-            {
-                const uint32_t rootIndex = static_cast<uint32_t>(finalParameters.size());
-
-                finalParameters.emplace_back(entry.parameter);
-
-                finalRootMapping.emplace_back(
-                    RootParameterMapping{.setIndex = entry.setIndex,
-                                         .bindingIndex = entry.bindingIndex,
-                                         .rootParameterIndex = rootIndex,
-                                         .descriptorSetLocalBindingIndex = entry.descriptorSetLocalBindingIndex,
-                                         .stage = entry.stage});
-            }
-        }
+        rangesBuilder.resolve(parameters);
 
         D3D12_ROOT_SIGNATURE_DESC1 desc{};
-        desc.NumParameters = static_cast<UINT>(finalParameters.size());
-        desc.pParameters = finalParameters.data();
+        desc.NumParameters = static_cast<UINT>(parameters.size());
+        desc.pParameters = parameters.data();
         desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
         D3D12_VERSIONED_ROOT_SIGNATURE_DESC versionedDesc{};
@@ -202,8 +244,10 @@ namespace TiRHI::DirectX12::Private
 
         auto rootLayout = std::make_unique<D3D12DescriptorRootSignatureLayout>();
         D3D12DescriptorRootSignatureLayout* result = rootLayout.get();
+        result->spaceDescriptor = std::move(spaceDescriptor);
 
-        m_rootSignatureMap.emplace(std::vector<DescriptorSet::BindingsLayout>(layouts.begin(), layouts.end()),
+        m_rootSignatureMap.emplace(std::vector<DescriptorSet::DescriptorSetLayoutEntry>(
+                                       DescriptorSetLayoutEntries.begin(), DescriptorSetLayoutEntries.end()),
                                    std::move(rootLayout));
 
         return result;

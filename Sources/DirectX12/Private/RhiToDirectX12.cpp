@@ -107,6 +107,8 @@ namespace TiRHI::DirectX12::Private
             // Compute, RayTracing, and multi-stage masks.
             return D3D12_SHADER_VISIBILITY_ALL;
         }
+
+        return D3D12_SHADER_VISIBILITY_ALL;
     }
 
     D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE toDirectX12(LoadOp loadOp)

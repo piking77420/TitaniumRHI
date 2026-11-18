@@ -15,7 +15,7 @@ namespace TiRHI::DirectX12
     class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>
     {
     public:
-        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
         using BaseType = typename BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>;
         using BindingsLayout = typename BaseType::BindingsLayout;
 
@@ -26,6 +26,11 @@ namespace TiRHI::DirectX12
 
         DescriptorSet(DescriptorSet&& other) noexcept;
         DescriptorSet& operator=(DescriptorSet&& other) noexcept;
+
+        DescriptorSet(RHI& rhi)
+            : BaseDescriptorSet(rhi)
+        {
+        }
 
         bool build(Device& device);
 

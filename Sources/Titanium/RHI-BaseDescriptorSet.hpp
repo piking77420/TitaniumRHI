@@ -115,6 +115,13 @@ namespace TiRHI
             }
         };
 
+        struct DescriptorSetLayoutEntry
+        {
+            BindingsLayout layout;
+            uint32_t setIndex;
+            bool operator==(const DescriptorSetLayoutEntry&) const = default;
+        };
+
         BaseDescriptorSet() = delete;
         ~BaseDescriptorSet() = default;
         BaseDescriptorSet(const BaseDescriptorSet&) = delete;

@@ -9,18 +9,30 @@ namespace TiRHI::DirectX12::Private
 {
     struct RootParameterMapping
     {
-        uint32_t setIndex;
-        uint32_t bindingIndex;
         uint32_t rootParameterIndex;
-        // tell as which index the binding is in the rhiDescriptorSet
-        uint32_t descriptorSetLocalBindingIndex;
-        ShaderStage stage;
+    };
+
+    struct OffsetAndCount
+    {
+        uint32_t offset;
+        uint32_t count; // count because for exemple TextureSampler are combined
+    };
+
+    using RootParameterTable = std::array<std::vector<RootParameterMapping>, static_cast<size_t>(ShaderStage::Count)>;
+    using BindingsSetTableOffset = std::array<std::vector<OffsetAndCount>, static_cast<size_t>(ShaderStage::Count)>;
+
+    struct SpaceDescriptor
+    {
+        // map rhiBinding to set
+        RootParameterTable rootParameterTable;
+        // offset for each set in each table of rootParameterTable
+        BindingsSetTableOffset bindingsSetTableOffset;
     };
 
     struct D3D12DescriptorRootSignatureLayout
     {
-        std::vector<RootParameterMapping> rootParameterBindings;
         MComPtr<ID3D12RootSignature> rootSignature;
+        SpaceDescriptor spaceDescriptor;
     };
 
     class DescriptorManager
@@ -33,8 +45,8 @@ namespace TiRHI::DirectX12::Private
 
         bool build(MComPtr<ID3D12Device> device);
 
-        D3D12DescriptorRootSignatureLayout*
-        getOrCreateD3D12DescriptorRootSignatureLayout(const std::span<const DescriptorSet::BindingsLayout>& layouts);
+        D3D12DescriptorRootSignatureLayout* getOrCreateD3D12DescriptorRootSignatureLayout(
+            const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& layouts);
 
         D3D12DescriptorRootSignatureLayout* getEmptyDescriptorRootSignatureLayout();
 
@@ -43,12 +55,16 @@ namespace TiRHI::DirectX12::Private
         {
             using is_transparent = void;
 
-            size_t operator()(std::span<const DescriptorSet::BindingsLayout> layouts) const noexcept
+            size_t operator()(
+                std::span<const DescriptorSet::DescriptorSetLayoutEntry> DescriptorSetLayoutEntries) const noexcept
             {
                 uint32_t hash = 0;
 
-                for (const auto& layout : layouts)
-                    hashCombine(hash, layout.cachedHash);
+                for (const auto& entry : DescriptorSetLayoutEntries)
+                {
+                    hashCombine(hash, entry.setIndex);
+                    hashCombine(hash, entry.layout.cachedHash);
+                }
 
                 return static_cast<size_t>(hash);
             }
@@ -58,8 +74,8 @@ namespace TiRHI::DirectX12::Private
         {
             using is_transparent = void;
 
-            bool operator()(std::span<const DescriptorSet::BindingsLayout> a,
-                            std::span<const DescriptorSet::BindingsLayout> b) const
+            bool operator()(std::span<const DescriptorSet::DescriptorSetLayoutEntry> a,
+                            std::span<const DescriptorSet::DescriptorSetLayoutEntry> b) const
             {
                 return std::ranges::equal(a, b);
             }
@@ -67,8 +83,8 @@ namespace TiRHI::DirectX12::Private
 
         ID3D12Device* m_device{nullptr};
 
-        std::unordered_map<std::vector<DescriptorSet::BindingsLayout>, RootSignatureLayoutPtr, BindingsLayoutsHash,
-                           BindingsLayoutsEqual>
+        std::unordered_map<std::vector<DescriptorSet::DescriptorSetLayoutEntry>, RootSignatureLayoutPtr,
+                           BindingsLayoutsHash, BindingsLayoutsEqual>
             m_rootSignatureMap;
 
         D3D12DescriptorRootSignatureLayout m_emptyDescriptorRootSignatureLayout;

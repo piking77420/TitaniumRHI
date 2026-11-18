@@ -192,6 +192,27 @@ namespace TiRHI
 #undef X
     };
 
+    template<typename F>
+    inline void forEachShaderStage(ShaderStageFlags flags, F&& visitor)
+    {
+        uint32_t bits = static_cast<uint32_t>(flags);
+
+        // Only individual shader-stage bits.
+        constexpr uint32_t validMask = (1u << 14) - 1u;
+        bits &= validMask;
+
+        while (bits != 0)
+        {
+            const uint32_t bitIndex = std::countr_zero(bits);
+            const uint32_t bit = 1u << bitIndex;
+
+            visitor(static_cast<ShaderStageFlags>(bit), bitIndex);
+
+            // Remove the lowest enabled bit.
+            bits &= bits - 1;
+        }
+    }
+
     RHI_DEFINE_ENUM_FLAGS(ShaderStageFlags)
     IMPLEMENT_TO_STRING_FLAGS_TITANIUM(ShaderStageFlags, RHI_SHADER_STAGE_FLAG_LIST)
 

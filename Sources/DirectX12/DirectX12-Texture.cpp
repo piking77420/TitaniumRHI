@@ -16,9 +16,6 @@ namespace TiRHI::DirectX12
 
     bool Texture::build(Device& device)
     {
-        const std::wstring name = getNameW();
-        m_image->SetName(name.c_str());
-
         D3D12_HEAP_PROPERTIES heap{};
         heap.Type = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -30,10 +27,10 @@ namespace TiRHI::DirectX12
         desc.MipLevels = 1;
         desc.Format = DirectX12::Private::toDirectX12(getFormat());
         desc.SampleDesc.Count = 1;
-        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
         desc.Flags = DirectX12::Private::textureFlagtoDirectX12(getFlags(), getFormat());
 
-        HRESULT hr = device.getNativeDevice()->CreateCommittedResource(
+        const HRESULT hr = device.getNativeDevice()->CreateCommittedResource(
             &heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_image));
 
         if (FAILED(hr))
@@ -41,6 +38,9 @@ namespace TiRHI::DirectX12
             RHI_LOG_ERROR(std::format(L"Faile to create texture {}", getNameW()), RhiApi::DirectX12);
             return false;
         }
+
+        const std::wstring name = getNameW();
+        m_image->SetName(name.c_str());
 
         return m_image && createHandle(device);
     }
@@ -61,19 +61,27 @@ namespace TiRHI::DirectX12
 
     bool Texture::createHandle(Device& device)
     {
+        bool isOk = true;
+
+        if ((getFlags() & TextureFlags::RenderTarget) != TextureFlags::None)
         {
             m_renderTargetView = Device::Private::getDescriptorAllocatorRTV(device).create(device);
             assert(m_renderTargetView);
             device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, m_renderTargetView->cpuHandle);
+            if (!m_renderTargetView)
+                isOk = false;
         }
 
+        if ((getFlags() & TextureFlags::ShaderResource) != TextureFlags::None)
         {
             m_shaderRenderView = Device::Private::getDescriptorAllocatorCbvSrvUav(device).create(device);
             assert(m_shaderRenderView);
             device.getNativeDevice()->CreateShaderResourceView(m_image.Get(), nullptr, m_shaderRenderView->cpuHandle);
+            if (!m_shaderRenderView)
+                isOk = false;
         }
 
-        return m_renderTargetView && m_shaderRenderView;
+        return isOk;
     }
 
 } // namespace TiRHI::DirectX12

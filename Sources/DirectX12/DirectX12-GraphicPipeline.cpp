@@ -16,13 +16,13 @@ namespace TiRHI::DirectX12
         if (!device.isValid())
             return false;
 
-        std::span<const BindingLayout> bindingsLayout = getLayouts();
+        std::span<const DescriptorSetLayoutEntry> descriptorSetLayoutEntries = getDescriptorSetLayoutEntries();
         auto& descriptorManager = Device::Private::getDescriptorManager(device);
 
-        if (!bindingsLayout.empty())
+        if (!descriptorSetLayoutEntries.empty())
         {
             m_D3D12DescriptorRootSignatureLayout =
-                descriptorManager.getOrCreateD3D12DescriptorRootSignatureLayout(bindingsLayout);
+                descriptorManager.getOrCreateD3D12DescriptorRootSignatureLayout(descriptorSetLayoutEntries);
         }
         else
         {
