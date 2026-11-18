@@ -20,6 +20,11 @@ namespace TiRHI
     public:
         using DescriptorSet = TDescriptorSet;
         using BindingLayout = typename DescriptorSet::BaseDescriptorSet::BindingsLayout;
+        struct DescriptorSetLayoutEntry
+        {
+            BindingLayout layout;
+            uint32_t setIndex;
+        };
 
         BasePipeline() = delete;
         ~BasePipeline() = default;
@@ -56,21 +61,21 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
-        T& setBindingsLayout(const std::span<const BindingLayout>& bindingLayouts)
+        T& setDescriptorSetLayoutEntries(const std::span<const DescriptorSetLayoutEntry>& descriptorSetLayoutEntries)
         {
-            m_layout.clear();
-            m_layout.reserve(bindingLayouts.size());
-            for (const auto& layout : bindingLayouts)
+            m_DescriptorSetLayoutEntries.clear();
+            m_DescriptorSetLayoutEntries.reserve(descriptorSetLayoutEntries.size());
+            for (const auto& layout : descriptorSetLayoutEntries)
             {
-                m_layout.emplace_back(layout);
+                m_DescriptorSetLayoutEntries.emplace_back(layout);
             }
 
             return static_cast<T&>(*this);
         }
 
-        std::span<const BindingLayout> getLayouts() const
+        std::span<const DescriptorSetLayoutEntry> getDescriptorSetLayoutEntries() const
         {
-            return m_layout;
+            return m_DescriptorSetLayoutEntries;
         }
 
         T& setPushConstant(PushConstant pushConstant)
@@ -121,10 +126,21 @@ namespace TiRHI
             return success ? std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
         }
 
+        [[nodiscard]]
+        uint32_t getMaxSetIndex() const
+        {
+            uint32_t maxIndex = 0;
+
+            for (const auto& [layout, setIndex] : m_DescriptorSetLayoutEntries)
+                maxIndex = std::max(maxIndex, setIndex);
+
+            return maxIndex;
+        }
+
     private:
         std::vector<BinaryModule> m_binaryModule;
 
-        std::vector<BindingLayout> m_layout;
+        std::vector<DescriptorSetLayoutEntry> m_DescriptorSetLayoutEntries;
 
         std::optional<PushConstant> m_pushConstant;
     };

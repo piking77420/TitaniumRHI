@@ -41,6 +41,7 @@ target_sources(
         RHI-Resource.hpp
         RHI-Surface.cpp
         RHI-Surface.hpp
+        RHITypes.cpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp

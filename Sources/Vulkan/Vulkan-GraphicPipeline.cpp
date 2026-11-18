@@ -46,7 +46,7 @@ namespace TiRHI::Vulkan
 
         const BinaryModule* fragmentBinary = nullptr;
 
-        if (!getModule<ShaderStage::Vertex>(&vertexBinary) || !getModule<ShaderStage::Pixel>(&fragmentBinary))
+        if (!getModule(&vertexBinary, ShaderStage::Vertex) || !getModule(&fragmentBinary, ShaderStage::Pixel))
             return false;
 
         auto createShaderModule = [&](const BinaryModule& binary) -> vk::UniqueShaderModule
@@ -127,19 +127,24 @@ namespace TiRHI::Vulkan
         colorBlending.setAttachments(colorAttachment);
 
         std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
-        descriptorSetLayouts.reserve(getLayouts().size());
 
-        for (auto& layout : getLayouts())
+        uint32_t bindingCount = getDescriptorSetLayoutEntries().size();
+
+        if (bindingCount > 0)
         {
-            vk::DescriptorSetLayout descriptorSetLayout =
-                Device::Private::getDescriptorManager(device).getDescriptorSetLayout(layout);
-
-            if (descriptorSetLayout == VK_NULL_HANDLE)
+            descriptorSetLayouts.resize(getMaxSetIndex() + 1, VK_NULL_HANDLE);
+            for (auto& entry : getDescriptorSetLayoutEntries())
             {
-                RHI_LOG_ERROR(L"Failed to resolve descriptorSetLayout from pipieline", Api);
-                return false;
+                vk::DescriptorSetLayout descriptorSetLayout =
+                    Device::Private::getDescriptorManager(device).getDescriptorSetLayout(entry.layout);
+
+                if (descriptorSetLayout == VK_NULL_HANDLE)
+                {
+                    RHI_LOG_ERROR(L"Failed to resolve descriptorSetLayout from pipieline", Api);
+                    return false;
+                }
+                descriptorSetLayouts[entry.setIndex] = descriptorSetLayout;
             }
-            descriptorSetLayouts.emplace_back(descriptorSetLayout);
         }
 
         // Pipeline layout

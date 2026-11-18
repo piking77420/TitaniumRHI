@@ -177,7 +177,7 @@ namespace TiRHI::Vulkan
 
         // The current frame fence must already have been waited on and reset.
 
-        // wait fence
+        // reset fence
         {
             std::array fences = {getNativeInFlightFence()};
             const VkFence* vkFences = reinterpret_cast<const VkFence*>(fences.data());
