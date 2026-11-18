@@ -72,12 +72,19 @@ namespace TiRHI::DirectX12
             D3D12_GPU_DESCRIPTOR_HANDLE handle;
         };
 
+        struct RecordState
+        {
+            ID3D12RootSignature* currentRootSignature = nullptr;
+            void reset()
+            {
+                currentRootSignature = nullptr;
+            }
+        } m_recordStateD3D12;
+
         Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
-
-        ID3D12RootSignature* m_currentRootSignature = nullptr;
 
         void resetOnRecord();
 

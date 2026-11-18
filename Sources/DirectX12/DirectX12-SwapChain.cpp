@@ -128,7 +128,8 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                auto& texture = m_textures.emplace_back(getRHI());
+                auto& texture = m_textures.emplace_back(getRHI()).setFlags(
+                    TextureFlags::RenderTarget); // Had to do this in order to create rtv handle
                 texture.setName("SwapchainBackBuffer [" + std::to_string(i) + "]");
                 Texture::Private::build(texture, device, image);
 

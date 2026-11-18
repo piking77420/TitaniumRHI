@@ -244,6 +244,7 @@ namespace TiRHI::DirectX12::Private
 
         auto rootLayout = std::make_unique<D3D12DescriptorRootSignatureLayout>();
         D3D12DescriptorRootSignatureLayout* result = rootLayout.get();
+        result->rootSignature = rootSignature;
         result->spaceDescriptor = std::move(spaceDescriptor);
 
         m_rootSignatureMap.emplace(std::vector<DescriptorSet::DescriptorSetLayoutEntry>(

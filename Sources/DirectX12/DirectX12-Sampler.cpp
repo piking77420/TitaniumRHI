@@ -17,6 +17,9 @@ namespace TiRHI::DirectX12
 
         m_samplerCpuHandle = Device::Private::getDescriptorAllocatorSampler(device).create(device);
 
+        if (!m_samplerCpuHandle || !*m_samplerCpuHandle)
+            return false;
+
         D3D12_SAMPLER_DESC samplerDesc{};
         samplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
 
@@ -26,12 +29,7 @@ namespace TiRHI::DirectX12
 
         samplerDesc.MipLODBias = 0.0f;
         samplerDesc.MaxAnisotropy = 16;
-        samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-        samplerDesc.BorderColor[0] = 0.0f;
-        samplerDesc.BorderColor[1] = 0.0f;
-        samplerDesc.BorderColor[2] = 0.0f;
-        samplerDesc.BorderColor[3] = 0.0f;
+        samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 
         samplerDesc.MinLOD = 0.0f;
         samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;

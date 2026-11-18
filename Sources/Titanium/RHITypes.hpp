@@ -18,6 +18,9 @@ namespace TiRHI
         using Ts::operator()...;
     };
 
+    template<class T>
+    inline constexpr bool AlwaysFalse = false;
+
     template<typename T, typename Variant>
     struct VariantIndex;
 
@@ -278,7 +281,7 @@ namespace TiRHI
     X(Present)                                                                                                         \
     X(Count)
 
-    enum struct ResourceState
+    enum struct ResourceState // TODO include pixel shader resource
     {
 #define X(name) name,
         RHI_RESOURCE_STATE_LIST(X)

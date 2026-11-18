@@ -24,6 +24,11 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device);
 
+        const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& getShaderViewHandle() const
+        {
+            return m_samplerCpuHandle;
+        }
+
     private:
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_samplerCpuHandle;
     };

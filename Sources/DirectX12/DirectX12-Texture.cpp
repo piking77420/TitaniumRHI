@@ -31,7 +31,7 @@ namespace TiRHI::DirectX12
         desc.Flags = DirectX12::Private::textureFlagtoDirectX12(getFlags(), getFormat());
 
         const HRESULT hr = device.getNativeDevice()->CreateCommittedResource(
-            &heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_image));
+            &heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_image));
 
         if (FAILED(hr))
         {

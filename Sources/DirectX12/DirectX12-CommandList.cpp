@@ -13,6 +13,7 @@
 #include <DirectX12/Private/RhiToDirectX12.hpp>
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
 #include <DirectX12/DirectX12-DescriptorSet.hpp>
+#include <DirectX12/DirectX12-Sampler.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -333,50 +334,57 @@ namespace TiRHI::DirectX12
 
         const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
             GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
-        /*
-        if (root->rootParameterBindings.empty())
+
+        if (!root)
             return;
 
-        if (root->rootParameterBindings.size() < set)
+        auto& bindingsLayout = descriptorSet.getBindingsLayout();
+
+        if (bindingsLayout.bindings.empty())
             return;
 
-        const auto& mapping = root->rootParameterBindings[set];
+        auto& spaceDescriptor = root->spaceDescriptor;
 
-        auto& bindings = descriptorSet.getBindingsLayout();
-        for (const auto& mapping : root->rootParameterBindings)
+        for (const auto& binding : bindingsLayout.bindings)
         {
-            if (mapping.setIndex != set)
-                continue;
-
-            const uint32_t descriptorSetBinding = mapping.descriptorSetLocalBindingIndex;
-            if (descriptorSetBinding >= bindings.bindings.size())
-            {
-                RHI_LOG_ERROR(std::format(L"Commandlist {}; Out of bounds binding descritproSets {}", getNameW(),
-                                          descriptorSet.getNameW()),
-                              Api);
-                return;
-            }
             std::visit(
-                [&](const auto& value)
-                {
-                    using T = std::remove_cvref_t<decltype(value)>;
+                overloads{[&](const DescriptorSet::SampledTexture& sampledTexture)
+                          {
+                              forEachShaderStage(
+                                  sampledTexture.shaderStageFlag,
+                                  [&]([[maybe_unused]] ShaderStageFlags stage, uint32_t index)
+                                  {
+                                      if (!sampledTexture.texture || !sampledTexture.sampler)
+                                          return;
 
-                    if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::SampledTexture>)
-                    {
-                        const auto& sampledTexture = value;
-                        m_commandList->SetGraphicsRootDescriptorTable(mapping.rootParameterIndex, gpuHandle);
-                    }
-                    else
-                    {
-                        static_assert(sizeof(T) == 0, "Unsupported binding type");
-                    }
-                },
-                bindings.bindings[descriptorSetBinding]);
+                                      std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleTexture =
+                                          Texture::Private::getShaderRenderViewHandle(*sampledTexture.texture);
+                                      std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleSampler =
+                                          sampledTexture.sampler->getShaderViewHandle();
 
-            // Get the shader-visible descriptor handle
-            // associated with this binding.
-            const D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = descriptorSet.getGpuHandle(mapping.bindingIndex);
-        }*/
+                                      if (!handleTexture || !handleSampler || handleTexture->gpuHandle.ptr == 0 ||
+                                          handleSampler->gpuHandle.ptr == 0)
+                                          return;
+
+                                      auto& offsetAndCount =
+                                          spaceDescriptor.bindingsSetTableOffset[index][sampledTexture.bindingIndex];
+                                      assert(offsetAndCount.count == 2);
+                                      auto& rootParameterBindingTexture =
+                                          spaceDescriptor.rootParameterTable[index][offsetAndCount.offset];
+                                      auto& rootParameterBindingSampler =
+                                          spaceDescriptor.rootParameterTable[index][offsetAndCount.offset + 1];
+
+                                      m_commandList->SetGraphicsRootDescriptorTable(
+                                          rootParameterBindingTexture.rootParameterIndex, handleTexture->gpuHandle);
+
+                                      m_commandList->SetGraphicsRootDescriptorTable(
+                                          rootParameterBindingSampler.rootParameterIndex, handleSampler->gpuHandle);
+                                  });
+                          },
+                          [&](auto&& value)
+                          { static_assert(AlwaysFalse<decltype(value)>, "Unsupported binding type"); }},
+                binding);
+        }
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -397,7 +405,7 @@ namespace TiRHI::DirectX12
 
     void CommandList::resetOnRecord()
     {
-        m_currentRootSignature = nullptr;
+        m_recordStateD3D12.reset();
     }
 
     void CommandList::bindDescriptorHeaps()
@@ -413,11 +421,11 @@ namespace TiRHI::DirectX12
 
     void CommandList::bindRootSignature(ID3D12RootSignature* rootSignature)
     {
-        if (m_currentRootSignature == rootSignature)
+        if (m_recordStateD3D12.currentRootSignature == rootSignature)
             return;
 
         m_commandList->SetGraphicsRootSignature(rootSignature);
-        m_currentRootSignature = rootSignature;
+        m_recordStateD3D12.currentRootSignature = rootSignature;
     }
 
     bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)
