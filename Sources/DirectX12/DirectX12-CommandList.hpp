@@ -60,6 +60,8 @@ namespace TiRHI::DirectX12
 
         void pushConstant(void* data, size_t size);
 
+        void upload2D(Device& device, Texture& texture, std::span<const std::byte> data);
+
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
             return m_commandList.Get();

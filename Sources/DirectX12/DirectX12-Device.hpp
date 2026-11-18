@@ -3,6 +3,7 @@
 
 #include <span>
 
+#include <D3D12MemAlloc.h>
 #include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
@@ -49,6 +50,11 @@ namespace TiRHI::DirectX12
             static DirectX12::Private::DescriptorManager& getDescriptorManager(Device& device)
             {
                 return device.m_descritproManager;
+            }
+
+            static D3D12MA::Allocator& getAllocator(Device& device)
+            {
+                return *device.m_allocator.Get();
             }
         };
 
@@ -103,6 +109,7 @@ namespace TiRHI::DirectX12
 
         } m_synchronization;
 
+        MComPtr<D3D12MA::Allocator> m_allocator;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorCbvSrvUav;
@@ -119,6 +126,8 @@ namespace TiRHI::DirectX12
         bool queryOptions();
 
         bool initDescriptorAllocator();
+
+        bool initMemoryAllocator(const MComPtr<IDXGIAdapter1>& adapter);
     };
 } // namespace TiRHI::DirectX12
 

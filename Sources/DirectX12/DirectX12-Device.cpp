@@ -123,14 +123,16 @@ namespace TiRHI::DirectX12
         if (IDXGIFactory6* factory = getRHI().getNativeFactory())
         {
             onBuild(adapters, index);
-            const auto& nativeAdapter = Internal::getAllNativeAdapters(factory);
+            const std::vector<MComPtr<IDXGIAdapter1>>& nativeAdapter = Internal::getAllNativeAdapters(factory);
 #undef min;
             if (m_adapterIndex >= nativeAdapter.size())
                 return false;
 
+            const MComPtr<IDXGIAdapter1>& adapter = nativeAdapter[m_adapterIndex];
+
             const bool success = createDevice(nativeAdapter[m_adapterIndex]);
             onCreateDeviceSuccess(adapters[m_adapterIndex], success);
-            return success &&
+            return success && initMemoryAllocator(adapter) &&
                    m_descriptorAllocatorRtv
                        .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
                        .build(*this) &&
@@ -427,6 +429,18 @@ namespace TiRHI::DirectX12
     {
         return m_descriptorAllocatorSampler.setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).build(*this) &&
                m_descriptorAllocatorSampler.setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER).build(*this);
+    }
+
+    bool Device::initMemoryAllocator(const MComPtr<IDXGIAdapter1>& adapter1)
+
+    {
+        D3D12MA::ALLOCATOR_DESC desc = {};
+
+        desc.pDevice = m_device.Get();
+        desc.pAdapter = adapter1.Get();
+        desc.Flags = static_cast<D3D12MA::ALLOCATOR_FLAGS>(D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS);
+
+        return SUCCEEDED(D3D12MA::CreateAllocator(&desc, m_allocator.ReleaseAndGetAddressOf()));
     }
 
 }

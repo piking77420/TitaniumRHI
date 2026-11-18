@@ -73,6 +73,13 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
+        uint64_t getTotalBytesSize() const
+        {
+            // TODO HANDLE LEVEL AND DEPTH
+
+            return TiRHI::pixelSizeFromFormat(getFormat()) * getWidth() * getHeight();
+        }
+
     protected:
         uint32_t m_width = 0;
 

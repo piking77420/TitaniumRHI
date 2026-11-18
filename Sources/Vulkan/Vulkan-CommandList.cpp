@@ -288,8 +288,7 @@ namespace TiRHI::Vulkan
     {
         assert(texture.getState() == ResourceState::CopyDestination);
 
-        const VkDeviceSize uploadSize = static_cast<VkDeviceSize>(TiRHI::pixelSizeFromFormat(texture.getFormat())) *
-                                        texture.getWidth() * texture.getHeight();
+        const VkDeviceSize uploadSize = static_cast<VkDeviceSize>(texture.getTotalBytesSize());
 
         if (data.size() != uploadSize || uploadSize == 0)
             return;

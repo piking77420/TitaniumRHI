@@ -1,6 +1,8 @@
 #ifndef TITANIUM_DIRECTX12_TEXTURE_H
 #define TITANIUM_DIRECTX12_TEXTURE_H
 
+#include <D3D12MemAlloc.h>
+
 #include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
@@ -54,6 +56,8 @@ namespace TiRHI::DirectX12
         friend Private;
 
         MComPtr<ID3D12Resource> m_image;
+
+        MComPtr<D3D12MA::Allocation> m_allocation;
 
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_renderTargetView;
 

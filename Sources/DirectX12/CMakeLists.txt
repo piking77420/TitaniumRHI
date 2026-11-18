@@ -51,9 +51,11 @@ target_include_directories(
 if(WIN32)
     target_link_libraries(
         TitaniumRHI
+        PUBLIC
+            D3D12MemoryAllocator
         PRIVATE
             d3d12.lib 
             dxgi.lib 
-            dxguid.lib 
+            dxguid.lib
     )
 endif()

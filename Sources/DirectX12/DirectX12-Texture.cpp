@@ -12,12 +12,16 @@ namespace TiRHI::DirectX12
     {
     }
 
-    Texture::~Texture() = default;
+    Texture::~Texture()
+    {
+        m_image.Reset();
+        m_allocation.Reset();
+    };
 
     bool Texture::build(Device& device)
     {
-        D3D12_HEAP_PROPERTIES heap{};
-        heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+        D3D12MA::ALLOCATION_DESC allocDesc = {};
+        allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         D3D12_RESOURCE_DESC desc{};
         desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -30,8 +34,11 @@ namespace TiRHI::DirectX12
         desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
         desc.Flags = DirectX12::Private::textureFlagtoDirectX12(getFlags(), getFormat());
 
-        const HRESULT hr = device.getNativeDevice()->CreateCommittedResource(
-            &heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_image));
+        D3D12MA::Allocator& allocator = Device::Private::getAllocator(device);
+
+        const HRESULT hr = allocator.CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                    m_allocation.ReleaseAndGetAddressOf(),
+                                                    IID_PPV_ARGS(m_image.ReleaseAndGetAddressOf()));
 
         if (FAILED(hr))
         {

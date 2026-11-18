@@ -146,6 +146,7 @@ if(TITANIUM_USE_PIX)
     )
 endif()
 
+    add_subdirectory(ThirdParty/D3D12MemoryAllocator)
     add_subdirectory(Sources/DirectX12)
 
 elseif(TITANIUM_RHI_BACKEND STREQUAL "Metal")
