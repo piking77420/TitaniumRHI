@@ -31,10 +31,19 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device);
 
+        void setSubmissionValue(uint64_t value)
+        {
+            m_submissionValue = value;
+        }
+
     private:
         friend Private;
 
+        Device* m_device{nullptr};
+
         vk::UniqueSampler m_sampler;
+
+        uint64_t m_submissionValue = 0;
     };
 
 } // namespace TiRHI::Vulkan

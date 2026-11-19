@@ -4,7 +4,15 @@
 
 namespace TiRHI::Vulkan
 {
-    Sampler::~Sampler() = default;
+    Sampler::~Sampler()
+    {
+        if (!m_device)
+            return;
+
+        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        defferdDestroy.retire(m_submissionValue,
+                              [uniqueSampler = std::move(m_sampler)]() mutable { uniqueSampler.reset(); });
+    }
 
     bool Sampler::build(Device& device)
     {
@@ -12,7 +20,7 @@ namespace TiRHI::Vulkan
 
         if (vkDevice == VK_NULL_HANDLE)
             return false;
-
+        m_device = &device;
         vk::SamplerCreateInfo info{};
         info.flags = {};
         info.pNext = nullptr;

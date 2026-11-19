@@ -1,9 +1,12 @@
+#include <variant>
+
 #include <Vulkan/Vulkan-CommandList.hpp>
 #include <Titanium/Log.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
+#include <Vulkan/Vulkan-Sampler.hpp>
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
 #include <Vulkan/Private/Transition.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
@@ -160,6 +163,19 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
+        // set submitted value
+        for (auto& texture : renderTargets.getColorAttachements())
+        {
+            if (texture)
+                texture->setSubmissionValue(m_lastSubmissionValue);
+        }
+
+        if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
+        {
+            if (texture)
+                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+        }
+
         return true;
     }
 
@@ -217,11 +233,31 @@ namespace TiRHI::Vulkan
             return;
 
         std::array<vk::DescriptorSet, 1> descriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+        getcurrentFrameCmb().bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics,
+            GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, descriporSet, {});
+        for (auto& binding : descriptorSet.getBindingsLayout().bindings)
+        {
+            std::visit(
+                [&](auto&& value)
+                {
+                    using T = std::remove_cvref_t<decltype(value)>;
 
-        vk::CommandBuffer cmb = getcurrentFrameCmb();
-        cmb.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                               GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set,
-                               descriporSet, {});
+                    if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
+                    {
+                        if (value.texture)
+                            value.texture->setSubmissionValue(m_lastSubmissionValue);
+
+                        if (value.sampler)
+                            value.sampler->setSubmissionValue(m_lastSubmissionValue);
+                    }
+                    else
+                    {
+                        static_assert(AlwaysFalse<T>, "Unsupported descriptor binding type");
+                    }
+                },
+                binding);
+        }
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -294,6 +330,7 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
                                                vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
+        texture.setSubmissionValue(m_lastSubmissionValue);
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const

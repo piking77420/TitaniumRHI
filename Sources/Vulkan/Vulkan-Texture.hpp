@@ -55,6 +55,8 @@ namespace TiRHI::Vulkan
             return isValid();
         }
 
+        void setSubmissionValue(uint64_t value);
+
     private:
         friend Private;
 
@@ -65,6 +67,8 @@ namespace TiRHI::Vulkan
         vk::UniqueImageView m_uniqueView;
 
         VmaAllocation m_allocation = nullptr;
+
+        uint64_t m_submissionValue = 0;
 
         bool build(Device& device, vk::Image image, Format format);
 

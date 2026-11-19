@@ -8,6 +8,8 @@
 
 namespace TiRHI
 {
+    // TODO may add and submited value in order to deffered destory
+
     template<typename T, typename TRHI>
     class Object
     {

@@ -119,11 +119,23 @@ namespace TiRHI::Vulkan
         // That allow swap chian to be used as an texture and particulary useful for command list tracking
         if (m_allocation && m_device)
         {
-            vmaDestroyImage(Device::Private::getAllocator(*m_device), static_cast<VkImage>(m_image), m_allocation);
+            TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
+                Device::Private::getDeferredDeletionQueue(*m_device);
+
+            deferredDeletionQueue.retire(m_submissionValue,
+                                         [allocator = Device::Private::getAllocator(*m_device),
+                                          image = std::move(m_image), allocation = std::move(m_allocation)]()
+                                         { vmaDestroyImage(allocator, static_cast<VkImage>(image), allocation); });
         }
 
         m_image = vk::Image{};
         m_allocation = nullptr;
+        m_submissionValue = 0;
+    }
+
+    void Texture::setSubmissionValue(uint64_t value)
+    {
+        m_submissionValue = value;
     }
 
 } // namespace TiRHI::Vulkan
