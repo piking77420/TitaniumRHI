@@ -10,7 +10,6 @@
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
 #include <Vulkan/Vulkan-Buffer.hpp>
-#include <Vulkan/Private/GenericUploadManager.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -35,12 +34,6 @@ namespace TiRHI::Vulkan
 
         struct Private
         {
-            static std::array<Vulkan::Private::VulkanUploadManager::UploadBatch, MaxFramesInFlight>&
-            getUploadBatch(CommandList& commandlist)
-            {
-                return commandlist.m_pendingUploads;
-            }
-
             static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
             {
                 commandlist.m_lastSubmissionValue = lastSubmissionValue;
@@ -81,8 +74,6 @@ namespace TiRHI::Vulkan
 
         void pushConstant(void* data, uint32_t size);
 
-        void upload2D(Device& device, Texture& texture, std::span<const std::byte> data);
-
         void copyBufferToTexture(Buffer& buffer, Texture& texture);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
@@ -103,8 +94,6 @@ namespace TiRHI::Vulkan
         } m_vulkanStorage;
 
         Device* m_device{nullptr}; // TODO fix this ugly
-
-        std::array<Vulkan::Private::VulkanUploadManager::UploadBatch, MaxFramesInFlight> m_pendingUploads;
 
         uint64_t m_lastSubmissionValue = 0;
 

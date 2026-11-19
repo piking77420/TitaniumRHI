@@ -256,54 +256,6 @@ namespace TiRHI::Vulkan
         }
     }
 
-    void CommandList::upload2D(Device& device, Texture& texture, std::span<const std::byte> data)
-    {
-        assert(texture.getState() == ResourceState::CopyDestination);
-
-        const VkDeviceSize uploadSize = static_cast<VkDeviceSize>(texture.getTotalBytesSize());
-
-        if (data.size() != uploadSize || uploadSize == 0)
-            return;
-
-        Vulkan::Private::VulkanUploadManager& uploads = Device::Private::getUploadManager(*m_device);
-        Vulkan::Private::StagingBuffer stagingBuffer = uploads.acquire(uploadSize);
-
-        if (stagingBuffer) // Use an scop exit
-        {
-            VmaAllocator allocator = stagingBuffer.getAllocator();
-            void* mappedData = nullptr;
-            {
-                const VkResult result = vmaMapMemory(allocator, stagingBuffer.getAllocation(), &mappedData);
-                VulkanCheckErrorStatus(result);
-
-                std::memcpy(mappedData, data.data(), data.size());
-
-                const VkResult flushResult =
-                    vmaFlushAllocation(allocator, stagingBuffer.getAllocation(), 0, uploadSize);
-                VulkanCheckErrorStatus(flushResult);
-                vmaUnmapMemory(allocator, stagingBuffer.getAllocation());
-            }
-
-            std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
-            bufferImageCopy[0]
-                .setBufferOffset(0)
-                .setBufferRowLength(0)
-                .setBufferImageHeight(0)
-                .setImageSubresource(vk::ImageSubresourceLayers{}
-                                         .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                         .setMipLevel(0)
-                                         .setBaseArrayLayer(0)
-                                         .setLayerCount(1))
-                .setImageOffset({0, 0, 0})
-                .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
-
-            getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), Texture::Private::getImage(texture),
-                                                   vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
-        }
-
-        m_pendingUploads[getRHI().getCurrentFrame()].buffers.emplace_back(std::move(stagingBuffer));
-    }
-
     void CommandList::copyBufferToTexture(Buffer& buffer, Texture& texture)
     {
         if (!buffer || !texture)

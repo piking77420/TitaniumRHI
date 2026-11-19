@@ -9,7 +9,6 @@
 #include <Private/DeviceQueueFamily.hpp>
 #include <Private/DescriptorManager.hpp>
 #include <Private/DeferredDeletionQueue.hpp>
-#include <Private/GenericUploadManager.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
@@ -65,11 +64,6 @@ namespace TiRHI::Vulkan
             static Vulkan::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
             {
                 return device.m_deferredDeletionQueue;
-            }
-
-            static Vulkan::Private::VulkanUploadManager& getUploadManager(Device& device)
-            {
-                return device.m_uploadManager;
             }
         };
 
@@ -172,8 +166,6 @@ namespace TiRHI::Vulkan
         Allocator m_vmaAllocator;
 
         Vulkan::Private::DeferredDeletionQueue m_deferredDeletionQueue;
-
-        Vulkan::Private::VulkanUploadManager m_uploadManager;
 
         bool checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures);
 

@@ -6,7 +6,6 @@ target_sources(
     TitaniumRHIInterface
     INTERFACE
         Private/StrongTypeId.hpp
-        Private/UploadManager.hpp
         Log.hpp
         RHI-BaseAcquiredFrame.cpp
         RHI-BaseAcquiredFrame.hpp
