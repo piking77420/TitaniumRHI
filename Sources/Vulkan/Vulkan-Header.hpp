@@ -172,7 +172,7 @@ namespace TiRHI::Vulkan
         if (result == vk::Result::eSuccess)
             return false;
 
-        RHI_LOG_ERROR(std::format(L"Vulkan error: {}", getResultDescriptionW(result)), RhiApi::Vulkan);
+        RHI_LOG_FATAL(std::format(L"Vulkan error: {}", getResultDescriptionW(result)), RhiApi::Vulkan);
 
         return true;
     }

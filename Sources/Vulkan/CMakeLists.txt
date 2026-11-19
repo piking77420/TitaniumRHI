@@ -8,6 +8,8 @@ target_sources(
         Private/DescriptorSetHandle.hpp
         Private/DeviceQueueFamily.cpp
         Private/DeviceQueueFamily.hpp
+        Private/StaginBuffer.cpp
+        Private/StaginBuffer.hpp
         Private/RHIToVulkan.cpp
         Private/RHIToVulkan.hpp
         Private/Transition.hpp

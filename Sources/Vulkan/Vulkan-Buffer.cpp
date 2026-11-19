@@ -1,10 +1,8 @@
-#include "DirectX12-Buffer.hpp"
-#include "DirectX12-Buffer.hpp"
-#include "DirectX12-Buffer.hpp"
 #include <Vulkan/Vulkan-Buffer.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
+#include <Titanium/Private/DeferredDeletionQueue.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -104,7 +102,7 @@ namespace TiRHI::Vulkan
             return nullptr;
         }
 
-        AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
+        Vulkan::Private::AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
         if (!allocatedBuffer)
             return nullptr;
 
@@ -128,7 +126,7 @@ namespace TiRHI::Vulkan
             return;
         }
 
-        AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
+        Vulkan::Private::AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
         if (!allocatedBuffer)
             return;
 
@@ -144,7 +142,7 @@ namespace TiRHI::Vulkan
         if (!m_device)
             return;
 
-        Vulkan::Private::DeferredDeletionQueue& defferdDeferredDeletionQueue =
+        TiRHI::Private::DeferredDeletionQueue& defferdDeferredDeletionQueue =
             Device::Private::getDeferredDeletionQueue(*m_device);
 
         assert(m_allocatedBuffer.size() == m_lastTimeLineUsed.size());
@@ -156,13 +154,14 @@ namespace TiRHI::Vulkan
             auto& allocatedBuffer = m_allocatedBuffer[i];
             if (allocatedBuffer.allocation && m_device)
             {
-                defferdDeferredDeletionQueue.retire(
-                    m_lastTimeLineUsed[i],
-                    [allocator = Device::Private::getAllocator(*m_device), allocatedBuffer = allocatedBuffer]()
-                    {
-                        vmaDestroyBuffer(allocator, static_cast<VkBuffer>(allocatedBuffer.buffer),
-                                         allocatedBuffer.allocation);
-                    });
+                defferdDeferredDeletionQueue.retire(m_lastTimeLineUsed[i],
+                                                    [allocator = Device::Private::getAllocator(*m_device),
+                                                     allocatedBuffer = std::move(allocatedBuffer)]()
+                                                    {
+                                                        vmaDestroyBuffer(allocator,
+                                                                         static_cast<VkBuffer>(allocatedBuffer.buffer),
+                                                                         allocatedBuffer.allocation);
+                                                    });
             }
         }
 
@@ -172,7 +171,7 @@ namespace TiRHI::Vulkan
 
     vk::Buffer Buffer::getVkBufferFrame()
     {
-        AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
+        Vulkan::Private::AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
 
         return allocatedBuffer ? allocatedBuffer->buffer : VK_NULL_HANDLE;
     }
@@ -184,7 +183,7 @@ namespace TiRHI::Vulkan
             m_lastTimeLineUsed[index] = timeLine;
     }
 
-    Buffer::AllocatedBuffer* Buffer::getAllocatedBufferFrame()
+    Vulkan::Private::AllocatedBuffer* Buffer::getAllocatedBufferFrame()
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
 

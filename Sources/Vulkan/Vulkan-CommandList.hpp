@@ -74,7 +74,7 @@ namespace TiRHI::Vulkan
 
         void pushConstant(void* data, uint32_t size);
 
-        void copyBufferToTexture(Buffer& buffer, Texture& texture);
+        void upload2d(Texture& texture, std::span<const std::byte> data);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 

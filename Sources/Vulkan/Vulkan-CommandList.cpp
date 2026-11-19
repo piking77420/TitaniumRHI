@@ -7,6 +7,7 @@
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
 #include <Vulkan/Private/Transition.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Private/StaginBuffer.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -257,15 +258,11 @@ namespace TiRHI::Vulkan
         }
     }
 
-    void CommandList::copyBufferToTexture(Buffer& buffer, Texture& texture)
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
     {
-        if (!buffer || !texture)
+        if (!m_device || !texture) [[unlikely]]
             return;
         assert(texture.getState() == ResourceState::CopyDestination);
-
-        if (buffer.getSize() == 0)
-            return;
-
         std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
         bufferImageCopy[0]
             .setBufferOffset(0)
@@ -279,16 +276,25 @@ namespace TiRHI::Vulkan
             .setImageOffset({0, 0, 0})
             .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
 
-        const vk::Buffer vkBuffer = buffer.getVkBufferFrame();
         const vk::Image vktexture = Texture::Private::getImage(texture);
 
-        if (vkBuffer == VK_NULL_HANDLE || vktexture == VK_NULL_HANDLE)
+        if (vktexture == VK_NULL_HANDLE) [[unlikely]]
             return;
 
-        // TODO do it for texture
-        buffer.setLastTimeLineUsedFrame(m_lastSubmissionValue);
-        getcurrentFrameCmb().copyBufferToImage(vkBuffer, vktexture, vk::ImageLayout::eTransferDstOptimal,
-                                               bufferImageCopy);
+        // TODO set m_lastSubmissionValue for texture
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_lastSubmissionValue);
+
+        if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
+            return;
+
+        if (std::byte* ptr = stagingBuffer.mapData()) [[likely]]
+        {
+            std::memcpy(ptr, data.data(), data.size_bytes());
+            stagingBuffer.unmapData();
+        }
+
+        getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
+                                               vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const

@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <Titanium/RHI-BaseBuffer.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
-#include <vma/vk_mem_alloc.h>
+#include <Vulkan/Private/StaginBuffer.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -50,16 +50,9 @@ namespace TiRHI::Vulkan
         void setLastTimeLineUsedFrame(uint64_t timeLine);
 
     private:
-        struct AllocatedBuffer
-        {
-            vk::Buffer buffer = VK_NULL_HANDLE;
-            VmaAllocation allocation = VK_NULL_HANDLE;
-            VmaAllocationInfo allocationInfo{};
-        };
-
         Device* m_device = nullptr;
 
-        std::vector<AllocatedBuffer> m_allocatedBuffer;
+        std::vector<Vulkan::Private::AllocatedBuffer> m_allocatedBuffer;
 
         std::vector<uint64_t> m_lastTimeLineUsed;
 
@@ -67,7 +60,7 @@ namespace TiRHI::Vulkan
 
         void destroy();
 
-        AllocatedBuffer* getAllocatedBufferFrame();
+        Vulkan::Private::AllocatedBuffer* getAllocatedBufferFrame();
     };
 }
 

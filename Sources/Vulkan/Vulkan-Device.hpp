@@ -8,7 +8,7 @@
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
 #include <Private/DescriptorManager.hpp>
-#include <Private/DeferredDeletionQueue.hpp>
+#include <Titanium/Private/DeferredDeletionQueue.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
@@ -61,7 +61,7 @@ namespace TiRHI::Vulkan
 
             static uint64_t getCurrentFrameSubmissionValue(const Device& device);
 
-            static Vulkan::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
+            static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
             {
                 return device.m_deferredDeletionQueue;
             }
@@ -165,7 +165,7 @@ namespace TiRHI::Vulkan
 
         Allocator m_vmaAllocator;
 
-        Vulkan::Private::DeferredDeletionQueue m_deferredDeletionQueue;
+        TiRHI::Private::DeferredDeletionQueue m_deferredDeletionQueue;
 
         bool checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures);
 
