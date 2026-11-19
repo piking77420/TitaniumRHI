@@ -380,6 +380,8 @@ namespace TiRHI::DirectX12
             // wait
             WaitForSingleObjectEx(m_synchronization.frameFenceEvent, INFINITE, FALSE);
         }
+
+        deferredDeletionQueue.collect(completedValue);
     }
 
     void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)

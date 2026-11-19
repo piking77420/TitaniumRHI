@@ -32,7 +32,7 @@ namespace TiRHI::Vulkan
         }
         m_commandPool = vkDevice.createCommandPoolUnique(vkCommandPoolCreateInfo);
 
-        if (!m_commandPool)
+        if (!m_commandPool) [[unlikely]]
         {
             RHI_LOG_ERROR(L"Failed to create command pool", RhiApi::Vulkan);
             return false;
@@ -51,7 +51,7 @@ namespace TiRHI::Vulkan
             return false;
         }
 
-        m_volkTable = device.getVolkTable();
+        m_volkTable = &device.getVolkTable();
         m_device = &device;
         return m_device && m_volkTable;
     }
@@ -78,7 +78,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::beginDebugLabel(std::string_view name, std::optional<std::span<const float, 4>> color)
     {
-        if (!getRHI().getUseDebugLabel() || !m_volkTable)
+        if (!getRHI().getUseDebugLabel() || !m_volkTable) [[unlikely]]
             return;
 
         vk::DebugUtilsLabelEXT label{};
@@ -94,7 +94,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::endDebugLabel()
     {
-        if (!getRHI().getUseDebugLabel() || !m_volkTable)
+        if (!getRHI().getUseDebugLabel() || !m_volkTable) [[unlikely]]
             return;
 
         getcurrentFrameCmb().endDebugUtilsLabelEXT();
@@ -186,10 +186,10 @@ namespace TiRHI::Vulkan
     void CommandList::transitionResource(Texture& texture, const ResourceState state)
     {
         const ResourceState currentState = texture.getState();
-        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE)
+        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
             return;
 
-        if (state == ResourceState::CopyDestination)
+        if (state == ResourceState::CopyDestination) [[unlikely]]
             assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
 
         using namespace Private;
@@ -212,7 +212,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
     {
-        if (!m_recordState.graphicPipeline)
+        if (!m_recordState.graphicPipeline) [[unlikely]]
             return;
 
         std::array<vk::DescriptorSet, 1> descriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
@@ -225,7 +225,8 @@ namespace TiRHI::Vulkan
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
-        getcurrentFrameCmb().draw(vertexCount, instanceCount, firstVertex, firstInstance);
+        if (m_volkTable) [[likely]]
+            m_volkTable->vkCmdDraw(getcurrentFrameCmb(), vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
     void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,

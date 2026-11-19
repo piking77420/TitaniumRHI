@@ -22,13 +22,13 @@ namespace TiRHI
             static_assert(std::derived_from<T, BaseBuffer<T, _Device, TRHI>>);
         }
 
-        _Derived& setSize(uint32_t size)
+        _Derived& setSize(uint64_t size)
         {
             m_size = size;
             return static_cast<T&>(*this);
         }
 
-        uint32_t getSize() const
+        uint64_t getSize() const
         {
             return m_size;
         }
@@ -124,7 +124,7 @@ namespace TiRHI
         };
 
     protected:
-        uint32_t m_size = {};
+        uint64_t m_size = {};
 
         BufferUsage m_usage{BufferUsage::None};
 

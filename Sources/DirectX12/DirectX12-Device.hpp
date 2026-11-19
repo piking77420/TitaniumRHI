@@ -11,6 +11,7 @@
 #include <DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
 #include <DirectX12/Private/DescriptorManager.hpp>
+#include <Titanium/Private/DeferredDeletionQueue.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -55,6 +56,11 @@ namespace TiRHI::DirectX12
             static D3D12MA::Allocator& getAllocator(Device& device)
             {
                 return *device.m_allocator.Get();
+            }
+
+            static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
+            {
+                return device.deferredDeletionQueue;
             }
         };
 
@@ -109,6 +115,7 @@ namespace TiRHI::DirectX12
 
         } m_synchronization;
 
+        TiRHI::Private::DeferredDeletionQueue deferredDeletionQueue;
         MComPtr<D3D12MA::Allocator> m_allocator;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;

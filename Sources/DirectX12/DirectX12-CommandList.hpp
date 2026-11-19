@@ -14,6 +14,7 @@ namespace TiRHI::DirectX12
     class Device;
     class RenderTargets;
     class Texture;
+    class Buffer;
     class RenderPassDescriptor;
     class GraphicPipeline;
     class DescriptorSet;
@@ -60,7 +61,7 @@ namespace TiRHI::DirectX12
 
         void pushConstant(void* data, size_t size);
 
-        void upload2D(Device& device, Texture& texture, std::span<const std::byte> data);
+        void copyBufferToTexture(Buffer& buffer, Texture& texture);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {

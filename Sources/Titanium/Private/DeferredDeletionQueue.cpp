@@ -1,6 +1,6 @@
-#include <Vulkan/Private/DeferredDeletionQueue.hpp>
+#include <Titanium/Private/DeferredDeletionQueue.hpp>
 
-namespace TiRHI::Vulkan::Private
+namespace TiRHI::Private
 {
     DeferredDeletionQueue::~DeferredDeletionQueue()
     {

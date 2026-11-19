@@ -85,8 +85,7 @@ namespace TiRHI::Vulkan
 
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
-        // Keep dispatch functions valid when the Device wrapper moves.
-        std::optional<VolkDeviceTable> m_volkTable;
+        const VolkDeviceTable* m_volkTable{nullptr};
 
         struct VulkanStorage
         {

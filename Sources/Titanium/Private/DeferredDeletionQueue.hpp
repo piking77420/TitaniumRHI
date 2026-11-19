@@ -1,15 +1,9 @@
-#ifndef TITANIUM_VULKAN_PRIVATE_DEFFERED_DELETATION_QUEUE_H
-#define TITANIUM_VULKAN_PRIVATE_DEFFERED_DELETATION_QUEUE_H
+#ifndef TITANIUM_PRIVATE_DEFFERED_DELETATION_QUEUE_H
+#define TITANIUM_PRIVATE_DEFFERED_DELETATION_QUEUE_H
 
 #include <functional>
-#include <queue>
 
-namespace TiRHI::Vulkan
-{
-    class Device;
-} // TiRHI::Vulkan
-
-namespace TiRHI::Vulkan::Private
+namespace TiRHI::Private
 {
     struct PendingDeletion
     {
@@ -36,4 +30,4 @@ namespace TiRHI::Vulkan::Private
 
 } // TiRHI::Vulkan
 
-#endif // TITANIUM_VULKAN_PRIVATE_DEFFERED_DELETATION_QUEUE_H
+#endif // TITANIUM_PRIVATE_DEFFERED_DELETATION_QUEUE_H

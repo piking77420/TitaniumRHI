@@ -5,6 +5,8 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
+        Private/DeferredDeletionQueue.cpp
+        Private/DeferredDeletionQueue.hpp
         Private/StrongTypeId.hpp
         Log.hpp
         RHI-BaseAcquiredFrame.cpp

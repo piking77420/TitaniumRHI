@@ -13,6 +13,8 @@ target_sources(
         Private/RhiToDirectX12.hpp
         DirectX12-AcquireFrame.cpp
         DirectX12-AcquireFrame.hpp
+        DirectX12-Buffer.cpp
+        DirectX12-Buffer.hpp
         DirectX12-CommandList.cpp
         DirectX12-CommandList.hpp
         DirectX12-DescriptorSet.cpp

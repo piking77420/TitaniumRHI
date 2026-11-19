@@ -61,11 +61,6 @@ namespace TiRHI::DirectX12
         return m_image && createHandle(device);
     }
 
-    bool Texture::isValid() const
-    {
-        return m_image && m_renderTargetView && m_shaderRenderView;
-    }
-
     bool Texture::createHandle(Device& device)
     {
         bool isOk = true;

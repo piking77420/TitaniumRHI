@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
-        Private/DeferredDeletionQueue.cpp
-        Private/DeferredDeletionQueue.hpp
         Private/DescriptorManager.cpp
         Private/DescriptorManager.cpp
         Private/DescriptorSetHandle.hpp

@@ -1,3 +1,6 @@
+#include "DirectX12-Buffer.hpp"
+#include "DirectX12-Buffer.hpp"
+#include "DirectX12-Buffer.hpp"
 #include <Vulkan/Vulkan-Buffer.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Private/RHIToVulkan.hpp>
@@ -177,7 +180,8 @@ namespace TiRHI::Vulkan
     void Buffer::setLastTimeLineUsedFrame(uint64_t timeLine)
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
-        m_lastTimeLineUsed[index] = timeLine;
+        if (index < m_lastTimeLineUsed.size())
+            m_lastTimeLineUsed[index] = timeLine;
     }
 
     Buffer::AllocatedBuffer* Buffer::getAllocatedBufferFrame()

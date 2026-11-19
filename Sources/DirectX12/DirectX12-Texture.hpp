@@ -50,7 +50,20 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device);
 
-        bool isValid() const;
+        bool isValid() const
+        {
+            return m_image;
+        }
+
+        bool isInvalid() const
+        {
+            return !isValid();
+        }
+
+        operator bool() const
+        {
+            return isValid();
+        }
 
     private:
         friend Private;

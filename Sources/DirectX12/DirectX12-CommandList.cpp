@@ -14,6 +14,8 @@
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
 #include <DirectX12/DirectX12-DescriptorSet.hpp>
 #include <DirectX12/DirectX12-Sampler.hpp>
+#include <DirectX12/DirectX12-Buffer.hpp>
+#include <DirectX12/DirectX12-Texture.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -403,73 +405,44 @@ namespace TiRHI::DirectX12
         assert(false && "TODO");
     }
 
-    void CommandList::upload2D(Device& device, Texture& texture, std::span<const std::byte> data)
+    void CommandList::copyBufferToTexture(Buffer& buffer, Texture& texture)
     {
-        ID3D12Device* d3d12Device = device.getNativeDevice().Get();
-        D3D12MA::Allocator& allocator = Device::Private::getAllocator(device);
+        if (!m_device || !buffer || !texture)
+            return;
 
-        const auto desc = Texture::Private::getImage(texture)->GetDesc();
+        assert(texture.getState() == ResourceState::CopyDestination);
+        assert((buffer.getUsage() & BufferUsage::CopySource) != BufferUsage::None);
 
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint = {};
+        ID3D12Resource* dstResource = Texture::Private::getImage(texture);
+
+        ID3D12Resource* srcResource = buffer.getNativeBufferFrame();
+
+        if (!srcResource || !dstResource)
+            return;
+
+        const D3D12_RESOURCE_DESC desc = dstResource->GetDesc();
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
         UINT numRows = 0;
         UINT64 rowSize = 0;
         UINT64 uploadSize = 0;
 
-        d3d12Device->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, &numRows, &rowSize, &uploadSize);
+        m_device->getNativeDevice()->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, &numRows, &rowSize, &uploadSize);
 
-        const size_t sourceRowPitch = static_cast<size_t>(rowSize);
-        const size_t sourceSize = sourceRowPitch * numRows;
-
-        assert(data.size_bytes() == sourceSize);
-
-        D3D12MA::ALLOCATION_DESC allocDesc = {};
-        allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-
-        D3D12_RESOURCE_DESC bufferDesc = {};
-        bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        bufferDesc.Width = uploadSize;
-        bufferDesc.Height = 1;
-        bufferDesc.DepthOrArraySize = 1;
-        bufferDesc.MipLevels = 1;
-        bufferDesc.SampleDesc.Count = 1;
-        bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-        // temp just foir testing firs time draw triangle
-        // dont remove it
-        static MComPtr<D3D12MA::Allocation> uploadAllocation = [&]()
+        // Make sure the source contains the complete upload footprint.
+        if (buffer.getSize() < uploadSize)
         {
-            MComPtr<D3D12MA::Allocation> all;
-            HRESULT hr = allocator.CreateResource(&allocDesc, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                  all.GetAddressOf(), IID_NULL, nullptr);
-
-            return all;
-        }();
-
-        uint8_t* mapped = nullptr;
-        D3D12_RANGE readRange = {0, 0};
-
-        ID3D12Resource* uploadBuffer = uploadAllocation->GetResource();
-
-        HRESULT hr = uploadBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mapped));
-
-        if (FAILED(hr))
-            throw std::runtime_error("Upload buffer Map failed");
-
-        for (UINT y = 0; y < numRows; ++y)
-        {
-            std::memcpy(mapped + footprint.Offset + y * footprint.Footprint.RowPitch, data.data() + y * sourceRowPitch,
-                        static_cast<size_t>(rowSize));
+            RHI_LOG_ERROR(L"Source buffer is too small for texture copy", RhiApi::DirectX12);
+            return;
         }
 
-        uploadBuffer->Unmap(0, nullptr);
-
-        D3D12_TEXTURE_COPY_LOCATION src = {};
-        src.pResource = uploadBuffer;
+        D3D12_TEXTURE_COPY_LOCATION src{};
+        src.pResource = srcResource;
         src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
         src.PlacedFootprint = footprint;
 
-        D3D12_TEXTURE_COPY_LOCATION dst = {};
-        dst.pResource = Texture::Private::getImage(texture);
+        D3D12_TEXTURE_COPY_LOCATION dst{};
+        dst.pResource = dstResource;
         dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         dst.SubresourceIndex = 0;
 
