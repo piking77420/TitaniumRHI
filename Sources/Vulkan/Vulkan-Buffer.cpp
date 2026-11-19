@@ -5,12 +5,16 @@
 
 namespace TiRHI::Vulkan
 {
-    Buffer ::~Buffer() = default;
+    Buffer ::~Buffer()
+    {
+        destroy();
+    };
 
     Buffer::Buffer(Buffer&& other) noexcept
         : BaseBuffer(std::move(other))
         , m_device(std::exchange(other.m_device, nullptr))
         , m_allocatedBuffer(std::exchange(other.m_allocatedBuffer, {}))
+        , m_lastTimeLineUsed(std::exchange(other.m_lastTimeLineUsed, {}))
     {
     }
 
@@ -23,6 +27,7 @@ namespace TiRHI::Vulkan
         BaseBuffer::operator=(std::move(other));
         m_device = std::exchange(other.m_device, nullptr);
         m_allocatedBuffer = std::exchange(other.m_allocatedBuffer, {});
+        m_lastTimeLineUsed = std::exchange(other.m_lastTimeLineUsed, {});
 
         return *this;
     }
@@ -62,7 +67,7 @@ namespace TiRHI::Vulkan
         }
 
         m_allocatedBuffer.resize(m_updateMode == BufferUpdateMode::Static ? 1 : getRHI().getFrameInFlight());
-
+        m_lastTimeLineUsed.resize(m_allocatedBuffer.size(), 0);
         for (auto& allocatedBuffer : m_allocatedBuffer)
         {
             const vk::Result vkResult = static_cast<vk::Result>(vmaCreateBuffer(
@@ -133,24 +138,46 @@ namespace TiRHI::Vulkan
 
     void Buffer::destroy()
     {
-        for (auto& allocatedBuffer : m_allocatedBuffer)
+        if (!m_device)
+            return;
+
+        Vulkan::Private::DeferredDeletionQueue& defferdDeferredDeletionQueue =
+            Device::Private::getDeferredDeletionQueue(*m_device);
+
+        assert(m_allocatedBuffer.size() == m_lastTimeLineUsed.size());
+        if (m_allocatedBuffer.size() != m_lastTimeLineUsed.size())
+            return;
+
+        for (size_t i = 0; i < m_allocatedBuffer.size(); i++)
         {
+            auto& allocatedBuffer = m_allocatedBuffer[i];
             if (allocatedBuffer.allocation && m_device)
             {
-                vmaDestroyBuffer(Device::Private::getAllocator(*m_device),
-                                 static_cast<VkBuffer>(allocatedBuffer.buffer), allocatedBuffer.allocation);
+                defferdDeferredDeletionQueue.retire(
+                    m_lastTimeLineUsed[i],
+                    [allocator = Device::Private::getAllocator(*m_device), allocatedBuffer = allocatedBuffer]()
+                    {
+                        vmaDestroyBuffer(allocator, static_cast<VkBuffer>(allocatedBuffer.buffer),
+                                         allocatedBuffer.allocation);
+                    });
             }
-            allocatedBuffer.buffer = vk::Buffer{};
-            allocatedBuffer.allocation = nullptr;
-            allocatedBuffer.allocationInfo = {};
         }
+
+        m_allocatedBuffer.clear();
+        m_lastTimeLineUsed.clear();
     }
 
-    vk::Buffer Buffer::getFrameVkBuffer()
+    vk::Buffer Buffer::getVkBufferFrame()
     {
         AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
 
         return allocatedBuffer ? allocatedBuffer->buffer : VK_NULL_HANDLE;
+    }
+
+    void Buffer::setLastTimeLineUsedFrame(uint64_t timeLine)
+    {
+        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+        m_lastTimeLineUsed[index] = timeLine;
     }
 
     Buffer::AllocatedBuffer* Buffer::getAllocatedBufferFrame()

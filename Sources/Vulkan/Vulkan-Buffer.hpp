@@ -45,7 +45,9 @@ namespace TiRHI::Vulkan
 
         void endDynamicUpdate();
 
-        vk::Buffer getFrameVkBuffer();
+        vk::Buffer getVkBufferFrame();
+
+        void setLastTimeLineUsedFrame(uint64_t timeLine);
 
     private:
         struct AllocatedBuffer
@@ -58,6 +60,8 @@ namespace TiRHI::Vulkan
         Device* m_device = nullptr;
 
         std::vector<AllocatedBuffer> m_allocatedBuffer;
+
+        std::vector<uint64_t> m_lastTimeLineUsed;
 
         bool build(Device& device, vk::Image image, Format format);
 

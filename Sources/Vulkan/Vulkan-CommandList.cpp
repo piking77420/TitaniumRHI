@@ -326,12 +326,14 @@ namespace TiRHI::Vulkan
             .setImageOffset({0, 0, 0})
             .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
 
-        const vk::Buffer vkBuffer = buffer.getFrameVkBuffer();
+        const vk::Buffer vkBuffer = buffer.getVkBufferFrame();
         const vk::Image vktexture = Texture::Private::getImage(texture);
 
         if (vkBuffer == VK_NULL_HANDLE || vktexture == VK_NULL_HANDLE)
             return;
 
+        // TODO do it for texture
+        buffer.setLastTimeLineUsedFrame(m_lastSubmissionValue);
         getcurrentFrameCmb().copyBufferToImage(vkBuffer, vktexture, vk::ImageLayout::eTransferDstOptimal,
                                                bufferImageCopy);
     }
