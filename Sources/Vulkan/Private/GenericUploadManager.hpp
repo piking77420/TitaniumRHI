@@ -1,10 +1,9 @@
-#ifndef TITANIUM_VULKAN_PRIVATE_DEFFERED_UPLOAD_MANAGER_H
-#define TITANIUM_VULKAN_PRIVATE_DEFFERED_UPLOAD_MANAGER_H
+#ifndef TITANIUM_VULKAN_PRIVATE_GENERIC_UPLOAD_MANAGER_H
+#define TITANIUM_VULKAN_PRIVATE_GENERIC_UPLOAD_MANAGER_H
 
-#include <functional>
-#include <queue>
 #include <Vulkan/Vulkan-Header.hpp>
 #include <vma/vk_mem_alloc.h>
+#include <Titanium/Private/UploadManager.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -103,43 +102,39 @@ namespace TiRHI::Vulkan::Private
         VmaAllocator m_allocator = nullptr;
     };
 
-    struct UploadBatch
+    struct VulkanStagingFactory
     {
-        UploadBatch() = default;
-        ~UploadBatch() = default;
+        VmaAllocator allocator;
 
-        UploadBatch(const UploadBatch&) = delete;
-        UploadBatch& operator=(const UploadBatch&) = delete;
-
-        UploadBatch(UploadBatch&&) noexcept = default;
-        UploadBatch& operator=(UploadBatch&&) noexcept = default;
-
-        std::vector<StagingBuffer> buffers;
-    };
-
-    class UploadManager
-    {
-    public:
-        UploadManager() = default;
-        ~UploadManager() = default;
-
-        StagingBuffer acquire(Device& device, VkDeviceSize size);
-
-        void retire(UploadBatch batch, uint64_t submissionValue);
-
-        void collect(Device& device, uint64_t completedValue);
-
-    private:
-        struct InFlightBatch
+        StagingBuffer operator()(uint64_t size) const
         {
-            uint64_t retireValue;
-            UploadBatch batch;
-        };
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size = static_cast<VkDeviceSize>(size);
+            bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        std::vector<StagingBuffer> m_available;
-        std::vector<InFlightBatch> m_inFlight;
+            VmaAllocationCreateInfo allocationInfo{};
+            allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocationInfo.flags =
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+            VmaAllocationInfo resultInfo{};
+            VkBuffer buffer;
+            VmaAllocation VmaAllocation;
+
+            if (vmaCreateBuffer(allocator, &bufferInfo, &allocationInfo, &buffer, &VmaAllocation, &resultInfo) !=
+                VK_SUCCESS)
+            {
+                RHI_LOG_FATAL(L"Failed to allocate Staging Buffer", TiRHI::RhiApi::Vulkan);
+                return {};
+            }
+
+            return StagingBuffer{allocator, vk::Buffer(buffer), VmaAllocation, size};
+        }
     };
 
+    using VulkanUploadManager = ::TiRHI::Private::UploadManager<StagingBuffer, VulkanStagingFactory>;
 } // TiRHI::Vulkan
 
-#endif // TITANIUM_VULKAN_PRIVATE_DEFFERED_UPLOAD_MANAGER_H
+#endif // TITANIUM_VULKAN_PRIVATE_GENERIC_UPLOAD_MANAGER_H

@@ -15,35 +15,7 @@ namespace TiRHI::Vulkan
     {
     }
 
-    CommandList::~CommandList()
-    {
-        const vk::Device device = m_device->getNativeDevice();
-        const VmaAllocator allocator = Device::Private::getAllocator(*m_device);
-        Vulkan::Private::UploadManager& uploads = Device::Private::getUploadManager(*m_device);
-
-        // TODO kind of ugnly because there 2 peaple who delete staging buffer
-        // command list here and uplaod manager
-        for (auto& batch : m_pendingUploads)
-        {
-            uploads.retire(std::exchange(batch, Vulkan::Private::UploadBatch{}), m_lastSubmissionValue);
-        }
-    }
-
-    CommandList& CommandList::operator=(CommandList&& other) noexcept
-    {
-        if (this == &other)
-            return *this;
-
-        BaseCommandList::operator=(std::move(other));
-        // Free buffers while their original pool still exists.
-        m_commandBuffer.clear();
-        m_commandPool = std::move(other.m_commandPool);
-        m_commandBuffer = std::move(other.m_commandBuffer);
-        m_volkTable = std::exchange(other.m_volkTable, std::nullopt);
-        m_vulkanStorage = std::move(other.m_vulkanStorage);
-        other.m_recordState.reset();
-        return *this;
-    }
+    CommandList::~CommandList() = default;
 
     bool CommandList::build(Device& device)
     {
@@ -293,8 +265,8 @@ namespace TiRHI::Vulkan
         if (data.size() != uploadSize || uploadSize == 0)
             return;
 
-        Vulkan::Private::UploadManager& uploads = Device::Private::getUploadManager(*m_device);
-        Vulkan::Private::StagingBuffer stagingBuffer = uploads.acquire(*m_device, uploadSize);
+        Vulkan::Private::VulkanUploadManager& uploads = Device::Private::getUploadManager(*m_device);
+        Vulkan::Private::StagingBuffer stagingBuffer = uploads.acquire(uploadSize);
 
         if (stagingBuffer) // Use an scop exit
         {

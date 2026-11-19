@@ -5,8 +5,8 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
-        Private/StrongTypeId.cpp
         Private/StrongTypeId.hpp
+        Private/UploadManager.hpp
         Log.hpp
         RHI-BaseAcquiredFrame.cpp
         RHI-BaseAcquiredFrame.hpp

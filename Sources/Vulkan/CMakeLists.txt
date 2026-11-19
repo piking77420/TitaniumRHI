@@ -13,8 +13,7 @@ target_sources(
         Private/RHIToVulkan.cpp
         Private/RHIToVulkan.hpp
         Private/Transition.hpp
-        Private/UploadManager.cpp
-        Private/UploadManager.hpp
+        Private/GenericUploadManager.hpp
         Private/VulkanToRHI.cpp
         Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp

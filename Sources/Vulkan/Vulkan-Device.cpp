@@ -57,7 +57,6 @@ namespace TiRHI::Vulkan
 
     Device::Device(RHI& rhi)
         : BaseDevice(rhi)
-
     {
     }
 
@@ -78,6 +77,7 @@ namespace TiRHI::Vulkan
         m_presentQueueIndex = std::exchange(other.m_presentQueueIndex, 0);
         m_synchronisations = std::move(other.m_synchronisations);
         m_dispatch = std::exchange(other.m_dispatch, VolkDeviceTable{});
+        m_uploadManager = std::exchange(m_uploadManager, {});
         return *this;
     }
 
@@ -191,7 +191,7 @@ namespace TiRHI::Vulkan
             if (desc.commandList)
             {
                 CommandList::Private::setLastSubmissionValue(*desc.commandList, submissionValue);
-                Vulkan::Private::UploadBatch& batch =
+                Vulkan::Private::VulkanUploadManager::UploadBatch& batch =
                     CommandList::Private::getUploadBatch(*desc.commandList)[getRHI().getCurrentFrame()];
                 m_uploadManager.retire(std::move(batch), submissionValue);
             }
@@ -223,7 +223,7 @@ namespace TiRHI::Vulkan
         // TODO COLLECT DATA
         const uint64_t completed = m_device->getSemaphoreCounterValue(m_timeLine.timeLineSemaphore.get());
         m_deferredDeletionQueue.collect(completed);
-        m_uploadManager.collect(*this, completed);
+        m_uploadManager.collect(completed);
     }
 
     bool Device::checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures)
@@ -381,6 +381,8 @@ namespace TiRHI::Vulkan
             return false;
         }
 
+        m_uploadManager =
+            Vulkan::Private::VulkanUploadManager(Vulkan::Private::VulkanStagingFactory{m_vmaAllocator.vmaAllocator});
         return true;
     }
 

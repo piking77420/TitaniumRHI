@@ -9,7 +9,7 @@
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
-#include <Vulkan/Private/UploadManager.hpp>
+#include <Vulkan/Private/GenericUploadManager.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -30,11 +30,12 @@ namespace TiRHI::Vulkan
         CommandList(const CommandList&) = delete;
         CommandList& operator=(const CommandList&) = delete;
         CommandList(CommandList&&) noexcept = default;
-        CommandList& operator=(CommandList&& other) noexcept;
+        CommandList& operator=(CommandList&& other) noexcept = default;
 
         struct Private
         {
-            static std::array<Vulkan::Private::UploadBatch, MaxFramesInFlight>& getUploadBatch(CommandList& commandlist)
+            static std::array<Vulkan::Private::VulkanUploadManager::UploadBatch, MaxFramesInFlight>&
+            getUploadBatch(CommandList& commandlist)
             {
                 return commandlist.m_pendingUploads;
             }
@@ -100,7 +101,7 @@ namespace TiRHI::Vulkan
 
         Device* m_device{nullptr}; // TODO fix this ugly
 
-        std::array<Vulkan::Private::UploadBatch, MaxFramesInFlight> m_pendingUploads;
+        std::array<Vulkan::Private::VulkanUploadManager::UploadBatch, MaxFramesInFlight> m_pendingUploads;
 
         uint64_t m_lastSubmissionValue = 0;
 
