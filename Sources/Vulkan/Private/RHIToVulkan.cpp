@@ -511,4 +511,35 @@ namespace TiRHI::Vulkan::Private
         }
     }
 
+    vk::BufferUsageFlags toVulkan(BufferUsage usage)
+    {
+        vk::BufferUsageFlags flags{};
+
+        if (static_cast<bool>(usage & BufferUsage::Vertex))
+            flags |= vk::BufferUsageFlagBits::eVertexBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Index))
+            flags |= vk::BufferUsageFlagBits::eIndexBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Constant))
+            flags |= vk::BufferUsageFlagBits::eUniformBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Structured))
+            flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Raw))
+            flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Indirect))
+            flags |= vk::BufferUsageFlagBits::eIndirectBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::CopySource))
+            flags |= vk::BufferUsageFlagBits::eTransferSrc;
+
+        if (static_cast<bool>(usage & BufferUsage::CopyDestination))
+            flags |= vk::BufferUsageFlagBits::eTransferDst;
+
+        return flags;
+    }
+
 }

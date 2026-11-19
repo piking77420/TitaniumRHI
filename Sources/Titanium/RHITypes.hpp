@@ -662,6 +662,57 @@ namespace TiRHI
 
     IMPLEMENT_TO_STRING_TITANIUM(TextureType, RHI_DESCRIPTOR_TEXTURE_TYPE_LIST)
 
+    // Default : for most buffers optimize for Gpu (SSBO, Vertex)
+    // Upload : host wirtable
+    // Readback : for readBacks
+#define RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST(X)                                                                      \
+    X(Default)                                                                                                         \
+    X(Upload)                                                                                                          \
+    X(Readback)
+
+    enum struct BufferMemoryType : uint8_t
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(BufferMemoryType, RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST)
+
+#define RHI_BUFFER_USAGE_FLAG_LIST(X)                                                                                  \
+    X(None, 0)                                                                                                         \
+    X(Vertex, 1u << 0)                                                                                                 \
+    X(Index, 1u << 1)                                                                                                  \
+    X(Constant, 1u << 2)                                                                                               \
+    X(Structured, 1u << 3)                                                                                             \
+    X(Raw, 1u << 4)                                                                                                    \
+    X(Indirect, 1u << 5)                                                                                               \
+    X(CopySource, 1u << 6)                                                                                             \
+    X(CopyDestination, 1u << 7)
+
+    enum struct BufferUsage : uint8_t
+    {
+#define X(name) name,
+        RHI_BUFFER_USAGE_FLAG_LIST(X)
+#undef X
+    };
+
+    RHI_DEFINE_ENUM_FLAGS(BufferUsage)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(BufferUsage, RHI_BUFFER_USAGE_FLAG_LIST)
+
+#define RHI_BUFFER_UPDATE_MODE_LIST(X)                                                                                 \
+    X(Static)                                                                                                          \
+    X(Dynamic)
+
+    enum struct BufferUpdateMode : uint8_t
+    {
+#define X(name) name,
+        RHI_BUFFER_UPDATE_MODE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(BufferUpdateMode, RHI_BUFFER_UPDATE_MODE_LIST)
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate

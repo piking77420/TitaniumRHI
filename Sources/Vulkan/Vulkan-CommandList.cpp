@@ -304,6 +304,38 @@ namespace TiRHI::Vulkan
         m_pendingUploads[getRHI().getCurrentFrame()].buffers.emplace_back(std::move(stagingBuffer));
     }
 
+    void CommandList::copyBufferToTexture(Buffer& buffer, Texture& texture)
+    {
+        if (!buffer || !texture)
+            return;
+        assert(texture.getState() == ResourceState::CopyDestination);
+
+        if (buffer.getSize() == 0)
+            return;
+
+        std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
+        bufferImageCopy[0]
+            .setBufferOffset(0)
+            .setBufferRowLength(0)
+            .setBufferImageHeight(0)
+            .setImageSubresource(vk::ImageSubresourceLayers{}
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setMipLevel(0)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setImageOffset({0, 0, 0})
+            .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
+
+        const vk::Buffer vkBuffer = buffer.getFrameVkBuffer();
+        const vk::Image vktexture = Texture::Private::getImage(texture);
+
+        if (vkBuffer == VK_NULL_HANDLE || vktexture == VK_NULL_HANDLE)
+            return;
+
+        getcurrentFrameCmb().copyBufferToImage(vkBuffer, vktexture, vk::ImageLayout::eTransferDstOptimal,
+                                               bufferImageCopy);
+    }
+
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();

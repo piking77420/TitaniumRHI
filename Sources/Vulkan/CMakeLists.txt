@@ -18,6 +18,8 @@ target_sources(
         Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp
         Vulkan-AcquiredFrame.hpp
+        Vulkan-Buffer.cpp
+        Vulkan-Buffer.hpp
         Vulkan-CommandList.cpp
         Vulkan-CommandList.hpp
         Vulkan-DescriptorSet.cpp

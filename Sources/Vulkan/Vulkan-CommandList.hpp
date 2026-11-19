@@ -9,6 +9,7 @@
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
+#include <Vulkan/Vulkan-Buffer.hpp>
 #include <Vulkan/Private/GenericUploadManager.hpp>
 
 namespace TiRHI::Vulkan
@@ -81,6 +82,8 @@ namespace TiRHI::Vulkan
         void pushConstant(void* data, uint32_t size);
 
         void upload2D(Device& device, Texture& texture, std::span<const std::byte> data);
+
+        void copyBufferToTexture(Buffer& buffer, Texture& texture);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 

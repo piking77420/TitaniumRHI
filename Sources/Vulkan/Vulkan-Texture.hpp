@@ -1,7 +1,6 @@
 #ifndef TITANIUM_VULKAN_TEXTURE_H
 #define TITANIUM_VULKAN_TEXTURE_H
 
-#include <variant>
 #include <Titanium/RHI-BaseTexture.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
 #include <vma/vk_mem_alloc.h>

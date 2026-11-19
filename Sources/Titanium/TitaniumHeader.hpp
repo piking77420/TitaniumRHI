@@ -12,6 +12,7 @@
 #include <Vulkan/Vulkan-Texture.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
 #include <Vulkan/Vulkan-Sampler.hpp>
+#include <Vulkan/Vulkan-Buffer.hpp>
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
 
 namespace TiRHI
@@ -27,6 +28,7 @@ namespace TiRHI
     using Texture = Vulkan::Texture;
     using GraphicPipeline = Vulkan::GraphicPipeline;
     using Sampler = Vulkan::Sampler;
+    using Buffer = Vulkan::Buffer;
     using DescriptorSet = Vulkan::DescriptorSet;
 }
 
