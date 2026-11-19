@@ -407,6 +407,9 @@ namespace TiRHI::DirectX12
                           RhiApi::DirectX12);
         }
 
+        for (const auto& desc : submitPresentDesc)
+            desc.commandList->setLastSubmissionValue(fenceValue);
+
         m_synchronization.frameFenceValue[getRHI().getCurrentFrame()] = fenceValue;
 
         // Present

@@ -16,6 +16,7 @@
 #include <DirectX12/DirectX12-Sampler.hpp>
 #include <DirectX12/DirectX12-Buffer.hpp>
 #include <DirectX12/DirectX12-Texture.hpp>
+#include <DirectX12/Private/StaginBuffer.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -405,48 +406,66 @@ namespace TiRHI::DirectX12
         assert(false && "TODO");
     }
 
-    void CommandList::copyBufferToTexture(Buffer& buffer, Texture& texture)
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
     {
-        if (!m_device || !buffer || !texture)
+        if (!m_device || !m_commandList || !texture || data.empty())
             return;
 
         assert(texture.getState() == ResourceState::CopyDestination);
-        assert((buffer.getUsage() & BufferUsage::CopySource) != BufferUsage::None);
 
         ID3D12Resource* dstResource = Texture::Private::getImage(texture);
+        ID3D12Device* device = m_device->getNativeDevice().Get();
 
-        ID3D12Resource* srcResource = buffer.getNativeBufferFrame();
-
-        if (!srcResource || !dstResource)
+        if (!dstResource)
             return;
 
         const D3D12_RESOURCE_DESC desc = dstResource->GetDesc();
+
+        if (desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || desc.SampleDesc.Count != 1)
+            return;
 
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
         UINT numRows = 0;
         UINT64 rowSize = 0;
         UINT64 uploadSize = 0;
 
-        m_device->getNativeDevice()->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, &numRows, &rowSize, &uploadSize);
+        device->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, &numRows, &rowSize, &uploadSize);
 
-        // Make sure the source contains the complete upload footprint.
-        if (buffer.getSize() < uploadSize)
-        {
-            RHI_LOG_ERROR(L"Source buffer is too small for texture copy", RhiApi::DirectX12);
+        if (numRows == 0 || rowSize == 0 || data.size_bytes() != rowSize * numRows)
             return;
+
+        DirectX12::Private::StagingBuffer staging(*m_device, uploadSize, m_lastSubmissionValue);
+
+        if (!staging)
+            return;
+
+        std::byte* mapped = staging.mapData();
+
+        if (!mapped)
+            return;
+
+        const auto* src = reinterpret_cast<const std::byte*>(data.data());
+
+        // Copy CPU data directly into the aligned staging buffer.
+        for (UINT row = 0; row < numRows; row++)
+        {
+            std::memcpy(mapped + footprint.Offset + static_cast<size_t>(row) * footprint.Footprint.RowPitch,
+                        src + static_cast<size_t>(row) * rowSize, static_cast<size_t>(rowSize));
         }
 
-        D3D12_TEXTURE_COPY_LOCATION src{};
-        src.pResource = srcResource;
-        src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        src.PlacedFootprint = footprint;
+        staging.unmapData();
 
-        D3D12_TEXTURE_COPY_LOCATION dst{};
-        dst.pResource = dstResource;
-        dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dst.SubresourceIndex = 0;
+        D3D12_TEXTURE_COPY_LOCATION source{};
+        source.pResource = staging.getBuffer();
+        source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        source.PlacedFootprint = footprint;
 
-        m_commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+        D3D12_TEXTURE_COPY_LOCATION destination{};
+        destination.pResource = dstResource;
+        destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        destination.SubresourceIndex = 0;
+
+        m_commandList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
     }
 
     void CommandList::resetOnRecord()
@@ -536,6 +555,11 @@ namespace TiRHI::DirectX12
 
             return true;
         }
+    }
+
+    void CommandList::setLastSubmissionValue(uint64_t lastSubmissionValue)
+    {
+        m_lastSubmissionValue = lastSubmissionValue;
     }
 
 } // namespace TiRHI::DirectX12

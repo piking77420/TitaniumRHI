@@ -11,6 +11,8 @@ target_sources(
         Private/DescriptorManager.hpp
         Private/RhiToDirectX12.cpp
         Private/RhiToDirectX12.hpp
+        Private/StaginBuffer.cpp
+        Private/StaginBuffer.hpp
         DirectX12-AcquireFrame.cpp
         DirectX12-AcquireFrame.hpp
         DirectX12-Buffer.cpp

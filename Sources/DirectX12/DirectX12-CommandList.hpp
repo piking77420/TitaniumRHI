@@ -61,12 +61,14 @@ namespace TiRHI::DirectX12
 
         void pushConstant(void* data, size_t size);
 
-        void copyBufferToTexture(Buffer& buffer, Texture& texture);
+        void upload2d(Texture& texture, std::span<const std::byte> data);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
             return m_commandList.Get();
         }
+
+        void setLastSubmissionValue(uint64_t lastSubmissionValue);
 
     private:
         struct SetGraphicsRootDescriptorTable
@@ -88,6 +90,7 @@ namespace TiRHI::DirectX12
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
+        uint64_t m_lastSubmissionValue = 0;
 
         void resetOnRecord();
 
