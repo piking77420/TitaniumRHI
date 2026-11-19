@@ -65,8 +65,15 @@ namespace TiRHI::DirectX12
             return isValid();
         }
 
+        void setSubmissionValue(uint64_t value)
+        {
+            m_lastSubmitedValue = value;
+        }
+
     private:
         friend Private;
+
+        Device* m_device{nullptr};
 
         MComPtr<ID3D12Resource> m_image;
 
@@ -75,6 +82,8 @@ namespace TiRHI::DirectX12
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_renderTargetView;
 
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_shaderRenderView;
+
+        uint64_t m_lastSubmitedValue = 0;
 
         bool build(Device& device, MComPtr<ID3D12Resource> image);
 

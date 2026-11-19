@@ -14,12 +14,30 @@ namespace TiRHI::DirectX12
 
     Texture::~Texture()
     {
-        m_image.Reset();
-        m_allocation.Reset();
+        if (!m_device)
+            return;
+
+        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        defferdDestroy.retire(m_lastSubmitedValue,
+                              [device = m_device, image = std::move(m_image), alloc = std::move(m_allocation),
+                               renderTargetView = std::move(m_renderTargetView),
+                               shaderRenderView = std::move(m_shaderRenderView)]() mutable
+                              {
+                                  if (renderTargetView)
+                                      Device::Private::getDescriptorAllocatorRTV(*device).release(*renderTargetView);
+                                  if (shaderRenderView)
+                                      Device::Private::getDescriptorAllocatorCbvSrvUav(*device).release(
+                                          *renderTargetView);
+
+                                  alloc.Reset();
+                                  image.Reset();
+                              });
     };
 
     bool Texture::build(Device& device)
     {
+        m_device = &device;
+
         D3D12MA::ALLOCATION_DESC allocDesc = {};
         allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -47,7 +65,7 @@ namespace TiRHI::DirectX12
         }
 
         const std::wstring name = getNameW();
-        m_image->SetName(name.c_str());
+        m_allocation->GetResource()->SetName(name.c_str());
 
         return m_image && createHandle(device);
     }

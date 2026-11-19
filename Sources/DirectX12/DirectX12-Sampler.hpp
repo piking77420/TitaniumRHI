@@ -29,7 +29,16 @@ namespace TiRHI::DirectX12
             return m_samplerCpuHandle;
         }
 
+        void setSubmissionValue(uint64_t value)
+        {
+            m_lastSubmitedValue = value;
+        }
+
     private:
+        Device* m_device{nullptr};
+
+        uint64_t m_lastSubmitedValue = 0;
+
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_samplerCpuHandle;
     };
 

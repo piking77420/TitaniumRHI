@@ -3,7 +3,22 @@
 
 namespace TiRHI::DirectX12
 {
-    Sampler::~Sampler() = default;
+    Sampler::~Sampler()
+    {
+        if (!m_device)
+            return;
+
+        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        defferdDestroy.retire(m_lastSubmitedValue,
+                              [device = m_device, sampler = std::move(m_samplerCpuHandle),
+                               cpuHandle = std::move(m_samplerCpuHandle)]() mutable
+                              {
+                                  Device::Private::getDescriptorAllocatorRTV(*device).release(*cpuHandle);
+                                  sampler.reset();
+                              });
+
+        m_lastSubmitedValue = 0;
+    }
 
     Sampler::Sampler(RHI& rhi)
         : BaseSampler(rhi)
