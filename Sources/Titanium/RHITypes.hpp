@@ -713,6 +713,12 @@ namespace TiRHI
 
     IMPLEMENT_TO_STRING_TITANIUM(BufferUpdateMode, RHI_BUFFER_UPDATE_MODE_LIST)
 
+    struct PushConstant
+    {
+        ShaderStageFlags flag;
+        uint32_t size;
+    };
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate

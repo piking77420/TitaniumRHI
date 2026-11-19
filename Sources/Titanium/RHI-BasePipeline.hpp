@@ -34,12 +34,6 @@ namespace TiRHI
             static_assert(std::derived_from<T, BasePipeline<T, TRHI, TDescriptorSet>>);
         }
 
-        struct PushConstant
-        {
-            ShaderStageFlags flag;
-            uint32_t size;
-        };
-
         BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size,
                                 std::string entryPoint)
         {

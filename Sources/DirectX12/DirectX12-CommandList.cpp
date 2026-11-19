@@ -403,7 +403,25 @@ namespace TiRHI::DirectX12
 
     void CommandList::pushConstant(void* data, size_t size)
     {
-        assert(false && "TODO");
+        if (data == nullptr || size == 0)
+            return;
+
+        if (!m_recordState.graphicPipeline)
+            return;
+
+        if (!m_recordStateD3D12.currentRootSignature)
+            return;
+
+        if (std::optional<PushConstant> pushConstant = m_recordState.graphicPipeline->getPushConstant())
+        {
+            assert(size % 4 == 0);
+            const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
+                GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
+
+            const UINT rootParameterIndex = root->spaceDescriptor.pushConstantParameterIndex;
+
+            m_commandList->SetGraphicsRoot32BitConstants(rootParameterIndex, static_cast<UINT>(size / 4), data, 0);
+        }
     }
 
     void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)

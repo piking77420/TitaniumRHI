@@ -250,8 +250,7 @@ namespace TiRHI::Vulkan
             return;
         }
 
-        if (std::optional<GraphicPipeline::PushConstant> pushConstant =
-                m_recordState.graphicPipeline->getPushConstant())
+        if (std::optional<PushConstant> pushConstant = m_recordState.graphicPipeline->getPushConstant())
         {
             getcurrentFrameCmb().pushConstants(layout, Vulkan::Private::toVulkan(pushConstant->flag), 0u,
                                                pushConstant->size, data);

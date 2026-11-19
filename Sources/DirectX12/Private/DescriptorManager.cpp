@@ -1,3 +1,5 @@
+#include <bit>
+#include <type_traits>
 #include <DirectX12/Private/DescriptorManager.hpp>
 #include <DirectX12/Private/RhiToDirectX12.hpp>
 
@@ -117,8 +119,8 @@ namespace TiRHI::DirectX12::Private
     }
 
     auto DescriptorManager::getOrCreateD3D12DescriptorRootSignatureLayout(
-        const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& DescriptorSetLayoutEntries)
-        -> D3D12DescriptorRootSignatureLayout*
+        const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& DescriptorSetLayoutEntries,
+        const std::optional<PushConstant> pushConstant) -> D3D12DescriptorRootSignatureLayout*
     {
         if (!m_device)
             return nullptr;
@@ -208,6 +210,20 @@ namespace TiRHI::DirectX12::Private
         }
 
         rangesBuilder.resolve(parameters);
+
+        // Add root paremet type 32 at the end
+        if (pushConstant)
+        {
+            spaceDescriptor.pushConstantParameterIndex = static_cast<uint32_t>(parameters.size());
+            auto& pushConstantParameter = parameters.emplace_back();
+            pushConstantParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+            pushConstantParameter.Constants.ShaderRegister = 0; // b0
+            pushConstantParameter.Constants.RegisterSpace = 0;
+            pushConstantParameter.Constants.Num32BitValues = pushConstant->size; // 16 * 4 = 64 bytes
+            pushConstantParameter.ShaderVisibility = std::popcount(static_cast<uint32_t>(pushConstant->flag)) >= 2
+                                                         ? D3D12_SHADER_VISIBILITY_ALL
+                                                         : Private::toDirectX12(pushConstant->flag);
+        }
 
         D3D12_ROOT_SIGNATURE_DESC1 desc{};
         desc.NumParameters = static_cast<UINT>(parameters.size());

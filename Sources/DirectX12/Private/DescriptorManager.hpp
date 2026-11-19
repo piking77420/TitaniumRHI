@@ -27,6 +27,8 @@ namespace TiRHI::DirectX12::Private
         RootParameterTable rootParameterTable;
         // offset for each set in each table of rootParameterTable
         BindingsSetTableOffset bindingsSetTableOffset;
+
+        uint32_t pushConstantParameterIndex = 0;
     };
 
     struct D3D12DescriptorRootSignatureLayout
@@ -46,7 +48,8 @@ namespace TiRHI::DirectX12::Private
         bool build(MComPtr<ID3D12Device> device);
 
         D3D12DescriptorRootSignatureLayout* getOrCreateD3D12DescriptorRootSignatureLayout(
-            const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& layouts);
+            const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& layouts,
+            const std::optional<PushConstant> pushConstant);
 
         D3D12DescriptorRootSignatureLayout* getEmptyDescriptorRootSignatureLayout();
 
