@@ -9,11 +9,25 @@
 
 namespace TiRHI::Vulkan
 {
+    RenderTargets::~RenderTargets()
+    {
+        if (!m_device)
+            return;
+
+        auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        deferredDestroy.retire(m_lastSubmitedValue,
+                               [frameBuffer = std::move(m_frameBuffer)]() mutable
+                               {
+                                  
+                               });
+    }
+
     bool RenderTargets::build(Device& device)
     {
         if (!BaseRenderTargets::build())
             return false;
 
+        m_device = &device;
         // m_renderPassDescriptor shoudl be valid
         assert(getRenderPassDescriptor());
 

@@ -16,7 +16,7 @@ namespace TiRHI::Vulkan
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
 
         RenderTargets() = delete;
-        ~RenderTargets() = default;
+        ~RenderTargets();
         RenderTargets(const RenderTargets&) = delete;
         RenderTargets& operator=(const RenderTargets&) = delete;
         RenderTargets(RenderTargets&&) noexcept = default;
@@ -37,10 +37,19 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device);
 
+        void setSubmissionValue(uint64_t value)
+        {
+            m_lastSubmitedValue = value;
+        }
+
     private:
         friend Private;
 
+        Device* m_device{nullptr};
+
         vk::UniqueFramebuffer m_frameBuffer;
+
+        uint64_t m_lastSubmitedValue = 0;
     };
 
 } // namespace TiRHI::Vulkan

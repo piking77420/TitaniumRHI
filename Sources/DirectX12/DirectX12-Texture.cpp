@@ -16,22 +16,29 @@ namespace TiRHI::DirectX12
     {
         if (!m_device)
             return;
+        auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        deferredDestroy.retire(m_lastSubmitedValue,
+                               [device = m_device, image = std::move(m_image), alloc = std::move(m_allocation),
+                                renderTargetView = std::exchange(m_renderTargetView, std::nullopt),
+                                shaderRenderView = std::exchange(m_shaderRenderView, std::nullopt)]() mutable
+                               {
+                                   if (renderTargetView)
+                                   {
+                                       Device::Private::getDescriptorAllocatorRTV(*device).release(*renderTargetView);
+                                   }
 
-        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
-        defferdDestroy.retire(m_lastSubmitedValue,
-                              [device = m_device, image = std::move(m_image), alloc = std::move(m_allocation),
-                               renderTargetView = std::move(m_renderTargetView),
-                               shaderRenderView = std::move(m_shaderRenderView)]() mutable
-                              {
-                                  if (renderTargetView)
-                                      Device::Private::getDescriptorAllocatorRTV(*device).release(*renderTargetView);
-                                  if (shaderRenderView)
-                                      Device::Private::getDescriptorAllocatorCbvSrvUav(*device).release(
-                                          *renderTargetView);
+                                   if (shaderRenderView)
+                                   {
+                                       Device::Private::getDescriptorAllocatorCbvSrvUav(*device).release(
+                                           *shaderRenderView);
+                                   }
 
-                                  alloc.Reset();
-                                  image.Reset();
-                              });
+                                   if (alloc)
+                                       alloc.Reset();
+
+                                   if (image)
+                                       image.Reset();
+                               });
     };
 
     bool Texture::build(Device& device)
@@ -72,6 +79,8 @@ namespace TiRHI::DirectX12
 
     bool Texture::build(Device& device, MComPtr<ID3D12Resource> image)
     {
+        m_device = &device;
+
         m_image = image;
         const std::wstring name = getNameW();
         m_image->SetName(name.data());

@@ -41,7 +41,7 @@ namespace TiRHI::DirectX12
 
         if (FAILED(hr))
         {
-            RHI_LOG_ERROR(std::format(L"ResizeBuffers failed: {}", hr), RhiApi::DirectX12);
+            RHI_LOG_FATAL(std::format(L"ResizeBuffers failed: {}", hr), RhiApi::DirectX12);
 
             return false;
         }
@@ -55,13 +55,13 @@ namespace TiRHI::DirectX12
     {
         if (!getRHI().getNativeFactory())
         {
-            RHI_LOG_ERROR(L"device.getFactory() was null when SwapChain::create", RhiApi::DirectX12);
+            RHI_LOG_FATAL(L"device.getFactory() was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 
         if (surface.getWindowHandle() == nullptr)
         {
-            RHI_LOG_ERROR(L"windowHandle was null when SwapChain::create", RhiApi::DirectX12);
+            RHI_LOG_FATAL(L"windowHandle was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 

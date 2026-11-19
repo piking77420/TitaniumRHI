@@ -253,6 +253,19 @@ namespace TiRHI::DirectX12
         m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? desc.data() : nullptr,
                                        depthDescPtr, D3D12_RENDER_PASS_FLAG_NONE);
 
+        // set submitted value
+        for (auto& texture : renderTargets.getColorAttachements())
+        {
+            if (texture)
+                texture->setSubmissionValue(m_lastSubmissionValue);
+        }
+
+        if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
+        {
+            if (texture)
+                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+        }
+
         return true;
     }
 
@@ -382,6 +395,9 @@ namespace TiRHI::DirectX12
 
                                       m_commandList->SetGraphicsRootDescriptorTable(
                                           rootParameterBindingSampler.rootParameterIndex, handleSampler->gpuHandle);
+
+                                      sampledTexture.texture->setSubmissionValue(m_lastSubmissionValue);
+                                      sampledTexture.sampler->setSubmissionValue(m_lastSubmissionValue);
                                   });
                           },
                           [&](auto&& value)

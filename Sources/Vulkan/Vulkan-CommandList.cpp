@@ -176,6 +176,7 @@ namespace TiRHI::Vulkan
                 (*texture)->setSubmissionValue(m_lastSubmissionValue);
         }
 
+        renderTargets.setSubmissionValue(m_lastSubmissionValue);
         return true;
     }
 

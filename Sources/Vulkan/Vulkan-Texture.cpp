@@ -111,8 +111,6 @@ namespace TiRHI::Vulkan
 
     void Texture::destroy()
     {
-        // Destroy the view before the underlying image.
-        m_uniqueView.reset();
 
         // Only VMA-allocated textures own their VkImage.
         // Swapchain images are owned by VkSwapchainKHR.
@@ -122,10 +120,18 @@ namespace TiRHI::Vulkan
             TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
                 Device::Private::getDeferredDeletionQueue(*m_device);
 
-            deferredDeletionQueue.retire(m_submissionValue,
-                                         [allocator = Device::Private::getAllocator(*m_device),
-                                          image = std::move(m_image), allocation = std::move(m_allocation)]()
-                                         { vmaDestroyImage(allocator, static_cast<VkImage>(image), allocation); });
+            deferredDeletionQueue.retire(
+                m_submissionValue, [allocator = Device::Private::getAllocator(*m_device), image = std::move(m_image),
+                                    allocation = std::move(m_allocation), view = std::move(m_uniqueView)]()
+                { vmaDestroyImage(allocator, static_cast<VkImage>(image), allocation); });
+        }
+        else
+        {
+            // if swapchain
+            TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
+                Device::Private::getDeferredDeletionQueue(*m_device);
+
+            deferredDeletionQueue.retire(m_submissionValue, [view = std::move(m_uniqueView)]() {});
         }
 
         m_image = vk::Image{};
