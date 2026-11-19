@@ -21,8 +21,8 @@ namespace TiRHI::DirectX12
 
         if (!descriptorSetLayoutEntries.empty())
         {
-            m_D3D12DescriptorRootSignatureLayout =
-                descriptorManager.getOrCreateD3D12DescriptorRootSignatureLayout(descriptorSetLayoutEntries);
+            m_D3D12DescriptorRootSignatureLayout = descriptorManager.getOrCreateD3D12DescriptorRootSignatureLayout(
+                descriptorSetLayoutEntries, getPushConstant());
         }
         else
         {
