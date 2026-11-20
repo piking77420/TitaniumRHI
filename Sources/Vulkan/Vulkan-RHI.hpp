@@ -24,6 +24,11 @@ namespace TiRHI::Vulkan
             return m_instance;
         }
 
+        const Instance& getInstance() const
+        {
+            return m_instance;
+        }
+
         vk::Instance getNativeInstance()
         {
             return m_instance.getInstance();

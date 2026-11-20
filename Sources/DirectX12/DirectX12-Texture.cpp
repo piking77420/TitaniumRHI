@@ -16,29 +16,53 @@ namespace TiRHI::DirectX12
     {
         if (!m_device)
             return;
-        auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
-        deferredDestroy.retire(m_lastSubmitedValue,
-                               [device = m_device, image = std::move(m_image), alloc = std::move(m_allocation),
-                                renderTargetView = std::exchange(m_renderTargetView, std::nullopt),
-                                shaderRenderView = std::exchange(m_shaderRenderView, std::nullopt)]() mutable
-                               {
-                                   if (renderTargetView)
-                                   {
-                                       Device::Private::getDescriptorAllocatorRTV(*device).release(*renderTargetView);
-                                   }
 
-                                   if (shaderRenderView)
-                                   {
-                                       Device::Private::getDescriptorAllocatorCbvSrvUav(*device).release(
-                                           *shaderRenderView);
-                                   }
+        // there an allocation if this an not an swap chain image
+        if (m_allocation)
+        {
+            auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+            deferredDestroy.retire(
+                m_lastSubmitedValue,
+                [device = m_device, image = std::move(m_image), alloc = std::move(m_allocation),
+                 renderTargetView = std::exchange(m_renderTargetView, std::nullopt),
+                 shaderRenderView = std::exchange(m_shaderRenderView, std::nullopt)]() mutable
+                {
+                    if (renderTargetView)
+                    {
+                        Device::Private::getDescriptorAllocatorRTV(*device).release(*renderTargetView);
+                    }
 
-                                   if (alloc)
-                                       alloc.Reset();
+                    if (shaderRenderView)
+                    {
+                        Device::Private::getDescriptorAllocatorCbvSrvUav(*device).release(*shaderRenderView);
+                    }
 
-                                   if (image)
-                                       image.Reset();
-                               });
+                    if (alloc)
+                        alloc.Reset();
+
+                    if (image)
+                        image.Reset();
+                });
+        }
+        else // Swapchain images must be released immediately before resizing the swapchain.
+             // See SwapChain::recreate() for synchronization details.
+        {
+            if (m_renderTargetView)
+            {
+                Device::Private::getDescriptorAllocatorRTV(*m_device).release(*m_renderTargetView);
+                m_renderTargetView.reset();
+            }
+
+            if (m_shaderRenderView)
+            {
+                Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).release(*m_shaderRenderView);
+                m_shaderRenderView.reset();
+            }
+
+            m_allocation.Reset();
+            if (m_image)
+                m_image.Reset();
+        }
     };
 
     bool Texture::build(Device& device)

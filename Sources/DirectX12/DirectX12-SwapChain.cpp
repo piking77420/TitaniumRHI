@@ -34,8 +34,18 @@ namespace TiRHI::DirectX12
 
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
     {
+        // ResizeBuffers requires all references to the existing swapchain backbuffers
+        // to be released. We must first wait for the GPU to finish using them, then
+        // destroy their texture wrappers immediately (without deferred deletion).
+        // Otherwise, outstanding references would cause ResizeBuffers to fail.
+
+        // Wait until the GPU has finished using the backbuffers.
+        device.wait();
+
+        // Release references to the swapchain images.
         m_textures.clear();
 
+        // Resize the swapchain.
         const HRESULT hr =
             m_swapchain->ResizeBuffers(getImageCount(), getWidth(), getHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 

@@ -48,6 +48,11 @@ namespace TiRHI::DirectX12
                 return device.m_descriptorAllocatorCbvSrvUav;
             }
 
+            static const DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorCbvSrvUav(const Device& device)
+            {
+                return device.m_descriptorAllocatorCbvSrvUav;
+            }
+
             static DirectX12::Private::DescriptorManager& getDescriptorManager(Device& device)
             {
                 return device.m_descritproManager;
@@ -73,12 +78,17 @@ namespace TiRHI::DirectX12
 
         void beginFrame();
 
-        MComPtr<ID3D12Device> getNativeDevice()
+        MComPtr<ID3D12Device> getNativeDevice() const
         {
             return m_device;
         }
 
-        MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue()
+        MComPtr<ID3D12CommandQueue> getNativeGraphicQueue()
+        {
+            return m_graphicsQueue;
+        }
+
+        const MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue() const
         {
             return m_graphicsQueue;
         }
