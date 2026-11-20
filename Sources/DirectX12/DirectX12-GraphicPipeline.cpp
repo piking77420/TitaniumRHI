@@ -19,7 +19,7 @@ namespace TiRHI::DirectX12
         std::span<const DescriptorSetLayoutEntry> descriptorSetLayoutEntries = getDescriptorSetLayoutEntries();
         auto& descriptorManager = Device::Private::getDescriptorManager(device);
 
-        if (!descriptorSetLayoutEntries.empty())
+        if (!descriptorSetLayoutEntries.empty() || getPushConstant().has_value())
         {
             m_D3D12DescriptorRootSignatureLayout = descriptorManager.getOrCreateD3D12DescriptorRootSignatureLayout(
                 descriptorSetLayoutEntries, getPushConstant());

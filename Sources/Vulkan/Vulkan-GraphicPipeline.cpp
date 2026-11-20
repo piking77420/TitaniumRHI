@@ -157,7 +157,7 @@ namespace TiRHI::Vulkan
             vk::PushConstantRange pushConstantRange{};
             pushConstantRange.setStageFlags(Vulkan::Private::toVulkan(pushConstant->flag))
                 .setOffset(0)
-                .setSize(sizeof(pushConstant->size));
+                .setSize(pushConstant->size);
 
             layoutInfo.setPPushConstantRanges(&pushConstantRange).setPushConstantRangeCount(1);
         }
