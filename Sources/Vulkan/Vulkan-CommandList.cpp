@@ -14,6 +14,23 @@
 
 namespace TiRHI::Vulkan
 {
+    [[nodiscard]]
+    constexpr bool isValidBufferState(ResourceState state) noexcept
+    {
+        switch (state)
+        {
+        case ResourceState::RenderTarget:
+        case ResourceState::DepthWrite:
+        case ResourceState::DepthRead:
+        case ResourceState::Present:
+        case ResourceState::Count:
+            return false;
+
+        default:
+            return true;
+        }
+    }
+
     CommandList::CommandList(RHI& rhi)
         : BaseCommandList(rhi)
     {
@@ -221,6 +238,35 @@ namespace TiRHI::Vulkan
         texture.setState(state);
     }
 
+    void CommandList::transitionResource(Buffer& buffer, ResourceState state)
+    {
+        const ResourceState currentState = buffer.getState();
+
+        if (currentState == state)
+            return;
+
+        if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
+        {
+            RHI_LOG_ERROR(L"Cannot transition buffer: the Vulkan buffer handle is null.", Api);
+            return;
+        }
+
+        if (!isValidBufferState(state))
+        {
+            RHI_LOG_ERROR(std::format(L"Cannot transition buffer from '{}' to '{}': "
+                                      L"the requested resource state is invalid for buffers.",
+                                      toWString(currentState), toWString(state)),
+                          Api);
+        }
+        using namespace Private;
+        const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
+        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+
+        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
+                                             {}, {}, barrier, {});
+        buffer.setState(state);
+    }
+
     void CommandList::bindPipeline(const GraphicPipeline& graphicPipeline)
     {
         BaseCommandList::bindPipeline(graphicPipeline);
@@ -344,6 +390,42 @@ namespace TiRHI::Vulkan
         texture.setSubmissionValue(m_lastSubmissionValue);
     }
 
+    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
+    {
+        if (!m_device || !buffer) [[unlikely]]
+            return;
+
+        if (data.empty())
+            return;
+
+        assert(buffer.getState() == ResourceState::CopyDestination);
+
+        assert(offset <= buffer.getSize());
+        assert(data.size_bytes() <= buffer.getSize() - offset);
+
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_lastSubmissionValue);
+
+        if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
+            return;
+
+        std::byte* ptr = stagingBuffer.mapData();
+
+        if (!ptr) [[unlikely]]
+            return;
+
+        std::memcpy(ptr, data.data(), data.size_bytes());
+        stagingBuffer.unmapData();
+
+        vk::BufferCopy region{};
+        region.srcOffset = static_cast<vk::DeviceSize>(0);
+        region.dstOffset = static_cast<vk::DeviceSize>(offset);
+        region.size = data.size_bytes();
+
+        getcurrentFrameCmb().copyBuffer(stagingBuffer.getBuffer(), buffer.getVkBufferFrame(), region);
+
+        buffer.setSubmissionValue(m_lastSubmissionValue);
+    }
+
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();
@@ -374,6 +456,25 @@ namespace TiRHI::Vulkan
 
         barrier.image = Texture::Private::getImage(texture);
         barrier.subresourceRange = range;
+
+        return barrier;
+    }
+
+    vk::BufferMemoryBarrier CommandList::makeBufferBarrier(Buffer& buffer, ResourceState current, ResourceState target)
+    {
+        using namespace Private;
+
+        vk::BufferMemoryBarrier barrier{};
+
+        barrier.srcAccessMask = getAccessMask(current);
+        barrier.dstAccessMask = getAccessMask(target);
+
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.buffer = buffer.getVkBufferFrame();
+        barrier.offset = 0;
+        barrier.size = VK_WHOLE_SIZE;
 
         return barrier;
     }

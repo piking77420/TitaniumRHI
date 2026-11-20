@@ -47,7 +47,7 @@ namespace TiRHI::Vulkan
 
         vk::Buffer getVkBufferFrame();
 
-        void setLastTimeLineUsedFrame(uint64_t timeLine);
+        void setSubmissionValue(uint64_t timeLine);
 
     private:
         Device* m_device = nullptr;

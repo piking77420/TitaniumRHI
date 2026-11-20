@@ -176,7 +176,7 @@ namespace TiRHI::Vulkan
         return allocatedBuffer ? allocatedBuffer->buffer : VK_NULL_HANDLE;
     }
 
-    void Buffer::setLastTimeLineUsedFrame(uint64_t timeLine)
+    void Buffer::setSubmissionValue(uint64_t timeLine)
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
         if (index < m_lastTimeLineUsed.size())

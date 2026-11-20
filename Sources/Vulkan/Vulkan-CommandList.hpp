@@ -60,8 +60,9 @@ namespace TiRHI::Vulkan
 
         void setScissors(const Rect2D& rect2d);
 
-        // TODO make some overload for batching barriers
         void transitionResource(Texture& texture, ResourceState state);
+
+        void transitionResource(Buffer& buffer, ResourceState state);
 
         void bindPipeline(const GraphicPipeline& graphicPipeline);
 
@@ -77,6 +78,8 @@ namespace TiRHI::Vulkan
         void pushConstant(void* data, uint32_t size);
 
         void upload2d(Texture& texture, std::span<const std::byte> data);
+
+        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 
@@ -99,6 +102,8 @@ namespace TiRHI::Vulkan
         uint64_t m_lastSubmissionValue = 0;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
+
+        static vk::BufferMemoryBarrier makeBufferBarrier(Buffer& buffer, ResourceState current, ResourceState target);
     };
 
 } // namespace TiRHI::Vulkan
