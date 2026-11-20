@@ -694,7 +694,7 @@ namespace TiRHI
 
     enum struct BufferUsage : uint8_t
     {
-#define X(name) name,
+#define X(name, value) name = value,
         RHI_BUFFER_USAGE_FLAG_LIST(X)
 #undef X
     };

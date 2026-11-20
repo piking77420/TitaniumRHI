@@ -518,28 +518,28 @@ namespace TiRHI::Vulkan::Private
     {
         vk::BufferUsageFlags flags{};
 
-        if (static_cast<bool>(usage & BufferUsage::Vertex))
+        if ((usage & BufferUsage::Vertex) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eVertexBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Index))
+        if ((usage & BufferUsage::Index) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eIndexBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Constant))
+        if ((usage & BufferUsage::Constant) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eUniformBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Structured))
+        if ((usage & BufferUsage::Structured) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eStorageBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Raw))
+        if ((usage & BufferUsage::Raw) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eStorageBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Indirect))
+        if ((usage & BufferUsage::Indirect) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eIndirectBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::CopySource))
+        if ((usage & BufferUsage::CopySource) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eTransferSrc;
 
-        if (static_cast<bool>(usage & BufferUsage::CopyDestination))
+        if ((usage & BufferUsage::CopyDestination) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eTransferDst;
 
         return flags;
