@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_COMMAND_LIST_H
 #define TITANIUM_DIRECTX12_COMMAND_LIST_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <optional>
 #include <vector>
 #include <Titanium/RHI-BaseCommandList.hpp>
@@ -13,15 +14,20 @@ namespace TiRHI::DirectX12
     class Device;
     class RenderTargets;
     class Texture;
+    class Buffer;
     class RenderPassDescriptor;
     class GraphicPipeline;
+    class DescriptorSet;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor, GraphicPipeline>
+    class CommandList
+        : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor, GraphicPipeline, DescriptorSet>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         CommandList() = delete;
         ~CommandList() = default;
-        RHI_MOVE_ONLY(CommandList)
+        RHI_MOVE_ONLY(CommandList);
         CommandList(RHI& rhi);
 
         bool build(Device& device);
@@ -46,21 +52,51 @@ namespace TiRHI::DirectX12
 
         void bindPipeline(const _GraphicPipeline& graphicPipeline);
 
+        void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
         void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
                          uint32_t firstInstance);
+
+        void pushConstant(void* data, size_t size);
+
+        void upload2d(Texture& texture, std::span<const std::byte> data);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
             return m_commandList.Get();
         }
 
+        void setLastSubmissionValue(uint64_t lastSubmissionValue);
+
     private:
+        struct SetGraphicsRootDescriptorTable
+        {
+            uint32_t rootParamIndex;
+            D3D12_GPU_DESCRIPTOR_HANDLE handle;
+        };
+
+        struct RecordState
+        {
+            ID3D12RootSignature* currentRootSignature = nullptr;
+            void reset()
+            {
+                currentRootSignature = nullptr;
+            }
+        } m_recordStateD3D12;
+
         Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
+        uint64_t m_lastSubmissionValue = 0;
+
+        void resetOnRecord();
+
+        void bindDescriptorHeaps();
+
+        void bindRootSignature(ID3D12RootSignature* rootSignature);
 
         bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
     };

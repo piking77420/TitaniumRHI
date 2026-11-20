@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_SWAPCHAIN_H
 #define TITANIUM_DIRECTX12_SWAPCHAIN_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <array>
 
 #include <d3d12.h>
@@ -21,16 +22,20 @@ namespace TiRHI::DirectX12
     class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets, Texture>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         SwapChain() = delete;
         ~SwapChain();
-        RHI_MOVE_ONLY(SwapChain)
+        RHI_MOVE_ONLY(SwapChain);
         SwapChain(RHI& rhi);
+
+        struct Private
+        {
+        };
 
         bool build(Device& device, Surface& surface);
 
         AcquiredFrame acquireNextImage(Device& device);
-
-        bool present();
 
         bool recreateSwapChain(Device& device, Surface& surface);
 
@@ -43,7 +48,10 @@ namespace TiRHI::DirectX12
         Texture& getCurrentSwapChainTexture();
 
     private:
+        friend Private;
+
         MComPtr<IDXGISwapChain3> m_swapchain;
+
         uint32_t m_swapchainFrameIndex = 0u;
 
         bool createSwapChain(Device& device, Surface& surface);

@@ -153,14 +153,27 @@ namespace TiRHI::Vulkan
 
     bool RHI::isPhysicalDeviceValid(vk::PhysicalDevice device)
     {
-        // should be the clean space for current rhi
-        // for exemple check if support compute if compute is mandatory
+        const auto extensions = device.enumerateDeviceExtensionProperties();
 
-        const std::vector<vk::ExtensionProperties> deviceExtensionProperties =
-            device.enumerateDeviceExtensionProperties();
-
-        if (!supportExtension(deviceExtensionProperties, VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+        if (!supportExtension(extensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME))
             return false;
+
+        const auto properties = device.getProperties();
+
+        if (properties.apiVersion < VK_API_VERSION_1_2)
+            return false;
+
+        vk::PhysicalDeviceTimelineSemaphoreFeatures timelineFeatures{};
+
+        vk::PhysicalDeviceFeatures2 features{};
+        features.setPNext(&timelineFeatures);
+
+        device.getFeatures2(&features);
+
+        if (!timelineFeatures.timelineSemaphore)
+            return false;
+
+        return true;
     }
 
 } // namespace TiRHI::Vulkan

@@ -16,7 +16,7 @@ namespace TiRHI::DirectX12
     {
     }
 
-    SwapChain::~SwapChain()²
+    SwapChain::~SwapChain()
     {
     }
 
@@ -29,38 +29,29 @@ namespace TiRHI::DirectX12
     {
         // Update frame index.
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
-
-        AcquiredFrame acquire(true);
-
-        acquire.setSwapChainImageIndex(m_swapchainFrameIndex);
-
-        return acquire;
-    }
-
-    bool SwapChain::present()
-    {
-        // Automatically present using internal present queue if possible.
-        const HRESULT hrPresent = m_swapchain->Present(m_vsync ? 1 : 0, 0);
-
-        if (FAILED(hrPresent))
-        {
-            RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent), RhiApi::DirectX12);
-            return false;
-        }
-
-        return true;
+        return AcquiredFrame(true, m_swapchain.Get(), m_vsync);
     }
 
     bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
     {
+        // ResizeBuffers requires all references to the existing swapchain backbuffers
+        // to be released. We must first wait for the GPU to finish using them, then
+        // destroy their texture wrappers immediately (without deferred deletion).
+        // Otherwise, outstanding references would cause ResizeBuffers to fail.
+
+        // Wait until the GPU has finished using the backbuffers.
+        device.wait();
+
+        // Release references to the swapchain images.
         m_textures.clear();
 
+        // Resize the swapchain.
         const HRESULT hr =
             m_swapchain->ResizeBuffers(getImageCount(), getWidth(), getHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 
         if (FAILED(hr))
         {
-            RHI_LOG_ERROR(std::format(L"ResizeBuffers failed: {}", hr), RhiApi::DirectX12);
+            RHI_LOG_FATAL(std::format(L"ResizeBuffers failed: {}", hr), RhiApi::DirectX12);
 
             return false;
         }
@@ -74,13 +65,13 @@ namespace TiRHI::DirectX12
     {
         if (!getRHI().getNativeFactory())
         {
-            RHI_LOG_ERROR(L"device.getFactory() was null when SwapChain::create", RhiApi::DirectX12);
+            RHI_LOG_FATAL(L"device.getFactory() was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 
         if (surface.getWindowHandle() == nullptr)
         {
-            RHI_LOG_ERROR(L"windowHandle was null when SwapChain::create", RhiApi::DirectX12);
+            RHI_LOG_FATAL(L"windowHandle was null when SwapChain::create", RhiApi::DirectX12);
             return false;
         }
 
@@ -147,7 +138,8 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                auto& texture = m_textures.emplace_back(getRHI());
+                auto& texture = m_textures.emplace_back(getRHI()).setFlags(
+                    TextureFlags::RenderTarget); // Had to do this in order to create rtv handle
                 texture.setName("SwapchainBackBuffer [" + std::to_string(i) + "]");
                 Texture::Private::build(texture, device, image);
 

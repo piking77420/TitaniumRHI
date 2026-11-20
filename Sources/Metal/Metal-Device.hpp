@@ -1,7 +1,10 @@
 #ifndef TITANIUM_METAL_DEVICE_H
 #define TITANIUM_METAL_DEVICE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <vector>
+#include <span>
+
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Metal/Metal-Header.hpp>
 
@@ -18,9 +21,9 @@ namespace TiRHI::Metal
     public:
         Device() = delete;
         ~Device();
-        RHI_MOVE_ONLY(Device)
+        RHI_MOVE_ONLY(Device);
         Device(RHI& rhi);
-        
+
         struct Private
         {
             static MTL::Device* getDevice(Device& device)
@@ -36,16 +39,23 @@ namespace TiRHI::Metal
 
         void wait();
 
-        void submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> cmdLists);
+        void submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc);
 
         bool isValid();
 
     private:
         friend Private;
 
-        MTL::Device* m_device;
+        MTL::Device* m_device = nullptr;
 
-        std::vector<CommandList*> m_pendingCommandList;
+        struct Frame
+        {
+            std::vector<CommandList*> pendingCommandList;
+        };
+
+        std::vector<Frame> m_frames;
+
+        void waits(std::span<CommandList*> commandLists);
     };
 
 }

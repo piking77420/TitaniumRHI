@@ -1,9 +1,9 @@
 #ifndef TITANIUM_VULKAN_TEXTURE_H
 #define TITANIUM_VULKAN_TEXTURE_H
 
-#include <variant>
-#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
+#include <Vulkan/Vulkan-Header.hpp>
+#include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
 {
@@ -13,21 +13,23 @@ namespace TiRHI::Vulkan
     class Texture : public BaseTexture<Texture, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
         Texture() = delete;
-        ~Texture() = default;
-        RHI_MOVE_ONLY(Texture)
+        ~Texture();
+        Texture(Texture&& other) noexcept;
+        Texture& operator=(Texture&& other) noexcept;
         Texture(RHI& rhi);
 
         struct Private
         {
-            static bool build(Texture& texture, Device& device, vk::Image image, vk::Format format)
+            static bool build(Texture& texture, Device& device, vk::Image image, Format format)
             {
                 return texture.build(device, image, format);
             }
 
             static vk::Image getImage(Texture& texture)
             {
-                return texture.getImage();
+                return texture.m_image;
             }
 
             static vk::ImageView getImageView(Texture& texture)
@@ -38,23 +40,39 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device);
 
+        bool isValid() const
+        {
+            return m_image != VK_NULL_HANDLE;
+        }
+
+        bool isInvalid() const
+        {
+            return m_image == VK_NULL_HANDLE;
+        }
+
+        operator bool() const
+        {
+            return isValid();
+        }
+
+        void setSubmissionValue(uint64_t value);
+
     private:
         friend Private;
 
-        //
-        std::variant<std::monostate, vk::UniqueImage, vk::Image> m_image;
+        Device* m_device = nullptr;
+
+        vk::Image m_image = VK_NULL_HANDLE;
 
         vk::UniqueImageView m_uniqueView;
 
-        vk::Image getImage() const
-        {
-            return std::visit(overloads{[](auto&& v) -> vk::Image { return VK_NULL_HANDLE; },
-                                        [](const vk::UniqueImage& image) -> vk::Image { return image.get(); },
-                                        [](vk::Image image) -> vk::Image { return image; }},
-                              m_image);
-        };
+        VmaAllocation m_allocation = nullptr;
 
-        bool build(Device& device, vk::Image image, vk::Format format);
+        uint64_t m_submissionValue = 0;
+
+        bool build(Device& device, vk::Image image, Format format);
+
+        void destroy();
     };
 }
 

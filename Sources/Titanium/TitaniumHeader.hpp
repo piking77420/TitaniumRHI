@@ -11,6 +11,9 @@
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
+#include <Vulkan/Vulkan-Sampler.hpp>
+#include <Vulkan/Vulkan-Buffer.hpp>
+#include <Vulkan/Vulkan-DescriptorSet.hpp>
 
 namespace TiRHI
 {
@@ -24,6 +27,9 @@ namespace TiRHI
     using RenderTargets = Vulkan::RenderTargets;
     using Texture = Vulkan::Texture;
     using GraphicPipeline = Vulkan::GraphicPipeline;
+    using Sampler = Vulkan::Sampler;
+    using Buffer = Vulkan::Buffer;
+    using DescriptorSet = Vulkan::DescriptorSet;
 }
 
 #elif defined(TITANIUM_DIRECT_X12)
@@ -37,6 +43,9 @@ namespace TiRHI
 #include <DirectX12/DirectX12-RenderTargets.hpp>
 #include <DirectX12/DirectX12-Texture.hpp>
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
+#include <DirectX12/DirectX12-Sampler.hpp>
+#include <DirectX12/DirectX12-Buffer.hpp>
+#include <DirectX12/DirectX12-DescriptorSet.hpp>
 
 namespace TiRHI
 {
@@ -50,6 +59,9 @@ namespace TiRHI
     using RenderTargets = DirectX12::RenderTargets;
     using Texture = DirectX12::Texture;
     using GraphicPipeline = DirectX12::GraphicPipeline;
+    using Sampler = DirectX12::Sampler;
+    using Buffer = DirectX12::Buffer;
+    using DescriptorSet = DirectX12::DescriptorSet;
 }
 
 #elif defined(TITANIUM_METAL)
@@ -84,7 +96,7 @@ namespace TiRHI
 
 namespace TiRHI::Contract
 {
-    /*
+
     template<typename T>
     concept RHIContract = requires(T& rhi) {
         { rhi.newDevice() } -> std::same_as<Device>;
@@ -101,17 +113,15 @@ namespace TiRHI::Contract
     static_assert(SurfaceContract<Surface>);
     // Device
     template<typename T>
-    concept DeviceContract = requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
-                                      std::optional<size_t> index, std::span<const AcquiredFrame> acquiredFrames,
-                                      std::span<CommandList*> cmdLists) {
-        { device.beginFrame() } -> std::same_as<void>;
-        { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
-        { device.wait() } -> std::same_as<void>;
-        { device.submit(acquiredFrames, cmdLists) } -> std::same_as<void>;
-
-        { device.isValid() } -> std::same_as<bool>;
-        { device() } -> std::same_as<bool>;
-    };
+    concept DeviceContract =
+        requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+                 std::optional<size_t> index, std::span<const typename T::SubmitPresentDesc> submitPresentDescs) {
+            { device.beginFrame() } -> std::same_as<void>;
+            { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
+            { device.wait() } -> std::same_as<void>;
+            { device.submitPresent(submitPresentDescs) } -> std::same_as<void>;
+            { device.isValid() } -> std::same_as<bool>;
+        };
 
     static_assert(DeviceContract<Device>);
 
@@ -121,7 +131,7 @@ namespace TiRHI::Contract
                                          const RenderPassDescriptor&) {
         { swapChain.build(device, surface) } -> std::same_as<bool>;
         { swapChain.acquireNextImage(device) } -> std::same_as<AcquiredFrame>;
-        { swapChain.present() } -> std::same_as<bool>;
+        { swapChain.recreateSwapChain(device, surface) } -> std::same_as<bool>;
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
         { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
         { swapChain.getCurrentRenderTargets() } -> std::same_as<RenderTargets&>;
@@ -137,7 +147,7 @@ namespace TiRHI::Contract
     concept CommandListContract = requires(T& commandList, Device& device, const Viewport& viewport,
                                            const Rect2D& rect2D, const BeginRenderPass& beginRenderPass,
                                            RenderTargets& renderTargets, const GraphicPipeline& graphicPipeline,
-                                           uint32_t uint) {
+                                           void* ptr, uint32_t uint) {
         { commandList.build(device) } -> std::same_as<bool>;
         { commandList.beginRecord() } -> std::same_as<bool>;
         { commandList.endRecord() } -> std::same_as<bool>;
@@ -148,6 +158,7 @@ namespace TiRHI::Contract
         { commandList.bindPipeline(graphicPipeline) } -> std::same_as<void>;
         { commandList.draw(uint, uint, uint, uint) } -> std::same_as<void>;
         { commandList.drawIndexed(uint, uint, uint, uint, uint) } -> std::same_as<void>;
+        { commandList.pushConstant(ptr, uint) } -> std::same_as<void>;
     } && std::derived_from<T, Object<T, RHI>>;
 
     static_assert(CommandListContract<CommandList>);
@@ -174,7 +185,14 @@ namespace TiRHI::Contract
     template<typename T>
     concept GraphicPipelineContract = requires(T& graphicPipeline, Device& device) {
         { graphicPipeline.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;*/
+    } && std::derived_from<T, Object<T, RHI>>;
+
+    template<typename T>
+    concept SamplerContract = requires(T& sampler, Device& device) {
+        { sampler.build(device) } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, RHI>>;
+
+    static_assert(SamplerContract<Sampler>);
 
 } // TiRHI::Contracts
 

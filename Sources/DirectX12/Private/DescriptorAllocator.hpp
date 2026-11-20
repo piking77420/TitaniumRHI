@@ -7,77 +7,84 @@
 #include <optional>
 #include <tuple>
 #include <vector>
+#include <utility>
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/Private/StrongTypeId.hpp>
 #include <Titanium/RHI-Object.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
+#include <DirectX12/Private/DescriptorHandle.hpp>
 
 namespace TiRHI::DirectX12
 {
-    struct DescriptorIndexTag
-    {
-    };
-    struct PoolIndexTag
-    {
-    };
-
-    using DesciptorIndex = TiRHI::Private::StrongTypeID<size_t, DescriptorIndexTag>;
-    using PoolIndex = TiRHI::Private::StrongTypeID<size_t, PoolIndexTag>;
-
-    struct CpuDescriptorHandle
-    {
-        PoolIndex poolIndex{};
-        DesciptorIndex descriptorIndex{};
-        size_t generation = 0;
-    };
-
     class Device;
-
 } // TiRHI::DirectX12
 
 namespace TiRHI::DirectX12::Private
 {
+    // TODO:
+    // - Use one large shader-visible ID3D12DescriptorHeap per heap type.
+    // - Store both CPU and GPU base descriptor handles.
+    // - Allocate descriptors using indexed slots.
+    // - Track occupied slots using std::bitset or a dynamic bitset.
+    // - Support contiguous descriptor ranges for descriptor tables.
+    // - Defer descriptor reuse until GPU execution has finished.
+    // - DescriptorHandle should contain CPU/GPU handles.
+    // - Keep allocation metadata inside DescriptorAllocator.
+
     class DescriptorAllocator
     {
     public:
         DescriptorAllocator() = default;
-        RHI_MOVE_ONLY(DescriptorAllocator);
         ~DescriptorAllocator() = default;
+        RHI_MOVE_ONLY(DescriptorAllocator);
+
+        D3D12_DESCRIPTOR_HEAP_TYPE getDescriptorHeapType()
+        {
+            return m_descriptorHeapType;
+        }
+
+        DescriptorAllocator& setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE type)
+        {
+            m_descriptorHeapType = type;
+            return *this;
+        }
 
         bool build(Device& device);
 
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> getOrCreate(Device& device,
-                                                               CpuDescriptorHandle& cpuDescriptorHandle);
+        std::optional<DescriptorHandle> create(Device& device, uint32_t count = 1);
 
-        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> get(const CpuDescriptorHandle& cpuDescriptorHandle);
+        void release(DescriptorHandle& cpuDescriptorHandle);
 
-        void release(CpuDescriptorHandle& cpuDescriptorHandle);
+        MComPtr<ID3D12DescriptorHeap> getHeap() const
+        {
+            return m_heap;
+        }
 
     private:
-        struct Pool
+        struct FreeBlock
         {
-            Pool() = default;
-            RHI_MOVE_ONLY(Pool);
-            ~Pool() = default;
-
-            static constexpr uint64_t BaseCapacity = 64;
-
-            MComPtr<ID3D12DescriptorHeap> rtvHeap;
-
-            UINT rtvDescriptorSize = 0;
-
-            D3D12_CPU_DESCRIPTOR_HANDLE baseHandlePtr;
-
-            uint64_t m_availableMask; // 1 mean free 0 occupied
-
-            std::array<size_t, BaseCapacity> generations;
-
-            bool build(ID3D12Device& device);
+            uint32_t start;
+            uint32_t count;
         };
 
-        std::vector<std::unique_ptr<Pool>> m_pools;
+        D3D12_DESCRIPTOR_HEAP_TYPE m_descriptorHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
-        std::optional<std::tuple<Pool*, PoolIndex, DesciptorIndex>> allocate(ID3D12Device& device);
+        bool m_shaderVisible = false;
+
+        UINT m_descriptorSize = 0;
+
+        UINT m_capacity = 0;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE m_baseCpuPtr{};
+
+        D3D12_GPU_DESCRIPTOR_HANDLE m_baseGpuPtr{};
+
+        MComPtr<ID3D12DescriptorHeap> m_heap;
+
+        std::vector<FreeBlock> m_freeBlocks;
+
+        DescriptorHandle getHandle(uint32_t index, uint32_t count);
     };
 
 } // namespace TiRHI::DirectX12::Private

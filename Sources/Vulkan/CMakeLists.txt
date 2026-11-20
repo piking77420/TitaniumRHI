@@ -3,8 +3,13 @@ cmake_minimum_required(VERSION 3.26)
 target_sources(
     TitaniumRHI
     PRIVATE
+        Private/DescriptorManager.cpp
+        Private/DescriptorManager.cpp
+        Private/DescriptorSetHandle.hpp
         Private/DeviceQueueFamily.cpp
         Private/DeviceQueueFamily.hpp
+        Private/StaginBuffer.cpp
+        Private/StaginBuffer.hpp
         Private/RHIToVulkan.cpp
         Private/RHIToVulkan.hpp
         Private/Transition.hpp
@@ -12,8 +17,12 @@ target_sources(
         Private/VulkanToRHI.hpp
         Vulkan-AcquiredFrame.cpp
         Vulkan-AcquiredFrame.hpp
+        Vulkan-Buffer.cpp
+        Vulkan-Buffer.hpp
         Vulkan-CommandList.cpp
         Vulkan-CommandList.hpp
+        Vulkan-DescriptorSet.cpp
+        Vulkan-DescriptorSet.hpp
         Vulkan-Device.cpp
         Vulkan-Device.hpp
         Vulkan-GraphicPipeline.cpp
@@ -26,6 +35,8 @@ target_sources(
         Vulkan-RenderTargets.hpp
         Vulkan-RHI.cpp
         Vulkan-RHI.hpp
+        Vulkan-Sampler.cpp
+        Vulkan-Sampler.hpp
         Vulkan-Surface.cpp
         Vulkan-Surface.hpp
         Vulkan-SwapChain.cpp

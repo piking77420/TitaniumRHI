@@ -12,17 +12,27 @@ namespace TiRHI::Vulkan
     class RHI : public TiRHI::BaseRHI<RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         RHI(const RhiCreate& rhiCreate);
         ~RHI() = default;
 
         Device newDevice();
 
+        Instance& getInstance()
+        {
+            return m_instance;
+        }
+
+        const Instance& getInstance() const
+        {
+            return m_instance;
+        }
+
         vk::Instance getNativeInstance()
         {
             return m_instance.getInstance();
         }
-
-        std::vector<vk::PhysicalDevice> getValidPhysicalDevices();
 
         [[nodiscard]] RhiApi getApi() const
         {
@@ -35,6 +45,8 @@ namespace TiRHI::Vulkan
         void enumerateAvailableAdatper();
 
         bool isPhysicalDeviceValid(vk::PhysicalDevice physicalDevice);
+
+        std::vector<vk::PhysicalDevice> getValidPhysicalDevices();
     };
 }
 

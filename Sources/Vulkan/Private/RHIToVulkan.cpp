@@ -7,61 +7,61 @@ namespace TiRHI::Vulkan::Private
     {
         switch (format)
         {
-        case TiRHI::Format::R8_UNorm:
+        case TiRHI::Format::R8UNorm:
             return vk::Format::eR8Unorm;
 
-        case TiRHI::Format::R8G8_UNorm:
+        case TiRHI::Format::R8G8UNorm:
             return vk::Format::eR8G8Unorm;
 
-        case TiRHI::Format::R8G8B8A8_UNorm:
+        case TiRHI::Format::R8G8B8A8UNorm:
             return vk::Format::eR8G8B8A8Unorm;
 
-        case TiRHI::Format::R8G8B8A8_UNorm_SRGB:
+        case TiRHI::Format::R8G8B8A8UNormSRGB:
             return vk::Format::eR8G8B8A8Srgb;
 
-        case TiRHI::Format::B8G8R8A8_UNorm:
+        case TiRHI::Format::B8G8R8A8UNorm:
             return vk::Format::eB8G8R8A8Unorm;
 
-        case TiRHI::Format::B8G8R8A8_UNorm_SRGB:
+        case TiRHI::Format::B8G8R8A8UNormSRGB:
             return vk::Format::eB8G8R8A8Srgb;
 
-        case TiRHI::Format::R16_Float:
+        case TiRHI::Format::R16Float:
             return vk::Format::eR16Sfloat;
 
-        case TiRHI::Format::R16G16_Float:
+        case TiRHI::Format::R16G16Float:
             return vk::Format::eR16G16Sfloat;
 
-        case TiRHI::Format::R16G16B16A16_Float:
+        case TiRHI::Format::R16G16B16A16Float:
             return vk::Format::eR16G16B16A16Sfloat;
 
-        case TiRHI::Format::R32_Float:
+        case TiRHI::Format::R32Float:
             return vk::Format::eR32Sfloat;
 
-        case TiRHI::Format::R32G32_Float:
+        case TiRHI::Format::R32G32Float:
             return vk::Format::eR32G32Sfloat;
 
-        case TiRHI::Format::R32G32B32A32_Float:
+        case TiRHI::Format::R32G32B32A32Float:
             return vk::Format::eR32G32B32A32Sfloat;
 
-        case TiRHI::Format::R32_UInt:
+        case TiRHI::Format::R32UInt:
             return vk::Format::eR32Uint;
 
-        case TiRHI::Format::R32G32_UInt:
+        case TiRHI::Format::R32G32UInt:
             return vk::Format::eR32G32Uint;
 
-        case TiRHI::Format::R32G32B32A32_UInt:
+        case TiRHI::Format::R32G32B32A32UInt:
             return vk::Format::eR32G32B32A32Uint;
 
-        case TiRHI::Format::D16_UNorm:
+        case TiRHI::Format::D16UNorm:
             return vk::Format::eD16Unorm;
 
-        case TiRHI::Format::D24_UNorm_S8_UInt:
+        case TiRHI::Format::D24UNormS8UInt:
             return vk::Format::eD24UnormS8Uint;
 
-        case TiRHI::Format::D32_Float:
+        case TiRHI::Format::D32Float:
             return vk::Format::eD32Sfloat;
 
-        case TiRHI::Format::D32_Float_S8_UInt:
+        case TiRHI::Format::D32FloatS8UInt:
             return vk::Format::eD32SfloatS8Uint;
 
         default:
@@ -338,6 +338,208 @@ namespace TiRHI::Vulkan::Private
             RHI_LOG_ERROR(std::format(L"Unsupported RHI FrontFace, Face = {}", toWString(frontFace)), RhiApi::Vulkan);
             return vk::FrontFace::eCounterClockwise;
         }
+    }
+
+    vk::Filter toVulkan(Filter filter)
+    {
+        switch (filter)
+        {
+        case TiRHI::Filter::Nearest:
+            return vk::Filter::eNearest;
+        case TiRHI::Filter::Linear:
+            return vk::Filter::eLinear;
+        default:
+            break;
+        }
+        RHI_LOG_ERROR(std::format(L"Unsupported RHI Filter, Filer = {}", toWString(filter)), RhiApi::Vulkan);
+        return vk::Filter::eNearest;
+    }
+
+    vk::SamplerMipmapMode toVulkanSamplerMipMapMode(Filter filter)
+    {
+        switch (filter)
+        {
+        case TiRHI::Filter::Nearest:
+            return vk::SamplerMipmapMode::eNearest;
+        case TiRHI::Filter::Linear:
+            return vk::SamplerMipmapMode::eLinear;
+        default:
+            break;
+        }
+        RHI_LOG_ERROR(std::format(L"Unsupported RHI Filter, Filer = {}", toWString(filter)), RhiApi::Vulkan);
+        return vk::SamplerMipmapMode::eNearest;
+    }
+
+    vk::SamplerAddressMode toVulkan(SamplerAddressMode samplerAddressMode)
+    {
+        switch (samplerAddressMode)
+        {
+        case TiRHI::SamplerAddressMode::Repeat:
+            return vk::SamplerAddressMode::eRepeat;
+        case TiRHI::SamplerAddressMode::MirroredRepeat:
+            return vk::SamplerAddressMode::eMirroredRepeat;
+        case TiRHI::SamplerAddressMode::ClampToEdge:
+            return vk::SamplerAddressMode::eClampToEdge;
+        case TiRHI::SamplerAddressMode::ClampToBorder:
+            return vk::SamplerAddressMode::eClampToBorder;
+        case TiRHI::SamplerAddressMode::MirrorClampToEdge:
+            return vk::SamplerAddressMode::eMirrorClampToEdge;
+        default:
+            break;
+        }
+        RHI_LOG_ERROR(
+            std::format(L"Unsupported RHI SamplerAddressMode, SamplerAddressMode = {}", toWString(samplerAddressMode)),
+            RhiApi::Vulkan);
+        return vk::SamplerAddressMode::eRepeat;
+    }
+
+    vk::CompareOp toVulkan(CompareOp compareOp)
+    {
+        switch (compareOp)
+        {
+        case TiRHI::CompareOp::eNever:
+            return vk::CompareOp::eNever;
+        case TiRHI::CompareOp::eLess:
+            return vk::CompareOp::eLess;
+        case TiRHI::CompareOp::eEqual:
+            return vk::CompareOp::eEqual;
+        case TiRHI::CompareOp::eLessOrEqual:
+            return vk::CompareOp::eLessOrEqual;
+        case TiRHI::CompareOp::eGreater:
+            return vk::CompareOp::eGreater;
+        case TiRHI::CompareOp::eNotEqual:
+            return vk::CompareOp::eNotEqual;
+        case TiRHI::CompareOp::eGreaterOrEqual:
+            return vk::CompareOp::eGreaterOrEqual;
+        case TiRHI::CompareOp::eAlways:
+            return vk::CompareOp::eAlways;
+        default:
+            break;
+        }
+
+        return vk::CompareOp::eLess;
+    }
+
+    vk::ShaderStageFlags toVulkan(ShaderStageFlags shaderStageFlags)
+    {
+        vk::ShaderStageFlags flags{};
+
+        if ((shaderStageFlags & ShaderStageFlags::Vertex) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eVertex;
+
+        if ((shaderStageFlags & ShaderStageFlags::Hull) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eTessellationControl;
+
+        if ((shaderStageFlags & ShaderStageFlags::Domain) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eTessellationEvaluation;
+
+        if ((shaderStageFlags & ShaderStageFlags::Geometry) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eGeometry;
+
+        if ((shaderStageFlags & ShaderStageFlags::Pixel) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eFragment;
+
+        if ((shaderStageFlags & ShaderStageFlags::Compute) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eCompute;
+
+        if ((shaderStageFlags & ShaderStageFlags::Amplification) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eTaskEXT;
+
+        if ((shaderStageFlags & ShaderStageFlags::Mesh) != ShaderStageFlags::None)
+            flags |= vk::ShaderStageFlagBits::eMeshEXT;
+
+        return flags;
+    }
+
+    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags)
+    {
+        vk::ImageUsageFlags flags{};
+
+        if ((textureFlags & TextureFlags::ShaderResource) != TextureFlags::None)
+            flags |= vk::ImageUsageFlagBits::eSampled;
+
+        if ((textureFlags & TextureFlags::RenderTarget) != TextureFlags::None)
+            flags |= vk::ImageUsageFlagBits::eColorAttachment;
+
+        if ((textureFlags & TextureFlags::UnorderedAccess) != TextureFlags::None)
+            flags |= vk::ImageUsageFlagBits::eStorage;
+
+        if ((textureFlags & TextureFlags::CopySource) != TextureFlags::None)
+            flags |= vk::ImageUsageFlagBits::eTransferSrc;
+
+        if ((textureFlags & TextureFlags::CopyDestination) != TextureFlags::None)
+            flags |= vk::ImageUsageFlagBits::eTransferDst;
+
+        return flags;
+    }
+
+    vk::ImageAspectFlags imageAspectFlagBitsFromFormat(Format format)
+    {
+        switch (format)
+        {
+        case Format::D16UNorm:
+        case Format::D32Float:
+            return vk::ImageAspectFlagBits::eDepth;
+
+        case Format::D24UNormS8UInt:
+        case Format::D32FloatS8UInt:
+            return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+
+        case Format::R8UNorm:
+        case Format::R8G8UNorm:
+        case Format::R8G8B8A8UNorm:
+        case Format::R8G8B8A8UNormSRGB:
+        case Format::B8G8R8A8UNorm:
+        case Format::B8G8R8A8UNormSRGB:
+        case Format::R16Float:
+        case Format::R16G16Float:
+        case Format::R16G16B16A16Float:
+        case Format::R32Float:
+        case Format::R32G32Float:
+        case Format::R32G32B32A32Float:
+        case Format::R32UInt:
+        case Format::R32G32UInt:
+        case Format::R32G32B32A32UInt:
+            return vk::ImageAspectFlagBits::eColor;
+
+        default:
+            RHI_LOG_ERROR(
+                std::format(L"Unsupported RHI Format for Vulkan image aspect, Format = {}", toWString(format)),
+                RhiApi::Vulkan);
+
+            return {};
+        }
+    }
+
+    vk::BufferUsageFlags toVulkan(BufferUsage usage)
+    {
+        vk::BufferUsageFlags flags{};
+
+        if (static_cast<bool>(usage & BufferUsage::Vertex))
+            flags |= vk::BufferUsageFlagBits::eVertexBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Index))
+            flags |= vk::BufferUsageFlagBits::eIndexBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Constant))
+            flags |= vk::BufferUsageFlagBits::eUniformBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Structured))
+            flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Raw))
+            flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::Indirect))
+            flags |= vk::BufferUsageFlagBits::eIndirectBuffer;
+
+        if (static_cast<bool>(usage & BufferUsage::CopySource))
+            flags |= vk::BufferUsageFlagBits::eTransferSrc;
+
+        if (static_cast<bool>(usage & BufferUsage::CopyDestination))
+            flags |= vk::BufferUsageFlagBits::eTransferDst;
+
+        return flags;
     }
 
 }

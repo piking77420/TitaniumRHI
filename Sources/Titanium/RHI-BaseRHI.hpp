@@ -1,6 +1,7 @@
 #ifndef TITANIUM_RHI_BASE_RHI_H
 #define TITANIUM_RHI_BASE_RHI_H
 
+#include <algorithm>
 #include <concepts>
 #include <span>
 
@@ -19,6 +20,7 @@ namespace TiRHI
     {
     public:
         using _Derived = Derived;
+        static constexpr TiRHI::RhiApi Api = Derived::Api;
 
         BaseRHI() = delete;
         ~BaseRHI() = default;
@@ -66,12 +68,10 @@ namespace TiRHI
 
         bool m_useDebugLabel = false;
     };
-#ifdef max
-#undef max
-#endif
+
     template<typename Derived>
     inline BaseRHI<Derived>::BaseRHI(const RhiCreate& rhiCreate)
-        : m_framesInFlight(std::max(3uz, rhiCreate.frameInFlight))
+        : m_framesInFlight(std::min(MaxFramesInFlight, rhiCreate.frameInFlight))
         , m_useDebugLabel(rhiCreate.useDebugLabel)
     {
         static_assert(std::derived_from<Derived, BaseRHI<Derived>>, "Derived must inherit from RHI<Derived>");

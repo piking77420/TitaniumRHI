@@ -67,6 +67,22 @@ namespace TiRHI::Vulkan::Private
 
     vk::FrontFace toVulkan(FrontFace frontFace);
 
+    vk::Filter toVulkan(Filter filter);
+
+    vk::SamplerMipmapMode toVulkanSamplerMipMapMode(Filter filter);
+
+    vk::SamplerAddressMode toVulkan(SamplerAddressMode samplerAddressMode);
+
+    vk::CompareOp toVulkan(CompareOp compareOp);
+
+    vk::ShaderStageFlags toVulkan(ShaderStageFlags shaderStageFlags);
+
+    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags);
+
+    vk::ImageAspectFlags imageAspectFlagBitsFromFormat(Format format);
+
+    vk::BufferUsageFlags toVulkan(BufferUsage usage);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

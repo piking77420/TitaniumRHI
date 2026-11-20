@@ -13,9 +13,14 @@ namespace TiRHI::Vulkan
     class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, Vulkan::RenderPassDescriptor, Vulkan::Texture>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         RenderTargets() = delete;
-        ~RenderTargets() = default;
-        RHI_MOVE_ONLY(RenderTargets);
+        ~RenderTargets();
+        RenderTargets(const RenderTargets&) = delete;
+        RenderTargets& operator=(const RenderTargets&) = delete;
+        RenderTargets(RenderTargets&&) noexcept = default;
+        RenderTargets& operator=(RenderTargets&& other) noexcept = default;
 
         RenderTargets(RHI& rhi)
             : BaseRenderTargets(rhi)
@@ -32,10 +37,19 @@ namespace TiRHI::Vulkan
 
         bool build(Device& device);
 
+        void setSubmissionValue(uint64_t value)
+        {
+            m_lastSubmitedValue = value;
+        }
+
     private:
         friend Private;
 
+        Device* m_device{nullptr};
+
         vk::UniqueFramebuffer m_frameBuffer;
+
+        uint64_t m_lastSubmitedValue = 0;
     };
 
 } // namespace TiRHI::Vulkan

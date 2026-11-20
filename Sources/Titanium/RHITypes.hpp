@@ -3,6 +3,8 @@
 
 #include <functional>
 #include <type_traits>
+#include <variant>
+#include <format>
 
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHI-EnumFlag.hpp>
@@ -15,6 +17,32 @@ namespace TiRHI
     {
         using Ts::operator()...;
     };
+
+    template<class T>
+    inline constexpr bool AlwaysFalse = false;
+
+    template<typename T, typename Variant>
+    struct VariantIndex;
+
+    template<typename T, typename... Ts>
+    struct VariantIndex<T, std::variant<Ts...>>
+    {
+        static constexpr std::size_t value = []
+        {
+            constexpr bool matches[] = {std::is_same_v<T, Ts>...};
+
+            for (std::size_t i = 0; i < sizeof...(Ts); ++i)
+                if (matches[i])
+                    return i;
+
+            return sizeof...(Ts);
+        }();
+
+        static_assert(value < sizeof...(Ts), "Type not found in variant");
+    };
+
+    template<typename T, typename Variant>
+    inline constexpr std::size_t VariantIndexV = VariantIndex<T, Variant>::value;
 
     enum struct RhiMessageSeverity
     {
@@ -83,25 +111,25 @@ namespace TiRHI
     IMPLEMENT_TO_STRING_TITANIUM(RhiApi, RHI_API_LIST)
 
 #define RHI_FORMAT_LIST(X)                                                                                             \
-    X(R8_UNorm)                                                                                                        \
-    X(R8G8_UNorm)                                                                                                      \
-    X(R8G8B8A8_UNorm)                                                                                                  \
-    X(R8G8B8A8_UNorm_SRGB)                                                                                             \
-    X(B8G8R8A8_UNorm)                                                                                                  \
-    X(B8G8R8A8_UNorm_SRGB)                                                                                             \
-    X(R16_Float)                                                                                                       \
-    X(R16G16_Float)                                                                                                    \
-    X(R16G16B16A16_Float)                                                                                              \
-    X(R32_Float)                                                                                                       \
-    X(R32G32_Float)                                                                                                    \
-    X(R32G32B32A32_Float)                                                                                              \
-    X(R32_UInt)                                                                                                        \
-    X(R32G32_UInt)                                                                                                     \
-    X(R32G32B32A32_UInt)                                                                                               \
-    X(D16_UNorm)                                                                                                       \
-    X(D24_UNorm_S8_UInt)                                                                                               \
-    X(D32_Float)                                                                                                       \
-    X(D32_Float_S8_UInt)
+    X(R8UNorm)                                                                                                         \
+    X(R8G8UNorm)                                                                                                       \
+    X(R8G8B8A8UNorm)                                                                                                   \
+    X(R8G8B8A8UNormSRGB)                                                                                               \
+    X(B8G8R8A8UNorm)                                                                                                   \
+    X(B8G8R8A8UNormSRGB)                                                                                               \
+    X(R16Float)                                                                                                        \
+    X(R16G16Float)                                                                                                     \
+    X(R16G16B16A16Float)                                                                                               \
+    X(R32Float)                                                                                                        \
+    X(R32G32Float)                                                                                                     \
+    X(R32G32B32A32Float)                                                                                               \
+    X(R32UInt)                                                                                                         \
+    X(R32G32UInt)                                                                                                      \
+    X(R32G32B32A32UInt)                                                                                                \
+    X(D16UNorm)                                                                                                        \
+    X(D24UNormS8UInt)                                                                                                  \
+    X(D32Float)                                                                                                        \
+    X(D32FloatS8UInt)
 
     enum struct Format
     {
@@ -110,7 +138,86 @@ namespace TiRHI
 #undef X
     };
 
+    uint32_t pixelSizeFromFormat(Format format);
+
+#define RHI_SHADER_STAGE_LIST(X)                                                                                       \
+    X(Vertex)                                                                                                          \
+    X(Hull)                                                                                                            \
+    X(Domain)                                                                                                          \
+    X(Geometry)                                                                                                        \
+    X(Pixel)                                                                                                           \
+    X(Amplification)                                                                                                   \
+    X(Mesh)                                                                                                            \
+    X(Compute)                                                                                                         \
+    X(RayGeneration)                                                                                                   \
+    X(AnyHit)                                                                                                          \
+    X(ClosestHit)                                                                                                      \
+    X(Miss)                                                                                                            \
+    X(Intersection)                                                                                                    \
+    X(Callable)                                                                                                        \
+    X(Count)
+
+    enum struct ShaderStage : uint8_t
+    {
+#define X(name) name,
+        RHI_SHADER_STAGE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(ShaderStage, RHI_SHADER_STAGE_LIST)
+
     IMPLEMENT_TO_STRING_TITANIUM(Format, RHI_FORMAT_LIST)
+
+#define RHI_SHADER_STAGE_FLAG_LIST(X)                                                                                  \
+    X(None, 0)                                                                                                         \
+    X(Vertex, 1u << 0)                                                                                                 \
+    X(Hull, 1u << 1)                                                                                                   \
+    X(Domain, 1u << 2)                                                                                                 \
+    X(Geometry, 1u << 3)                                                                                               \
+    X(Pixel, 1u << 4)                                                                                                  \
+    X(Compute, 1u << 5)                                                                                                \
+    X(Amplification, 1u << 6)                                                                                          \
+    X(Mesh, 1u << 7)                                                                                                   \
+    X(RayGen, 1u << 8)                                                                                                 \
+    X(AnyHit, 1u << 9)                                                                                                 \
+    X(ClosestHit, 1u << 10)                                                                                            \
+    X(Miss, 1u << 11)                                                                                                  \
+    X(Intersection, 1u << 12)                                                                                          \
+    X(Callable, 1u << 13)                                                                                              \
+    X(AllGraphics, 0x000000DFu)                                                                                        \
+    X(AllRayTracing, 0x00003F00u)                                                                                      \
+    X(All, 0xFFFFFFFFu)
+
+    enum struct ShaderStageFlags : uint32_t
+    {
+#define X(name, value) name = value,
+        RHI_SHADER_STAGE_FLAG_LIST(X)
+#undef X
+    };
+
+    template<typename F>
+    inline void forEachShaderStage(ShaderStageFlags flags, F&& visitor)
+    {
+        uint32_t bits = static_cast<uint32_t>(flags);
+
+        // Only individual shader-stage bits.
+        constexpr uint32_t validMask = (1u << 14) - 1u;
+        bits &= validMask;
+
+        while (bits != 0)
+        {
+            const uint32_t bitIndex = std::countr_zero(bits);
+            const uint32_t bit = 1u << bitIndex;
+
+            visitor(static_cast<ShaderStageFlags>(bit), bitIndex);
+
+            // Remove the lowest enabled bit.
+            bits &= bits - 1;
+        }
+    }
+
+    RHI_DEFINE_ENUM_FLAGS(ShaderStageFlags)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(ShaderStageFlags, RHI_SHADER_STAGE_FLAG_LIST)
 
 #define RHI_LOAD_OP_LIST(X)                                                                                            \
     X(LoadOp)                                                                                                          \
@@ -174,7 +281,7 @@ namespace TiRHI
     X(Present)                                                                                                         \
     X(Count)
 
-    enum struct ResourceState
+    enum struct ResourceState // TODO include pixel shader resource
     {
 #define X(name) name,
         RHI_RESOURCE_STATE_LIST(X)
@@ -448,6 +555,170 @@ namespace TiRHI
 
     IMPLEMENT_TO_STRING_TITANIUM(FrontFace, RHI_FRONT_FACE_LIST)
 
+#define RHI_FILTER_LIST(X)                                                                                             \
+    X(Nearest)                                                                                                         \
+    X(Linear)
+
+    enum class Filter
+    {
+#define X(name) name,
+        RHI_FILTER_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(Filter, RHI_FILTER_LIST)
+
+#define RHI_SAMPLER_ADDRESS_MODE_LIST(X)                                                                               \
+    X(Repeat)                                                                                                          \
+    X(MirroredRepeat)                                                                                                  \
+    X(ClampToEdge)                                                                                                     \
+    X(ClampToBorder)                                                                                                   \
+    X(MirrorClampToEdge)
+
+    enum class SamplerAddressMode
+    {
+#define X(name) name,
+        RHI_SAMPLER_ADDRESS_MODE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(SamplerAddressMode, RHI_SAMPLER_ADDRESS_MODE_LIST)
+
+    constexpr float LodClampNone = 1000.f;
+
+#define RHI_COMPARE_OP_LIST(X)                                                                                         \
+    X(eNever)                                                                                                          \
+    X(eLess)                                                                                                           \
+    X(eEqual)                                                                                                          \
+    X(eLessOrEqual)                                                                                                    \
+    X(eGreater)                                                                                                        \
+    X(eNotEqual)                                                                                                       \
+    X(eGreaterOrEqual)                                                                                                 \
+    X(eAlways)
+
+    enum class CompareOp
+    {
+#define X(name) name,
+        RHI_COMPARE_OP_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(CompareOp, RHI_COMPARE_OP_LIST)
+
+#define RHI_DESCRIPTOR_TYPE_LIST(X)                                                                                    \
+    X(UniformBuffer)                                                                                                   \
+    X(StorageBuffer)                                                                                                   \
+    X(SampledTexture)                                                                                                  \
+    X(StorageTexture)
+
+    enum class BufferType
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_TYPE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(BufferType, RHI_DESCRIPTOR_TYPE_LIST)
+
+#define RHI_DESCRIPTOR_SET_TYPE_LIST(X)                                                                                \
+    X(Dynamic)                                                                                                         \
+    X(Immutable)
+
+    enum class DescriptorSetType
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_SET_TYPE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(DescriptorSetType, RHI_DESCRIPTOR_SET_TYPE_LIST)
+
+#define RHI_TEXTURE_FLAG_LIST(X)                                                                                       \
+    X(None, 0)                                                                                                         \
+    X(ShaderResource, 1u << 0)                                                                                         \
+    X(RenderTarget, 1u << 1)                                                                                           \
+    X(UnorderedAccess, 1u << 3)                                                                                        \
+    X(CopySource, 1u << 4)                                                                                             \
+    X(CopyDestination, 1u << 5)
+
+    enum struct TextureFlags : uint32_t
+    {
+#define X(name, value) name = value,
+        RHI_TEXTURE_FLAG_LIST(X)
+#undef X
+    };
+
+    RHI_DEFINE_ENUM_FLAGS(TextureFlags)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(TextureFlags, RHI_TEXTURE_FLAG_LIST)
+
+#define RHI_DESCRIPTOR_TEXTURE_TYPE_LIST(X)                                                                            \
+    X(Texture2D)                                                                                                       \
+    X(Texture3D)
+
+    enum struct TextureType : uint8_t
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_TEXTURE_TYPE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(TextureType, RHI_DESCRIPTOR_TEXTURE_TYPE_LIST)
+
+    // Default : for most buffers optimize for Gpu (SSBO, Vertex)
+    // Upload : host wirtable
+    // Readback : for readBacks
+#define RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST(X)                                                                      \
+    X(Default)                                                                                                         \
+    X(Upload)                                                                                                          \
+    X(Readback)
+
+    enum struct BufferMemoryType : uint8_t
+    {
+#define X(name) name,
+        RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(BufferMemoryType, RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST)
+
+#define RHI_BUFFER_USAGE_FLAG_LIST(X)                                                                                  \
+    X(None, 0)                                                                                                         \
+    X(Vertex, 1u << 0)                                                                                                 \
+    X(Index, 1u << 1)                                                                                                  \
+    X(Constant, 1u << 2)                                                                                               \
+    X(Structured, 1u << 3)                                                                                             \
+    X(Raw, 1u << 4)                                                                                                    \
+    X(Indirect, 1u << 5)                                                                                               \
+    X(CopySource, 1u << 6)                                                                                             \
+    X(CopyDestination, 1u << 7)
+
+    enum struct BufferUsage : uint8_t
+    {
+#define X(name) name,
+        RHI_BUFFER_USAGE_FLAG_LIST(X)
+#undef X
+    };
+
+    RHI_DEFINE_ENUM_FLAGS(BufferUsage)
+    IMPLEMENT_TO_STRING_FLAGS_TITANIUM(BufferUsage, RHI_BUFFER_USAGE_FLAG_LIST)
+
+#define RHI_BUFFER_UPDATE_MODE_LIST(X)                                                                                 \
+    X(Static)                                                                                                          \
+    X(Dynamic)
+
+    enum struct BufferUpdateMode : uint8_t
+    {
+#define X(name) name,
+        RHI_BUFFER_UPDATE_MODE_LIST(X)
+#undef X
+    };
+
+    IMPLEMENT_TO_STRING_TITANIUM(BufferUpdateMode, RHI_BUFFER_UPDATE_MODE_LIST)
+
+    struct PushConstant
+    {
+        ShaderStageFlags flag;
+        uint32_t size;
+    };
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate
@@ -458,6 +729,15 @@ namespace TiRHI
     };
 
     using WindowHandle = void*;
+
+    template<class T>
+    inline void hashCombine(std::uint32_t& s, const T& v)
+    {
+        std::hash<T> h;
+        s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
+    }
+
+    constexpr size_t MaxFramesInFlight = 3;
 
 } // namespace TiRHI
 

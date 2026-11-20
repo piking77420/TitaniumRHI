@@ -5,12 +5,22 @@ target_sources(
     PRIVATE
         Private/DescriptorAllocator.cpp
         Private/DescriptorAllocator.hpp
+        Private/DescriptorHandle.cpp
+        Private/DescriptorHandle.hpp
+        Private/DescriptorManager.cpp
+        Private/DescriptorManager.hpp
         Private/RhiToDirectX12.cpp
         Private/RhiToDirectX12.hpp
+        Private/StaginBuffer.cpp
+        Private/StaginBuffer.hpp
         DirectX12-AcquireFrame.cpp
         DirectX12-AcquireFrame.hpp
+        DirectX12-Buffer.cpp
+        DirectX12-Buffer.hpp
         DirectX12-CommandList.cpp
         DirectX12-CommandList.hpp
+        DirectX12-DescriptorSet.cpp
+        DirectX12-DescriptorSet.hpp
         DirectX12-Device.cpp
         DirectX12-Device.hpp
         DirectX12-Header.hpp
@@ -24,6 +34,8 @@ target_sources(
         DirectX12-GraphicPipeline.hpp
         DirectX12-RHI.cpp
         DirectX12-RHI.hpp
+        DirectX12-Sampler.cpp
+        DirectX12-Sampler.hpp
         DirectX12-Surface.cpp
         DirectX12-Surface.hpp
         DirectX12-SwapChain.cpp
@@ -43,9 +55,11 @@ target_include_directories(
 if(WIN32)
     target_link_libraries(
         TitaniumRHI
+        PUBLIC
+            D3D12MemoryAllocator
         PRIVATE
             d3d12.lib 
             dxgi.lib 
-            dxguid.lib 
+            dxguid.lib
     )
 endif()

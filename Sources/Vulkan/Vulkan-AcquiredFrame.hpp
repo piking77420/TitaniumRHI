@@ -9,6 +9,8 @@ namespace TiRHI::Vulkan
     class AcquiredFrame : public BaseAcquiredFrame
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         explicit AcquiredFrame() = default;
         ~AcquiredFrame() = default;
         explicit AcquiredFrame(bool success)
@@ -49,6 +51,17 @@ namespace TiRHI::Vulkan
             return *this;
         }
 
+        vk::SwapchainKHR getSwapChain() const
+        {
+            return m_swapChain;
+        }
+
+        AcquiredFrame& setSwapChain(vk::SwapchainKHR swapChain)
+        {
+            m_swapChain = swapChain;
+            return *this;
+        }
+
         explicit operator bool() const
         {
             return BaseAcquiredFrame::operator bool();
@@ -60,6 +73,8 @@ namespace TiRHI::Vulkan
         vk::Semaphore m_imageAvailabe;
 
         uint32_t m_swapChainImageIndex = 0;
+
+        vk::SwapchainKHR m_swapChain{VK_NULL_HANDLE};
     };
 } // namespace TiRHI::Vulkan
 

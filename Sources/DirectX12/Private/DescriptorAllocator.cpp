@@ -6,177 +6,149 @@
 
 namespace TiRHI::DirectX12::Private
 {
+    // for now it is hardocoded
+    // TODO be able to bind multiple heaps
+    [[nodiscard]]
+    constexpr uint32_t getDescriptorCapacity(D3D12_DESCRIPTOR_HEAP_TYPE type)
+    {
+        switch (type)
+        {
+        case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+            return 65'536;
+
+        case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+            return 2'048;
+
+        case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+            return 1'024;
+
+        case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+            return 256;
+
+        default:
+            return 0;
+        }
+    }
+
     bool DescriptorAllocator::build(Device& device)
     {
         if (!device.getNativeDevice())
             return false;
 
-        return m_pools.emplace_back(std::make_unique<Pool>())->build(*device.getNativeDevice());
-    }
+        Microsoft::WRL::ComPtr<ID3D12Device> nativeDevice = device.getNativeDevice();
+        m_descriptorSize = nativeDevice->GetDescriptorHandleIncrementSize(m_descriptorHeapType);
 
-    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-    DescriptorAllocator::getOrCreate(Device& device, CpuDescriptorHandle& cpuDescriptorHandle)
-    {
-        if (!cpuDescriptorHandle.descriptorIndex.isValid() && !cpuDescriptorHandle.poolIndex.isValid())
-        {
-            auto optAlloc = allocate(*device.getNativeDevice());
-            if (optAlloc)
-            {
-                std::tuple<DescriptorAllocator::Pool*, PoolIndex, DesciptorIndex>& alloc = *optAlloc;
-                cpuDescriptorHandle.poolIndex = std::get<PoolIndex>(alloc);
-                cpuDescriptorHandle.descriptorIndex = std::get<DesciptorIndex>(alloc);
+        m_capacity = getDescriptorCapacity(m_descriptorHeapType);
+        if (m_capacity == 0)
+            return false;
 
-                Pool* pool = std::get<DescriptorAllocator::Pool*>(alloc);
-                cpuDescriptorHandle.generation = pool->generations[cpuDescriptorHandle.poolIndex.toUnderlying()];
-
-                D3D12_CPU_DESCRIPTOR_HANDLE handle = pool->baseHandlePtr;
-                handle.ptr += cpuDescriptorHandle.descriptorIndex.toUnderlying() * pool->rtvDescriptorSize;
-                return handle;
-            }
-            else
-            {
-                RHI_LOG_FATAL(L"Failed to allocate Descriptor", RhiApi::DirectX12);
-                return {};
-            }
-        }
-        else if (cpuDescriptorHandle.descriptorIndex.isValid() && cpuDescriptorHandle.poolIndex.isValid())
-        {
-            if (cpuDescriptorHandle.poolIndex.toUnderlying() >= 0 &&
-                cpuDescriptorHandle.poolIndex.toUnderlying() < m_pools.size())
-            {
-                Pool& pool = *m_pools[cpuDescriptorHandle.poolIndex.toUnderlying()].get();
-
-                D3D12_CPU_DESCRIPTOR_HANDLE handle = pool.baseHandlePtr;
-                handle.ptr += cpuDescriptorHandle.descriptorIndex.toUnderlying() * pool.rtvDescriptorSize;
-                return handle;
-            }
-            else
-            {
-                RHI_LOG_FATAL(L"Un error as occur", RhiApi::DirectX12);
-            }
-        }
-        else
-        {
-            RHI_LOG_FATAL(L"Un error as occur", RhiApi::DirectX12);
-        }
-        return {};
-    }
-
-    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DescriptorAllocator::get(const CpuDescriptorHandle& cpuDescriptorHandle)
-    {
-        if (!cpuDescriptorHandle.descriptorIndex.isValid() || !cpuDescriptorHandle.poolIndex.isValid())
-        {
-            return std::nullopt;
-        }
-
-        if (cpuDescriptorHandle.poolIndex.toUnderlying() >= 0 &&
-            cpuDescriptorHandle.poolIndex.toUnderlying() < m_pools.size())
-        {
-            Pool& pool = *m_pools[cpuDescriptorHandle.poolIndex.toUnderlying()].get();
-
-            D3D12_CPU_DESCRIPTOR_HANDLE handle = pool.baseHandlePtr;
-            handle.ptr += cpuDescriptorHandle.descriptorIndex.toUnderlying() * pool.rtvDescriptorSize;
-            return handle;
-        }
-        else
-        {
-            RHI_LOG_FATAL(L"Un error as occur", RhiApi::DirectX12);
-        }
-        return std::nullopt;
-    }
-
-    void DescriptorAllocator::release(CpuDescriptorHandle& handle)
-    {
-        if (!handle.poolIndex.isValid() || !handle.descriptorIndex.isValid())
-            return;
-
-        const size_t poolIndex = handle.poolIndex.toUnderlying();
-        const size_t index = handle.descriptorIndex.toUnderlying();
-
-        if (poolIndex >= m_pools.size() || index >= Pool::BaseCapacity)
-            return;
-
-        Pool& pool = *m_pools[poolIndex];
-
-        const uint64_t bit = uint64_t{1} << index;
-
-        // Already free
-        if (pool.m_availableMask & bit)
-        {
-            RHI_LOG_ERROR(L"Descriptor double free", RhiApi::DirectX12);
-            return;
-        }
-
-        // Stale handle
-        if (pool.generations[index] != handle.generation)
-        {
-            RHI_LOG_ERROR(L"Invalid descriptor generation", RhiApi::DirectX12);
-            return;
-        }
-
-        pool.m_availableMask |= bit;
-        ++pool.generations[index];
-
-        handle = {};
-    }
-
-    std::optional<std::tuple<DescriptorAllocator::Pool*, PoolIndex, DesciptorIndex>>
-    DescriptorAllocator::allocate(ID3D12Device& device)
-    {
-
-        for (size_t i = 0; i < m_pools.size(); i++)
-        {
-            auto& pool = m_pools[i];
-            if (!pool)
-                continue;
-
-            const uint64_t available = pool->m_availableMask;
-
-            if (available == 0)
-                continue;
-
-            const size_t index = std::countr_zero(available);
-
-            // Mark descriptor as allocated
-            pool->m_availableMask &= ~(uint64_t{1} << index);
-
-            return std::make_optional(
-                std::make_tuple(pool.get(), PoolIndex::FromUnderlying(i), DesciptorIndex::FromUnderlying(index)));
-        }
-
-        auto& pool = m_pools.emplace_back(std::make_unique<Pool>());
-        pool->build(device);
-
-        // allocate index 0
-        pool->m_availableMask &= ~uint64_t{1};
-
-        return std::make_optional(std::make_tuple(pool.get(), PoolIndex::FromUnderlying(m_pools.size() - 1),
-                                                  DesciptorIndex::FromUnderlying(0u)));
-    }
-
-    bool DescriptorAllocator::Pool::build(ID3D12Device& device)
-    {
-        RHI_LOG_INFO(L"New DescriptorAllocator pool", RhiApi::DirectX12);
+        m_shaderVisible = m_descriptorHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
+                          m_descriptorHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 
         D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
-        heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        heapDesc.NumDescriptors = static_cast<UINT>(BaseCapacity);
-        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-        const HRESULT result = device.CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeap));
+        heapDesc.Type = m_descriptorHeapType;
+        heapDesc.NumDescriptors = m_capacity;
+        heapDesc.Flags = m_shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        ;
+        const HRESULT result = nativeDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_heap));
 
         if (FAILED(result))
         {
             RHI_LOG_ERROR(L"Failed to create DescriptorAllocator's descriptor heap", RhiApi::DirectX12);
-            return false;
+            return {};
         }
 
-        rtvDescriptorSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        m_baseCpuPtr = m_heap->GetCPUDescriptorHandleForHeapStart();
+        m_baseGpuPtr = m_shaderVisible ? m_heap->GetGPUDescriptorHandleForHeapStart() : D3D12_GPU_DESCRIPTOR_HANDLE{};
 
-        baseHandlePtr = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-        m_availableMask = std::numeric_limits<uint64_t>::max();
+        m_freeBlocks.emplace_back(FreeBlock{.start = 0, .count = heapDesc.NumDescriptors});
 
         return true;
+    }
+
+    std::optional<DescriptorHandle> DescriptorAllocator::create(Device& device, uint32_t count)
+    {
+        if (count == 0)
+            return std::nullopt;
+
+        for (size_t i = 0; i < m_freeBlocks.size(); ++i)
+        {
+            FreeBlock& block = m_freeBlocks[i];
+
+            if (block.count < count)
+                continue;
+
+            const uint32_t startIndex = block.start;
+
+            block.start += count;
+
+            assert((static_cast<int64_t>(block.count) - static_cast<int64_t>(count)) >= 0);
+            block.count -= count;
+
+            if (block.count == 0)
+                m_freeBlocks.erase(m_freeBlocks.begin() + i);
+
+            return getHandle(startIndex, count);
+        }
+
+        return std::nullopt;
+    }
+
+    void DescriptorAllocator::release(DescriptorHandle& handle)
+    {
+        if (!handle)
+        {
+            return;
+        }
+        const SIZE_T offset = handle.cpuHandle.ptr - m_baseCpuPtr.ptr;
+        assert(m_descriptorSize != 0);
+        assert(offset % m_descriptorSize == 0);
+        const uint32_t start = static_cast<uint32_t>(offset / m_descriptorSize);
+
+        assert(start < m_capacity);
+        assert(handle.count <= m_capacity - start);
+
+        auto it = std::lower_bound(m_freeBlocks.begin(), m_freeBlocks.end(), start,
+                                   [](const FreeBlock& block, uint32_t index) { return block.start < index; });
+
+        assert(it == m_freeBlocks.end() || start + handle.count <= it->start);
+
+        assert(it == m_freeBlocks.begin() || (it - 1)->start + (it - 1)->count <= start);
+
+        it = m_freeBlocks.insert(it, FreeBlock{start, handle.count});
+
+        // merge with previous block.
+        if (it != m_freeBlocks.begin())
+        {
+            auto prev = it - 1;
+
+            if (prev->start + prev->count == it->start)
+            {
+                prev->count += it->count;
+                it = m_freeBlocks.erase(it);
+                it = prev;
+            }
+        }
+
+        auto next = it + 1;
+        // merge with next block.
+        if (next != m_freeBlocks.end() && it->start + it->count == next->start)
+        {
+            it->count += next->count;
+            m_freeBlocks.erase(next);
+        }
+
+        // Invalidate this instance.
+        handle = {};
+    }
+
+    DescriptorHandle DescriptorAllocator::getHandle(uint32_t index, uint32_t count)
+    {
+        return DescriptorHandle{
+            .count = count,
+            .cpuHandle = m_baseCpuPtr.ptr + m_descriptorSize * index,
+            .gpuHandle = m_shaderVisible ? (m_baseGpuPtr.ptr + m_descriptorSize * index) : UINT64{0},
+        };
     }
 
 } // namespace TiRHI::DirectX12::Private

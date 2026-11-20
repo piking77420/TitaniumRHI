@@ -12,13 +12,13 @@ namespace TiRHI::Metal
 {
     RHI::~RHI()
     {
+        m_pool->release();
     }
 
     RHI::RHI(const RhiCreate& rhiCreate)
         : BaseRHI<RHI>(rhiCreate)
-        , m_device(MTL::CreateSystemDefaultDevice())
+        , m_pool(NS::AutoreleasePool::alloc()->init())
     {
-
         // Enumerate all adapter / device
         NS::Array* devices = MTL::CopyAllDevices();
 
@@ -46,7 +46,7 @@ namespace TiRHI::Metal
             // Metal does not directly expose a PCI vendor ID.
             uint32_t vendorId = 0;
             // Apple GPU
-            if (m_device->supportsFamily(MTL::GPUFamilyApple7))
+            if (device->supportsFamily(MTL::GPUFamilyApple7))
                 vendorId = 0x106B;
 
             property.limits.minUniformBufferOffset = 256;

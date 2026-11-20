@@ -147,6 +147,7 @@ namespace TiRHI::Vulkan
     }
 
     Instance::Instance(const RHI& rhi)
+        : m_apiVersion(VK_API_VERSION_1_3)
     {
         RHI_LOG_VERBOSE(L"volkInitialize", RhiApi::Vulkan);
         const vk::Result volkInitResult = static_cast<vk::Result>(volkInitialize());
@@ -185,7 +186,7 @@ namespace TiRHI::Vulkan
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "TitaniumRHI";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_3;
+        appInfo.apiVersion = m_apiVersion;
 
         vk::InstanceCreateInfo instanceCreateInfo = {};
         instanceCreateInfo.sType = vk::StructureType::eInstanceCreateInfo;
@@ -257,6 +258,11 @@ namespace TiRHI::Vulkan
 
     Instance::~Instance()
     {
+        destroy();
+    }
+
+    void Instance::destroy()
+    {
 #if defined(TITANIUM_VALIDATION_LAYER)
 
         if (m_debugUtilsMessenger)
@@ -274,6 +280,23 @@ namespace TiRHI::Vulkan
             vkDestroyInstance(static_cast<VkInstance>(m_instance), nullptr);
             m_instance = nullptr;
         }
+    }
+
+    Instance::Instance(Instance&& other) noexcept
+        : m_instance(std::exchange(other.m_instance, vk::Instance{}))
+        , m_debugUtilsMessenger(std::exchange(other.m_debugUtilsMessenger, vk::DebugUtilsMessengerEXT{}))
+    {
+    }
+
+    Instance& Instance::operator=(Instance&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        destroy();
+        m_instance = std::exchange(other.m_instance, vk::Instance{});
+        m_debugUtilsMessenger = std::exchange(other.m_debugUtilsMessenger, vk::DebugUtilsMessengerEXT{});
+        return *this;
     }
 
 } // namespace TiRHI::Vulkan

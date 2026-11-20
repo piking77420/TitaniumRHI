@@ -1,24 +1,42 @@
 #ifndef TITANIUM_METAL_GRAPHIC_PIPELINE_H
 #define TITANIUM_METAL_GRAPHIC_PIPELINE_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BasePipeline.hpp>
 
+namespace MTL
+{
+    class RenderPipelineState;
+} // namespace MTL
+ 
 namespace TiRHI::Metal
 {
     class RHI;
+    class Device;
     class RenderPassDescriptor;
 
-    class GraphicPipiline : public BaseGraphicPipiline<GraphicPipiline, RHI, RenderPassDescriptor>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, RenderPassDescriptor>
     {
     public:
-        GraphicPipiline() = delete;
-        ~GraphicPipiline();
-        RHI_MOVE_ONLY(GraphicPipiline)
-        GraphicPipiline(RHI& rhi);
+        GraphicPipeline() = delete;
+        ~GraphicPipeline();
+        RHI_MOVE_ONLY(GraphicPipeline);
+        GraphicPipeline(RHI& rhi);
 
-        bool build();
+        struct Private
+        {
+            static MTL::RenderPipelineState* getRenderPipelineState(GraphicPipeline& graphicPipeline)
+            {
+                return graphicPipeline.m_metalRenderPSO;
+            }
+        };
+
+        bool build(Device& device);
 
     private:
+        friend Private;
+
+        MTL::RenderPipelineState* m_metalRenderPSO{nullptr};
     };
 } // namespace TiRHI::Metal
 

@@ -1,6 +1,7 @@
 #ifndef TITANIUM_DIRECTX12_RENDER_TARGETS_H
 #define TITANIUM_DIRECTX12_RENDER_TARGETS_H
 
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <span>
 #include <vector>
 #include <Titanium/RHI-BaseRenderTargets.hpp>
@@ -16,9 +17,11 @@ namespace TiRHI::DirectX12
     class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, RenderPassDescriptor, Texture>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         RenderTargets() = delete;
         ~RenderTargets() = default;
-        RHI_MOVE_ONLY(RenderTargets)
+        RHI_MOVE_ONLY(RenderTargets);
         RenderTargets(RHI& rhi);
 
         struct Private

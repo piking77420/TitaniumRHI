@@ -122,16 +122,30 @@ namespace TiRHI::DirectX12
     {
         if (IDXGIFactory6* factory = getRHI().getNativeFactory())
         {
-            const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
-
-            const auto& nativeAdapter = Internal::getAllNativeAdapters(factory);
+            onBuild(adapters, index);
+            const std::vector<MComPtr<IDXGIAdapter1>>& nativeAdapter = Internal::getAllNativeAdapters(factory);
 #undef min;
-            if (adaptaterIndex >= nativeAdapter.size())
+            if (m_adapterIndex >= nativeAdapter.size())
                 return false;
 
-            return createDevice(nativeAdapter[adaptaterIndex]);
+            const MComPtr<IDXGIAdapter1>& adapter = nativeAdapter[m_adapterIndex];
+
+            const bool success = createDevice(nativeAdapter[m_adapterIndex]);
+            onCreateDeviceSuccess(adapters[m_adapterIndex], success);
+            return success && initMemoryAllocator(adapter) &&
+                   m_descriptorAllocatorRtv
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+                       .build(*this) &&
+                   m_descriptorAllocatorSampler
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+                       .build(*this) &&
+                   m_descriptorAllocatorCbvSrvUav
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+                       .build(*this) &&
+                   m_descritproManager.build(m_device);
         }
         RHI_LOG_FATAL(L"Factory was null in device creating", RhiApi::DirectX12);
+
         return false;
     }
 
@@ -366,17 +380,18 @@ namespace TiRHI::DirectX12
             // wait
             WaitForSingleObjectEx(m_synchronization.frameFenceEvent, INFINITE, FALSE);
         }
+
+        deferredDeletionQueue.collect(completedValue);
     }
 
-    void Device::submit([[maybe_unused]] std::span<const AcquiredFrame> acquiredFrame,
-                        std::span<CommandList*> commandList)
+    void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)
     {
         // Execute cmd lists
         {
             std::vector<ID3D12CommandList*> cmdListsArr;
-            cmdListsArr.reserve(commandList.size());
-            for (auto& cml : commandList)
-                cmdListsArr.emplace_back(cml->getCommandListNative());
+            cmdListsArr.reserve(submitPresentDesc.size());
+            for (auto& submitPresentDesc : submitPresentDesc)
+                cmdListsArr.emplace_back(submitPresentDesc.commandList->getCommandListNative());
             m_graphicsQueue->ExecuteCommandLists(static_cast<UINT>(cmdListsArr.size()), cmdListsArr.data());
         }
 
@@ -392,6 +407,45 @@ namespace TiRHI::DirectX12
                           RhiApi::DirectX12);
         }
 
+        for (const auto& desc : submitPresentDesc)
+            desc.commandList->setLastSubmissionValue(fenceValue);
+
         m_synchronization.frameFenceValue[getRHI().getCurrentFrame()] = fenceValue;
+
+        // Present
+        for (auto& submitPresentDesc : submitPresentDesc)
+        {
+            for (auto& acquireFrame : submitPresentDesc.acquireFrames)
+            {
+                // Automatically present using internal present queue if possible.
+                const HRESULT hrPresent =
+                    acquireFrame.getSwapChainNativeHandle()->Present(acquireFrame.getVsync() ? 1 : 0, 0);
+
+                if (FAILED(hrPresent))
+                {
+                    RHI_LOG_ERROR(std::format(L"SwapChain Present failed!\nError Code: {}", hrPresent),
+                                  RhiApi::DirectX12);
+                }
+            }
+        }
     }
+
+    bool Device::initDescriptorAllocator()
+    {
+        return m_descriptorAllocatorSampler.setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).build(*this) &&
+               m_descriptorAllocatorSampler.setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER).build(*this);
+    }
+
+    bool Device::initMemoryAllocator(const MComPtr<IDXGIAdapter1>& adapter1)
+
+    {
+        D3D12MA::ALLOCATOR_DESC desc = {};
+
+        desc.pDevice = m_device.Get();
+        desc.pAdapter = adapter1.Get();
+        desc.Flags = static_cast<D3D12MA::ALLOCATOR_FLAGS>(D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS);
+
+        return SUCCEEDED(D3D12MA::CreateAllocator(&desc, m_allocator.ReleaseAndGetAddressOf()));
+    }
+
 }

@@ -9,4 +9,9 @@ namespace TiRHI::Metal
     {
     }
 
+    bool RenderPassDescriptor::build(Device& device)
+    {
+        return true;
+    }
+
 } // namespace TiRHI::Metal

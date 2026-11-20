@@ -21,7 +21,10 @@ namespace TiRHI
 
         BaseSwapChain() = delete;
         ~BaseSwapChain() = default;
-        RHI_MOVE_ONLY(BaseSwapChain)
+        BaseSwapChain(const BaseSwapChain&) = delete;
+        BaseSwapChain& operator=(const BaseSwapChain&) = delete;
+        BaseSwapChain(BaseSwapChain&&) noexcept = default;
+        BaseSwapChain& operator=(BaseSwapChain&&) noexcept = default;
         BaseSwapChain(TRHI& rhi)
             : Object<T, TRHI>(rhi)
             , m_renderPassDescriptor(rhi)
@@ -123,7 +126,7 @@ namespace TiRHI
 
         uint32_t m_imageCount = 1;
 
-        Format m_format = Format::B8G8R8A8_UNorm;
+        Format m_format = Format::B8G8R8A8UNorm;
 
         TRenderPassDescriptor m_renderPassDescriptor;
 

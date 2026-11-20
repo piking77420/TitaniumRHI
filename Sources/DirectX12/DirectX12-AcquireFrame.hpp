@@ -11,19 +11,32 @@ namespace TiRHI::DirectX12
     public:
         explicit AcquiredFrame() = default;
         ~AcquiredFrame() = default;
-        explicit AcquiredFrame(bool success)
+        explicit AcquiredFrame(bool success, IDXGISwapChain3* swapChainNativeHandle, bool vsync)
             : BaseAcquiredFrame(success)
+            , m_swapChainNativeHandle(swapChainNativeHandle)
+            , m_vsync(vsync)
         {
         }
 
-        uint32_t getSwapChainImageIndex() const
+        IDXGISwapChain3* getSwapChainNativeHandle() const
         {
-            return m_swapChainImageIndex;
+            return m_swapChainNativeHandle;
         }
 
-        AcquiredFrame& setSwapChainImageIndex(uint32_t imageIndex)
+        AcquiredFrame& setSwapChainNativeHandle(IDXGISwapChain3* iDXGISwapChain3)
         {
-            m_swapChainImageIndex = imageIndex;
+            m_swapChainNativeHandle = iDXGISwapChain3;
+            return *this;
+        }
+
+        bool getVsync() const
+        {
+            return m_vsync;
+        }
+
+        AcquiredFrame& setVsync(bool newVsync)
+        {
+            m_vsync = newVsync;
             return *this;
         }
 
@@ -34,6 +47,10 @@ namespace TiRHI::DirectX12
 
     private:
         uint32_t m_swapChainImageIndex = 0;
+
+        IDXGISwapChain3* m_swapChainNativeHandle{nullptr};
+
+        bool m_vsync = false;
     };
 } // namespace TiRHI::DirectX12
 

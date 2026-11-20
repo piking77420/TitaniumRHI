@@ -7,6 +7,9 @@
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
+#include <Private/DescriptorManager.hpp>
+#include <Titanium/Private/DeferredDeletionQueue.hpp>
+#include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
 {
@@ -16,20 +19,60 @@ namespace TiRHI::Vulkan
     class CommandList;
     class AcquiredFrame;
 
-    class Device : public BaseDevice<Device, RHI>
+    struct Allocator
+    {
+        VmaAllocator vmaAllocator = VK_NULL_HANDLE;
+
+        Allocator() = default;
+        ~Allocator()
+        {
+            if (vmaAllocator)
+            {
+                vmaDestroyAllocator(vmaAllocator);
+                vmaAllocator = nullptr;
+            }
+        }
+    };
+
+    class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         Device() = delete;
         ~Device() = default;
-        RHI_MOVE_ONLY(Device)
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
+        Device(Device&&) noexcept = default;
+        Device& operator=(Device&& other) noexcept;
         Device(RHI& rhi);
+
+        struct Private
+        {
+            static VmaAllocator& getAllocator(Device& device)
+            {
+                return device.m_vmaAllocator.vmaAllocator;
+            }
+
+            static TiRHI::Vulkan::Private::DescriporManager& getDescriptorManager(Device& device)
+            {
+                return device.m_descriporManager;
+            }
+
+            static uint64_t getCurrentFrameSubmissionValue(const Device& device);
+
+            static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
+            {
+                return device.m_deferredDeletionQueue;
+            }
+        };
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                    std::optional<size_t> index = {});
 
         void wait();
 
-        void submit(std::span<const AcquiredFrame> acquiredFrame, std::span<CommandList*> commandList);
+        void submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc);
 
         void beginFrame();
 
@@ -48,7 +91,7 @@ namespace TiRHI::Vulkan
             return m_device.get();
         }
 
-        const Private::DeviceQueueProperties& getQueueProperties() const
+        const Vulkan::Private::DeviceQueueProperties& getQueueProperties() const
         {
             return m_queueProperties;
         }
@@ -86,11 +129,13 @@ namespace TiRHI::Vulkan
         }
 
     private:
+        friend Private;
+
         vk::UniqueDevice m_device;
 
         vk::PhysicalDevice m_physicalDevice;
 
-        Private::DeviceQueueProperties m_queueProperties;
+        Vulkan::Private::DeviceQueueProperties m_queueProperties;
 
         vk::Queue m_graphicQueue;
 
@@ -107,7 +152,20 @@ namespace TiRHI::Vulkan
 
         std::vector<Synchronisation> m_synchronisations;
 
+        struct TimeLine
+        {
+            vk::UniqueSemaphore timeLineSemaphore;
+            uint64_t nextSubmissionValue = 0;
+            std::array<uint64_t, MaxFramesInFlight> nextSubmissionValueFrames;
+        } m_timeLine;
+
         VolkDeviceTable m_dispatch{};
+
+        TiRHI::Vulkan::Private::DescriporManager m_descriporManager;
+
+        Allocator m_vmaAllocator;
+
+        TiRHI::Private::DeferredDeletionQueue m_deferredDeletionQueue;
 
         bool checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures);
 
@@ -117,6 +175,8 @@ namespace TiRHI::Vulkan
         bool createSynchronisationPrimitives();
 
         bool initVolkTable();
+
+        bool initVmaAllocator(Vulkan::Instance& instance);
     };
 
 } // namespace TiRHI::Vulkan

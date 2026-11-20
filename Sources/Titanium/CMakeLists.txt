@@ -5,7 +5,8 @@ add_library(TitaniumRHIInterface INTERFACE)
 target_sources(
     TitaniumRHIInterface
     INTERFACE
-        Private/StrongTypeId.cpp
+        Private/DeferredDeletionQueue.cpp
+        Private/DeferredDeletionQueue.hpp
         Private/StrongTypeId.hpp
         Log.hpp
         RHI-BaseAcquiredFrame.cpp
@@ -20,7 +21,11 @@ target_sources(
         RHI-BaseRenderPassDescriptor.hpp
         RHI-BaseCommandList.cpp
         RHI-BaseCommandList.hpp
+        RHI-BaseDescriptorSet.cpp
+        RHI-BaseDescriptorSet.hpp
         RHI-BaseRHI.hpp
+        RHI-BaseSampler.cpp
+        RHI-BaseSampler.hpp
         RHI-BaseSwapChain.cpp
         RHI-BaseSwapChain.hpp
         RHI-BaseTexture.cpp
@@ -30,12 +35,14 @@ target_sources(
         RHI-EnumFlag.hpp
         RHI-EnumToString.hpp
         RHI-Object.hpp
+        RHI-SpecialMembers.hpp
         RHI-BaseRenderTargets.cpp
         RHI-BaseRenderTargets.hpp
         RHI-Resource.cpp
         RHI-Resource.hpp
         RHI-Surface.cpp
         RHI-Surface.hpp
+        RHITypes.cpp
         RHITypes.hpp
         TitaniumHeader.hpp
         Version.hpp

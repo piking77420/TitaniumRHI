@@ -1,10 +1,16 @@
+#include <variant>
+
 #include <Vulkan/Vulkan-CommandList.hpp>
 #include <Titanium/Log.hpp>
 #include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-RHI.hpp>
-#include <Vulkan/Private/RHIToVulkan.hpp>
-#include <Vulkan/Private/Transition.hpp>
+#include <Vulkan/Vulkan-Device.hpp>
 #include <Vulkan/Vulkan-GraphicPipeline.hpp>
+#include <Vulkan/Vulkan-Sampler.hpp>
+#include <Vulkan/Vulkan-DescriptorSet.hpp>
+#include <Vulkan/Private/Transition.hpp>
+#include <Vulkan/Private/RHIToVulkan.hpp>
+#include <Vulkan/Private/StaginBuffer.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -12,6 +18,8 @@ namespace TiRHI::Vulkan
         : BaseCommandList(rhi)
     {
     }
+
+    CommandList::~CommandList() = default;
 
     bool CommandList::build(Device& device)
     {
@@ -28,7 +36,7 @@ namespace TiRHI::Vulkan
         }
         m_commandPool = vkDevice.createCommandPoolUnique(vkCommandPoolCreateInfo);
 
-        if (!m_commandPool)
+        if (!m_commandPool) [[unlikely]]
         {
             RHI_LOG_ERROR(L"Failed to create command pool", RhiApi::Vulkan);
             return false;
@@ -48,7 +56,8 @@ namespace TiRHI::Vulkan
         }
 
         m_volkTable = &device.getVolkTable();
-        return true;
+        m_device = &device;
+        return m_device && m_volkTable;
     }
 
     bool CommandList::beginRecord()
@@ -73,7 +82,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::beginDebugLabel(std::string_view name, std::optional<std::span<const float, 4>> color)
     {
-        if (!getRHI().getUseDebugLabel() || !m_volkTable)
+        if (!getRHI().getUseDebugLabel() || !m_volkTable) [[unlikely]]
             return;
 
         vk::DebugUtilsLabelEXT label{};
@@ -89,7 +98,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::endDebugLabel()
     {
-        if (!getRHI().getUseDebugLabel() || !m_volkTable)
+        if (!getRHI().getUseDebugLabel() || !m_volkTable) [[unlikely]]
             return;
 
         getcurrentFrameCmb().endDebugUtilsLabelEXT();
@@ -154,6 +163,20 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
+        // set submitted value
+        for (auto& texture : renderTargets.getColorAttachements())
+        {
+            if (texture)
+                texture->setSubmissionValue(m_lastSubmissionValue);
+        }
+
+        if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
+        {
+            if (texture)
+                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+        }
+
+        renderTargets.setSubmissionValue(m_lastSubmissionValue);
         return true;
     }
 
@@ -181,8 +204,11 @@ namespace TiRHI::Vulkan
     void CommandList::transitionResource(Texture& texture, const ResourceState state)
     {
         const ResourceState currentState = texture.getState();
-        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE)
+        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
             return;
+
+        if (state == ResourceState::CopyDestination) [[unlikely]]
+            assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
 
         using namespace Private;
 
@@ -191,7 +217,7 @@ namespace TiRHI::Vulkan
         const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
 
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
-                                             getTransitionDependencyMask(currentState, state), {}, {}, barrier);
+                                             transitionData.dependencyFlags, {}, {}, barrier);
         texture.setState(state);
     }
 
@@ -202,9 +228,43 @@ namespace TiRHI::Vulkan
                                           GraphicPipeline::Private::getPipeline(*m_recordState.graphicPipeline));
     }
 
+    void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
+    {
+        if (!m_recordState.graphicPipeline) [[unlikely]]
+            return;
+
+        std::array<vk::DescriptorSet, 1> descriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+        getcurrentFrameCmb().bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics,
+            GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, descriporSet, {});
+        for (auto& binding : descriptorSet.getBindingsLayout().bindings)
+        {
+            std::visit(
+                [&](auto&& value)
+                {
+                    using T = std::remove_cvref_t<decltype(value)>;
+
+                    if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
+                    {
+                        if (value.texture)
+                            value.texture->setSubmissionValue(m_lastSubmissionValue);
+
+                        if (value.sampler)
+                            value.sampler->setSubmissionValue(m_lastSubmissionValue);
+                    }
+                    else
+                    {
+                        static_assert(AlwaysFalse<T>, "Unsupported descriptor binding type");
+                    }
+                },
+                binding);
+        }
+    }
+
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
-        getcurrentFrameCmb().draw(vertexCount, instanceCount, firstVertex, firstInstance);
+        if (m_volkTable) [[likely]]
+            m_volkTable->vkCmdDraw(getcurrentFrameCmb(), vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
     void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
@@ -213,14 +273,70 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().drawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
 
+    void CommandList::pushConstant(void* data, uint32_t size)
+    {
+        if (data == nullptr || size == 0)
+            return;
+
+        if (!m_recordState.graphicPipeline)
+            return;
+        vk::PipelineLayout layout = GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline);
+        if (layout == VK_NULL_HANDLE)
+        {
+            RHI_LOG_ERROR(L"vk::PipelineLayout was null", Api);
+            return;
+        }
+
+        if (std::optional<PushConstant> pushConstant = m_recordState.graphicPipeline->getPushConstant())
+        {
+            getcurrentFrameCmb().pushConstants(layout, Vulkan::Private::toVulkan(pushConstant->flag), 0u,
+                                               pushConstant->size, data);
+        }
+    }
+
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
+    {
+        if (!m_device || !texture) [[unlikely]]
+            return;
+        assert(texture.getState() == ResourceState::CopyDestination);
+        std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
+        bufferImageCopy[0]
+            .setBufferOffset(0)
+            .setBufferRowLength(0)
+            .setBufferImageHeight(0)
+            .setImageSubresource(vk::ImageSubresourceLayers{}
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setMipLevel(0)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setImageOffset({0, 0, 0})
+            .setImageExtent({texture.getWidth(), texture.getHeight(), 1});
+
+        const vk::Image vktexture = Texture::Private::getImage(texture);
+
+        if (vktexture == VK_NULL_HANDLE) [[unlikely]]
+            return;
+
+        // TODO set m_lastSubmissionValue for texture
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_lastSubmissionValue);
+
+        if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
+            return;
+
+        if (std::byte* ptr = stagingBuffer.mapData()) [[likely]]
+        {
+            std::memcpy(ptr, data.data(), data.size_bytes());
+            stagingBuffer.unmapData();
+        }
+
+        getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
+                                               vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
+        texture.setSubmissionValue(m_lastSubmissionValue);
+    }
+
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
     {
         return m_commandBuffer[getRHI().getCurrentFrame()].get();
-    }
-
-    vk::DependencyFlags CommandList::getTransitionDependencyMask(ResourceState current, ResourceState target)
-    {
-        return {};
     }
 
     vk::ImageMemoryBarrier CommandList::makeImageBarrier(Texture& texture, ResourceState current, ResourceState target)
@@ -237,8 +353,8 @@ namespace TiRHI::Vulkan
 
         vk::ImageMemoryBarrier barrier{};
 
-        barrier.oldLayout = Private::toVulkanImageLayout(current);
-        barrier.newLayout = Private::toVulkanImageLayout(target);
+        barrier.oldLayout = Vulkan::Private::toVulkanImageLayout(current);
+        barrier.newLayout = Vulkan::Private::toVulkanImageLayout(target);
 
         barrier.srcAccessMask = getAccessMask(current);
         barrier.dstAccessMask = getAccessMask(target);

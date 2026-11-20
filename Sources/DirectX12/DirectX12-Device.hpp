@@ -1,11 +1,17 @@
 #ifndef TITANIUM_DIRECTX12_DEVICE_H
 #define TITANIUM_DIRECTX12_DEVICE_H
 
+#include <span>
+
+#include <D3D12MemAlloc.h>
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 
 #include <DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
+#include <DirectX12/Private/DescriptorManager.hpp>
+#include <Titanium/Private/DeferredDeletionQueue.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -15,17 +21,52 @@ namespace TiRHI::DirectX12
     class Surface;
     class AcquiredFrame;
 
-    class Device : public BaseDevice<Device, RHI>
+    class Device : public BaseDevice<Device, RHI, AcquiredFrame, CommandList>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         Device() = delete;
         ~Device();
-        RHI_MOVE_ONLY(Device)
+        RHI_MOVE_ONLY(Device);
         Device(RHI& rhi);
 
         struct Private
         {
-            // TODO
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorRTV(Device& device)
+            {
+                return device.m_descriptorAllocatorRtv;
+            }
+
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorSampler(Device& device)
+            {
+                return device.m_descriptorAllocatorSampler;
+            }
+
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorCbvSrvUav(Device& device)
+            {
+                return device.m_descriptorAllocatorCbvSrvUav;
+            }
+
+            static const DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorCbvSrvUav(const Device& device)
+            {
+                return device.m_descriptorAllocatorCbvSrvUav;
+            }
+
+            static DirectX12::Private::DescriptorManager& getDescriptorManager(Device& device)
+            {
+                return device.m_descritproManager;
+            }
+
+            static D3D12MA::Allocator& getAllocator(Device& device)
+            {
+                return *device.m_allocator.Get();
+            }
+
+            static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
+            {
+                return device.deferredDeletionQueue;
+            }
         };
 
         bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
@@ -33,23 +74,23 @@ namespace TiRHI::DirectX12
 
         void wait();
 
-        void submit(std::span<const AcquiredFrame> acquiredFrame, std::span<CommandList*> commandList);
+        void submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc);
 
         void beginFrame();
 
-        ID3D12Device* getNativeDevice()
+        MComPtr<ID3D12Device> getNativeDevice() const
         {
-            return m_device.Get();
+            return m_device;
         }
 
-        MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue()
+        MComPtr<ID3D12CommandQueue> getNativeGraphicQueue()
         {
             return m_graphicsQueue;
         }
 
-        DirectX12::Private::DescriptorAllocator& getDescriptorAllocator()
+        const MComPtr<ID3D12CommandQueue>& getNativeGraphicQueue() const
         {
-            return m_descriptorAllocator;
+            return m_graphicsQueue;
         }
 
         bool isValid() const
@@ -84,7 +125,13 @@ namespace TiRHI::DirectX12
 
         } m_synchronization;
 
-        DirectX12::Private::DescriptorAllocator m_descriptorAllocator;
+        TiRHI::Private::DeferredDeletionQueue deferredDeletionQueue;
+        MComPtr<D3D12MA::Allocator> m_allocator;
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorCbvSrvUav;
+
+        DirectX12::Private::DescriptorManager m_descritproManager;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
 
@@ -94,6 +141,10 @@ namespace TiRHI::DirectX12
         bool createSynchronisation();
 
         bool queryOptions();
+
+        bool initDescriptorAllocator();
+
+        bool initMemoryAllocator(const MComPtr<IDXGIAdapter1>& adapter);
     };
 } // namespace TiRHI::DirectX12
 

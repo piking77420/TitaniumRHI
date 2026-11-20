@@ -21,9 +21,9 @@ namespace TiRHI::Metal
 
         struct Private
         {
-            CA::MetalLayer* getLayer(RHI& rhi)
+            NS::AutoreleasePool* getAutoReleasePool(RHI& rhi)
             {
-                return rhi.m_layer;
+                return rhi.m_pool;
             }
         };
 
@@ -34,9 +34,8 @@ namespace TiRHI::Metal
     private:
         friend Private;
 
-        MTL::Device* m_device = nullptr;
+        NS::AutoreleasePool* m_pool;
 
-        CA::MetalLayer* m_layer = nullptr;
     };
 } // TiRHI::Metal
 

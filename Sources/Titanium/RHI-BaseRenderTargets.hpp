@@ -22,7 +22,11 @@ namespace TiRHI
 
         BaseRenderTargets() = delete;
         ~BaseRenderTargets() = default;
-        RHI_MOVE_ONLY(BaseRenderTargets);
+        BaseRenderTargets(const BaseRenderTargets&) = delete;
+        BaseRenderTargets& operator=(const BaseRenderTargets&) = delete;
+        BaseRenderTargets(BaseRenderTargets&&) noexcept = default;
+        BaseRenderTargets& operator=(BaseRenderTargets&& other) noexcept = default;
+
         BaseRenderTargets(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
@@ -75,12 +79,12 @@ namespace TiRHI
             return true;
         }
 
-        const std::span<const _Texture* const>& getColorAttachements() const
+        std::span<const _Texture* const> getColorAttachements() const
         {
             return m_colorAttachements;
         }
 
-        const std::span<_Texture*>& getColorAttachements()
+        std::span<_Texture*> getColorAttachements()
         {
             return m_colorAttachements;
         }
@@ -108,7 +112,7 @@ namespace TiRHI
 
         T& bindDepthAttachement(_Texture& textureToBind, size_t bindingSlot)
         {
-            m_depthAttachement = textureToBind;
+            m_depthAttachement = &textureToBind;
             return reinterpret_cast<T&>(*this);
         }
 

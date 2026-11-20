@@ -9,6 +9,7 @@
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
+#include <Vulkan/Vulkan-Buffer.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -16,14 +17,29 @@ namespace TiRHI::Vulkan
     class Device;
     class RenderPassDescriptor;
     class GraphicPipeline;
+    class DescriptorSet;
 
     class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
-                                               Vulkan::GraphicPipeline>
+                                               Vulkan::GraphicPipeline, DescriptorSet>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         CommandList() = delete;
-        ~CommandList() = default;
-        RHI_MOVE_ONLY(CommandList)
+        ~CommandList();
+        CommandList(const CommandList&) = delete;
+        CommandList& operator=(const CommandList&) = delete;
+        CommandList(CommandList&&) noexcept = default;
+        CommandList& operator=(CommandList&& other) noexcept = default;
+
+        struct Private
+        {
+            static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
+            {
+                commandlist.m_lastSubmissionValue = lastSubmissionValue;
+            }
+        };
+
         explicit CommandList(RHI& rhi);
 
         bool build(Device& device);
@@ -49,27 +65,36 @@ namespace TiRHI::Vulkan
 
         void bindPipeline(const GraphicPipeline& graphicPipeline);
 
+        void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
         void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,
                          uint32_t firstInstance);
 
+        void pushConstant(void* data, uint32_t size);
+
+        void upload2d(Texture& texture, std::span<const std::byte> data);
+
         vk::CommandBuffer getcurrentFrameCmb() const;
 
     private:
+        friend Private;
+
         vk::UniqueCommandPool m_commandPool;
 
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
-        const VolkDeviceTable* m_volkTable = nullptr;
+        const VolkDeviceTable* m_volkTable{nullptr};
 
         struct VulkanStorage
         {
             std::vector<vk::ClearValue> clearValues;
-            std::array<std::vector<size_t>, ResourceStateCount * ResourceStateCount> transitionTexture;
         } m_vulkanStorage;
 
-        static vk::DependencyFlags getTransitionDependencyMask(ResourceState current, ResourceState target);
+        Device* m_device{nullptr}; // TODO fix this ugly
+
+        uint64_t m_lastSubmissionValue = 0;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
     };

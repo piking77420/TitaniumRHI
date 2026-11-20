@@ -12,6 +12,11 @@
 #include <DirectX12/DirectX12-RenderTargets.hpp>
 #include <DirectX12/Private/RhiToDirectX12.hpp>
 #include <DirectX12/DirectX12-GraphicPipeline.hpp>
+#include <DirectX12/DirectX12-DescriptorSet.hpp>
+#include <DirectX12/DirectX12-Sampler.hpp>
+#include <DirectX12/DirectX12-Buffer.hpp>
+#include <DirectX12/DirectX12-Texture.hpp>
+#include <DirectX12/Private/StaginBuffer.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -38,8 +43,12 @@ namespace TiRHI::DirectX12
                 D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
             if (FAILED(hrCmdAllocCreated))
             {
+                const std::wstring name =
+                    std::format(L"CommandAlloc {} [{}]", (getName().empty() ? L"" : getNameW()), i);
+                cmdAlloc->SetName(name.c_str());
+
                 RHI_LOG_ERROR(
-                    std::format(L"Create Command Allocator {} failed!\n Error Code: {}", i, hrCmdAllocCreated),
+                    std::format(L"Create Command Allocator {} failed!\n Error Code: {}", name, hrCmdAllocCreated),
                     RhiApi::DirectX12);
                 return false;
             }
@@ -49,7 +58,7 @@ namespace TiRHI::DirectX12
                     std::format(L"CommandAlloc {} [{}]", (getName().empty() ? L"" : getNameW()), i);
                 cmdAlloc->SetName(name.c_str());
 
-                RHI_LOG_INFO(std::format(L"Create Command Allocator {} success! name : {}", hrCmdAllocCreated, name),
+                RHI_LOG_INFO(std::format(L"Create Command Allocator {} success! name : {}", i, name),
                              RhiApi::DirectX12);
             }
         }
@@ -80,6 +89,9 @@ namespace TiRHI::DirectX12
         if (!onBeginRecord())
             return false;
 
+        if (!m_device)
+            return false;
+
         const size_t currentFrame = getRHI().getCurrentFrame();
 
         const HRESULT hrAllocator = m_allocators[currentFrame]->Reset();
@@ -92,6 +104,8 @@ namespace TiRHI::DirectX12
         if (FAILED(hrCommandList))
             return false;
 
+        resetOnRecord();
+        bindDescriptorHeaps();
         return true;
     }
 
@@ -171,7 +185,9 @@ namespace TiRHI::DirectX12
                                                         const Texture& texture,
                                                         const AttachmentDescriptor& attachmentDescriptor)
         {
-            if (!Texture::Private::getRtv(texture, *device, desc.cpuDescriptor))
+            const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& handle =
+                Texture::Private::getRenderTargetViewHandle(texture);
+            if (!handle)
             {
                 RHI_LOG_ERROR(
                     std::format(L"Failed to get D3D12_CPU_DESCRIPTOR_HANDLE fo the texture {}", texture.getNameW()),
@@ -179,6 +195,7 @@ namespace TiRHI::DirectX12
                 return;
             }
 
+            desc.cpuDescriptor = handle->cpuHandle;
             desc.BeginningAccess.Type = Private::toDirectX12(attachmentDescriptor.loadOp);
 
             desc.BeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(attachmentDescriptor.format);
@@ -201,16 +218,17 @@ namespace TiRHI::DirectX12
 
         if (depthAtt)
         {
-            D3D12_CPU_DESCRIPTOR_HANDLE handle;
             const Texture& depthTexture = *depthTargetAttachement.value();
-            if (Texture::Private::getRtv(depthTexture, *m_device, depthDesc.cpuDescriptor))
+            const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& handle =
+                Texture::Private::getRenderTargetViewHandle(depthTexture);
+            if (!handle)
             {
                 RHI_LOG_ERROR(std::format(L"Failed to get D3D12_CPU_DESCRIPTOR_HANDLE fo the texture {}",
                                           depthTexture.getNameW()),
                               RhiApi::DirectX12);
                 return false;
             }
-            depthDesc.cpuDescriptor = handle;
+            depthDesc.cpuDescriptor = handle->cpuHandle;
             depthDesc.DepthBeginningAccess.Type = Private::toDirectX12(depthAtt->loadOp);
             depthDesc.DepthEndingAccess.Type = Private::toDirectX12(depthAtt->storeOp);
             depthDesc.StencilBeginningAccess.Type = Private::toDirectX12(depthAtt->stencilLoadOp);
@@ -234,6 +252,19 @@ namespace TiRHI::DirectX12
 
         m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? desc.data() : nullptr,
                                        depthDescPtr, D3D12_RENDER_PASS_FLAG_NONE);
+
+        // set submitted value
+        for (auto& texture : renderTargets.getColorAttachements())
+        {
+            if (texture)
+                texture->setSubmissionValue(m_lastSubmissionValue);
+        }
+
+        if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
+        {
+            if (texture)
+                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+        }
 
         return true;
     }
@@ -302,13 +333,77 @@ namespace TiRHI::DirectX12
         if (!m_recordState.graphicPipeline)
             return;
 
-        ID3D12RootSignature* root = GraphicPipeline::Private::getSignature(*m_recordState.graphicPipeline);
+        const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
+            GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
 
-        m_commandList->SetGraphicsRootSignature(root);
+        bindRootSignature(root ? root->rootSignature.Get() : nullptr);
         ID3D12PipelineState* state = GraphicPipeline::Private::getPipelineState(*m_recordState.graphicPipeline);
         m_commandList->SetPipelineState(state);
 
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    }
+
+    void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
+    {
+        if (!BaseCommandList::onBindDescriptorSet(descriptorSet))
+            return;
+
+        const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
+            GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
+
+        if (!root)
+            return;
+
+        auto& bindingsLayout = descriptorSet.getBindingsLayout();
+
+        if (bindingsLayout.bindings.empty())
+            return;
+
+        auto& spaceDescriptor = root->spaceDescriptor;
+
+        for (const auto& binding : bindingsLayout.bindings)
+        {
+            std::visit(
+                overloads{[&](const DescriptorSet::SampledTexture& sampledTexture)
+                          {
+                              forEachShaderStage(
+                                  sampledTexture.shaderStageFlag,
+                                  [&]([[maybe_unused]] ShaderStageFlags stage, uint32_t index)
+                                  {
+                                      if (!sampledTexture.texture || !sampledTexture.sampler)
+                                          return;
+
+                                      std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleTexture =
+                                          Texture::Private::getShaderRenderViewHandle(*sampledTexture.texture);
+                                      std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleSampler =
+                                          sampledTexture.sampler->getShaderViewHandle();
+
+                                      if (!handleTexture || !handleSampler || handleTexture->gpuHandle.ptr == 0 ||
+                                          handleSampler->gpuHandle.ptr == 0)
+                                          return;
+
+                                      auto& offsetAndCount =
+                                          spaceDescriptor.bindingsSetTableOffset[index][sampledTexture.bindingIndex];
+                                      assert(offsetAndCount.count == 2);
+                                      auto& rootParameterBindingTexture =
+                                          spaceDescriptor.rootParameterTable[index][offsetAndCount.offset];
+                                      auto& rootParameterBindingSampler =
+                                          spaceDescriptor.rootParameterTable[index][offsetAndCount.offset + 1];
+
+                                      m_commandList->SetGraphicsRootDescriptorTable(
+                                          rootParameterBindingTexture.rootParameterIndex, handleTexture->gpuHandle);
+
+                                      m_commandList->SetGraphicsRootDescriptorTable(
+                                          rootParameterBindingSampler.rootParameterIndex, handleSampler->gpuHandle);
+
+                                      sampledTexture.texture->setSubmissionValue(m_lastSubmissionValue);
+                                      sampledTexture.sampler->setSubmissionValue(m_lastSubmissionValue);
+                                  });
+                          },
+                          [&](auto&& value)
+                          { static_assert(AlwaysFalse<decltype(value)>, "Unsupported binding type"); }},
+                binding);
+        }
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -320,6 +415,116 @@ namespace TiRHI::DirectX12
                                   int32_t vertexOffset, uint32_t firstInstance)
     {
         m_commandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    }
+
+    void CommandList::pushConstant(void* data, size_t size)
+    {
+        if (data == nullptr || size == 0)
+            return;
+
+        if (!m_recordState.graphicPipeline)
+            return;
+
+        if (!m_recordStateD3D12.currentRootSignature)
+            return;
+
+        if (std::optional<PushConstant> pushConstant = m_recordState.graphicPipeline->getPushConstant())
+        {
+            assert(size % 4 == 0);
+            const DirectX12::Private::D3D12DescriptorRootSignatureLayout* root =
+                GraphicPipeline::Private::getD3D12DescriptorRootSignatureLayout(*m_recordState.graphicPipeline);
+
+            const UINT rootParameterIndex = root->spaceDescriptor.pushConstantParameterIndex;
+
+            m_commandList->SetGraphicsRoot32BitConstants(rootParameterIndex, static_cast<UINT>(size / 4), data, 0);
+        }
+    }
+
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
+    {
+        if (!m_device || !m_commandList || !texture || data.empty())
+            return;
+
+        assert(texture.getState() == ResourceState::CopyDestination);
+
+        ID3D12Resource* dstResource = Texture::Private::getImage(texture);
+        ID3D12Device* device = m_device->getNativeDevice().Get();
+
+        if (!dstResource)
+            return;
+
+        const D3D12_RESOURCE_DESC desc = dstResource->GetDesc();
+
+        if (desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || desc.SampleDesc.Count != 1)
+            return;
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
+        UINT numRows = 0;
+        UINT64 rowSize = 0;
+        UINT64 uploadSize = 0;
+
+        device->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, &numRows, &rowSize, &uploadSize);
+
+        if (numRows == 0 || rowSize == 0 || data.size_bytes() != rowSize * numRows)
+            return;
+
+        DirectX12::Private::StagingBuffer staging(*m_device, uploadSize, m_lastSubmissionValue);
+
+        if (!staging)
+            return;
+
+        std::byte* mapped = staging.mapData();
+
+        if (!mapped)
+            return;
+
+        const auto* src = reinterpret_cast<const std::byte*>(data.data());
+
+        // Copy CPU data directly into the aligned staging buffer.
+        for (UINT row = 0; row < numRows; row++)
+        {
+            std::memcpy(mapped + footprint.Offset + static_cast<size_t>(row) * footprint.Footprint.RowPitch,
+                        src + static_cast<size_t>(row) * rowSize, static_cast<size_t>(rowSize));
+        }
+
+        staging.unmapData();
+
+        D3D12_TEXTURE_COPY_LOCATION source{};
+        source.pResource = staging.getBuffer();
+        source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        source.PlacedFootprint = footprint;
+
+        D3D12_TEXTURE_COPY_LOCATION destination{};
+        destination.pResource = dstResource;
+        destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        destination.SubresourceIndex = 0;
+
+        m_commandList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+    }
+
+    void CommandList::resetOnRecord()
+    {
+        m_recordStateD3D12.reset();
+    }
+
+    void CommandList::bindDescriptorHeaps()
+    {
+        assert(m_device);
+
+        ID3D12DescriptorHeap* heaps[] = {Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).getHeap().Get(),
+
+                                         Device::Private::getDescriptorAllocatorSampler(*m_device).getHeap().Get()};
+
+        m_commandList->SetDescriptorHeaps(2, heaps);
+    }
+
+    void CommandList::bindRootSignature(ID3D12RootSignature* rootSignature)
+    {
+        if (m_recordStateD3D12.currentRootSignature == rootSignature)
+            return;
+
+        m_commandList->SetGraphicsRootSignature(rootSignature);
+        m_recordStateD3D12.currentRootSignature = rootSignature;
     }
 
     bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)
@@ -384,6 +589,11 @@ namespace TiRHI::DirectX12
 
             return true;
         }
+    }
+
+    void CommandList::setLastSubmissionValue(uint64_t lastSubmissionValue)
+    {
+        m_lastSubmissionValue = lastSubmissionValue;
     }
 
 } // namespace TiRHI::DirectX12

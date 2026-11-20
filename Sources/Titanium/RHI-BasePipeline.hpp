@@ -3,8 +3,10 @@
 
 #include <memory>
 #include <span>
-#include <vector>
 #include <ranges>
+#include <optional>
+#include <string>
+#include <vector>
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
@@ -12,43 +14,24 @@
 
 namespace TiRHI
 {
-#define RHI_SHADER_STAGE_LIST(X)                                                                                       \
-    X(Vertex)                                                                                                          \
-    X(Hull)                                                                                                            \
-    X(Domain)                                                                                                          \
-    X(Geometry)                                                                                                        \
-    X(Pixel)                                                                                                           \
-    X(Amplification)                                                                                                   \
-    X(Mesh)                                                                                                            \
-    X(Compute)                                                                                                         \
-    X(RayGeneration)                                                                                                   \
-    X(AnyHit)                                                                                                          \
-    X(ClosestHit)                                                                                                      \
-    X(Miss)                                                                                                            \
-    X(Intersection)                                                                                                    \
-    X(Callable)
-
-    enum struct ShaderStage : uint8_t
-    {
-#define X(name) name,
-        RHI_SHADER_STAGE_LIST(X)
-#undef X
-            Count
-    };
-
-    IMPLEMENT_TO_STRING_TITANIUM(ShaderStage, RHI_SHADER_STAGE_LIST)
-
-    template<typename T, typename TRHI>
+    template<typename T, typename TRHI, typename TDescriptorSet>
     class BasePipeline : public Object<T, TRHI>
     {
     public:
+        using DescriptorSet = TDescriptorSet;
+        using BindingLayout = typename DescriptorSet::BaseDescriptorSet::BindingsLayout;
+        using DescriptorSetLayoutEntry = typename DescriptorSet::BaseDescriptorSet::DescriptorSetLayoutEntry;
+
         BasePipeline() = delete;
         ~BasePipeline() = default;
-        RHI_MOVE_ONLY(BasePipeline)
+        BasePipeline(const BasePipeline&) = delete;
+        BasePipeline& operator=(const BasePipeline&) = delete;
+        BasePipeline(BasePipeline&&) noexcept = default;
+        BasePipeline& operator=(BasePipeline&&) noexcept = default;
         BasePipeline(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BasePipeline<T, TRHI>>);
+            static_assert(std::derived_from<T, BasePipeline<T, TRHI, TDescriptorSet>>);
         }
 
         BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size,
@@ -60,12 +43,40 @@ namespace TiRHI
 
         BasePipeline& addModule(ShaderStage shaderStage, const std::span<const std::byte>& code, std::string entryPoint)
         {
-           const uint32_t size = static_cast<uint32_t>(code.size());
+            const uint32_t size = static_cast<uint32_t>(code.size());
 
-           std::unique_ptr data = std::make_unique<uint8_t[]>(size);
-           std::memcpy(data.get(), code.data(), size);
-           m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
-           return static_cast<T&>(*this);
+            std::unique_ptr data = std::make_unique<uint8_t[]>(size);
+            std::memcpy(data.get(), code.data(), size);
+            m_binaryModule.emplace_back(BinaryModule{shaderStage, size, std::move(data), std::move(entryPoint)});
+            return static_cast<T&>(*this);
+        }
+
+        T& setDescriptorSetLayoutEntries(const std::span<const DescriptorSetLayoutEntry>& descriptorSetLayoutEntries)
+        {
+            m_DescriptorSetLayoutEntries.clear();
+            m_DescriptorSetLayoutEntries.reserve(descriptorSetLayoutEntries.size());
+            for (const auto& layout : descriptorSetLayoutEntries)
+            {
+                m_DescriptorSetLayoutEntries.emplace_back(layout);
+            }
+
+            return static_cast<T&>(*this);
+        }
+
+        std::span<const DescriptorSetLayoutEntry> getDescriptorSetLayoutEntries() const
+        {
+            return m_DescriptorSetLayoutEntries;
+        }
+
+        T& setPushConstant(PushConstant pushConstant)
+        {
+            m_pushConstant.emplace(pushConstant);
+            return static_cast<T&>(*this);
+        }
+
+        const std::optional<PushConstant>& getPushConstant() const
+        {
+            return m_pushConstant;
         }
 
     protected:
@@ -82,11 +93,10 @@ namespace TiRHI
             return m_binaryModule;
         }
 
-        template<ShaderStage stage>
-        bool getModule(const BinaryModule** const module)
+        bool getModule(const BinaryModule** const module, ShaderStage stage)
         {
-            auto it =
-                std::ranges::find_if(m_binaryModule, [](const BinaryModule& binary) { return binary.stage == stage; });
+            auto it = std::ranges::find_if(m_binaryModule,
+                                           [&stage](const BinaryModule& binary) { return binary.stage == stage; });
 
             if (it == m_binaryModule.end())
             {
@@ -98,24 +108,50 @@ namespace TiRHI
             return true;
         }
 
+        std::optional<const BinaryModule*> getModule(ShaderStage stage)
+        {
+            const BinaryModule* module{nullptr};
+            const bool success = getModule(&module, stage);
+
+            return success ? std::optional<const BinaryModule*>(module) : std::optional<const BinaryModule*>{};
+        }
+
+        [[nodiscard]]
+        uint32_t getMaxSetIndex() const
+        {
+            uint32_t maxIndex = 0;
+
+            for (const auto& [layout, setIndex] : m_DescriptorSetLayoutEntries)
+                maxIndex = std::max(maxIndex, setIndex);
+
+            return maxIndex;
+        }
+
     private:
         std::vector<BinaryModule> m_binaryModule;
+
+        std::vector<DescriptorSetLayoutEntry> m_DescriptorSetLayoutEntries;
+
+        std::optional<PushConstant> m_pushConstant;
     };
 
     // TODO fix typo
-    template<typename T, typename TRHI, typename TRenderPassDescriptor>
-    class BaseGraphicPipiline : public BasePipeline<T, TRHI>
+    template<typename T, typename TRHI, typename TDescriptorSet, typename TRenderPassDescriptor>
+    class BaseGraphicPipiline : public BasePipeline<T, TRHI, TDescriptorSet>
     {
     public:
         using _RenderPassDescriptor = TRenderPassDescriptor;
 
         BaseGraphicPipiline() = delete;
         ~BaseGraphicPipiline() = default;
-        RHI_MOVE_ONLY(BaseGraphicPipiline)
+        BaseGraphicPipiline(const BaseGraphicPipiline&) = delete;
+        BaseGraphicPipiline& operator=(const BaseGraphicPipiline&) = delete;
+        BaseGraphicPipiline(BaseGraphicPipiline&&) noexcept = default;
+        BaseGraphicPipiline& operator=(BaseGraphicPipiline&&) noexcept = default;
         BaseGraphicPipiline(TRHI& rhi)
-            : BasePipeline<T, TRHI>(rhi)
+            : BasePipeline<T, TRHI, TDescriptorSet>(rhi)
         {
-            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI, TRenderPassDescriptor>>);
+            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI, TDescriptorSet, TRenderPassDescriptor>>);
         }
 
         T& setRenderPassDescritptor(const _RenderPassDescriptor* renderPassDescriptor)

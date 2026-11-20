@@ -3,6 +3,7 @@
 
 #include <Titanium/RHI-BasePipeline.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Vulkan/Vulkan-DescriptorSet.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -10,12 +11,18 @@ namespace TiRHI::Vulkan
     class Device;
     class RenderPassDescriptor;
 
-    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, RenderPassDescriptor>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, DescriptorSet, RenderPassDescriptor>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         GraphicPipeline() = delete;
-        ~GraphicPipeline() = default;
-        RHI_MOVE_ONLY(GraphicPipeline)
+        ~GraphicPipeline();
+        GraphicPipeline(const GraphicPipeline&) = delete;
+        GraphicPipeline& operator=(const GraphicPipeline&) = delete;
+        GraphicPipeline(GraphicPipeline&&) noexcept;
+        GraphicPipeline& operator=(GraphicPipeline&&) noexcept;
+
         GraphicPipeline(RHI& rhi)
             : BaseGraphicPipiline(rhi)
         {
@@ -27,6 +34,11 @@ namespace TiRHI::Vulkan
             {
                 return pipeline.m_pipeline;
             }
+
+            static vk::PipelineLayout getPipelineLayout(const GraphicPipeline& pipeline)
+            {
+                return pipeline.m_pipelineLayout;
+            }
         };
 
         bool build(Device& device);
@@ -34,9 +46,13 @@ namespace TiRHI::Vulkan
     private:
         friend Private;
 
+        vk::Device m_device = VK_NULL_HANDLE;
+
         vk::PipelineLayout m_pipelineLayout;
 
         vk::Pipeline m_pipeline;
+
+        void destroy();
     };
 
 } // namespace TiRHI::Vulkan

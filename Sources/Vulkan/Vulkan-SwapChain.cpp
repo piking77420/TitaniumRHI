@@ -18,6 +18,34 @@ namespace TiRHI::Vulkan
     {
     }
 
+    SwapChain::~SwapChain() = default;
+
+    SwapChain::SwapChain(SwapChain&& other) noexcept
+        : SwapChain(other.getRHI())
+    {
+        *this = std::move(other);
+    }
+
+    SwapChain& SwapChain::operator=(SwapChain&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        assert(&getRHI() == &other.getRHI());
+        m_renderTargets.clear();
+        m_textures.clear();
+        BaseSwapChain::operator=(std::move(other));
+        m_swapchain = std::move(other.m_swapchain);
+        m_currentFormat = other.m_currentFormat;
+        m_swapChainSupportDetails = std::move(other.m_swapChainSupportDetails);
+        m_synchronisations = std::move(other.m_synchronisations);
+        m_imageIndex = std::exchange(other.m_imageIndex, 0);
+        m_presentQueue = std::exchange(other.m_presentQueue, vk::Queue{});
+        for (auto& target : m_renderTargets)
+            target.setRenderPassDescriptor(&m_renderPassDescriptor);
+        return *this;
+    }
+
     bool SwapChain::build(Device& device, Surface& surface)
     {
         if (!BaseSwapChain::build())
@@ -37,6 +65,7 @@ namespace TiRHI::Vulkan
 
     AcquiredFrame SwapChain::acquireNextImage(Device& device)
     {
+        // TODO CHECK IF SUBOTIMAL
         {
             const vk::ResultValue<uint32_t> result = device.getNativeDevice().acquireNextImageKHR(
                 m_swapchain.get(), std::numeric_limits<uint64_t>::max(), getNativeImageAvailableSemaphore());
@@ -52,8 +81,9 @@ namespace TiRHI::Vulkan
                 (m_synchronisations[m_imageIndex].imageInFlight != VK_NULL_HANDLE) &&
                 m_synchronisations[m_imageIndex].imageInFlight != device.getNativeInFlightFence())
             {
-                device.getNativeDevice().waitForFences(m_synchronisations[m_imageIndex].imageInFlight, vk::True,
-                                                       std::numeric_limits<uint64_t>::max());
+                vk::Result result = device.getNativeDevice().waitForFences(
+                    m_synchronisations[m_imageIndex].imageInFlight, vk::True, std::numeric_limits<uint64_t>::max());
+                VulkanCheckErrorStatus(result);
             }
             m_synchronisations[m_imageIndex].imageInFlight = device.getNativeInFlightFence();
         }
@@ -64,30 +94,10 @@ namespace TiRHI::Vulkan
         acquiredFrame
             .setImageAvailableSemaphore(getNativeImageAvailableSemaphore())
             .setRenderFinishSemaphore(getNativeRenderFinishedSemaphore())
-            .setSwapChainImageIndex(m_imageIndex);
+            .setSwapChainImageIndex(m_imageIndex)
+            .setSwapChain(m_swapchain.get());
         // clang-format on
         return acquiredFrame;
-    }
-
-    bool SwapChain::present()
-    {
-        std::array waitSemaphore = {getNativeRenderFinishedSemaphore()};
-        std::array swapChains = {m_swapchain.get()};
-        std::array swapImageIndicies = {m_imageIndex};
-
-        vk::PresentInfoKHR presentInfo{};
-        // clang-format off
-        presentInfo
-            .setWaitSemaphores(waitSemaphore)
-            .setSwapchains(swapChains)
-            .setImageIndices(swapImageIndicies)
-            .setPResults(nullptr); // opt
-        // clang-format on
-
-        const vk::Result result = m_presentQueue.presentKHR(presentInfo);
-        VulkanCheckErrorStatus(result);
-
-        return result == vk::Result::eSuccess;
     }
 
     vk::SwapchainCreateInfoKHR SwapChain::getSwapChainCreateInfo(Device& device, Surface& surface) const
@@ -147,6 +157,9 @@ namespace TiRHI::Vulkan
         {
             m_imageCount = std::min(m_imageCount, m_swapChainSupportDetails.capabilities.maxImageCount);
         }
+        m_imageCount = std::clamp(m_imageCount, m_swapChainSupportDetails.capabilities.minImageCount,
+                                  m_swapChainSupportDetails.capabilities.maxImageCount);
+
         m_currentFormat = getSurfaceFormat();
 
         // render pass check
@@ -165,6 +178,7 @@ namespace TiRHI::Vulkan
         vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(device, surface);
         createInfo.setOldSwapchain(oldSwapchain ? oldSwapchain.get() : VK_NULL_HANDLE);
 
+        m_format = Private::toRhi(createInfo.imageFormat);
         m_swapchain = vkDevice.createSwapchainKHRUnique(createInfo);
 
         if (!m_swapchain)
@@ -181,7 +195,7 @@ namespace TiRHI::Vulkan
             for (const auto& image : images)
             {
                 auto& texture = m_textures.emplace_back(getRHI());
-                if (!Texture::Private::build(texture, device, image, createInfo.imageFormat))
+                if (!Texture::Private::build(texture, device, image, m_format))
                 {
                     RHI_LOG_ERROR(std::format(L"Failed to build Swapchain {}", getNameW()), RhiApi::Vulkan);
                 }
@@ -300,7 +314,7 @@ namespace TiRHI::Vulkan
 
     bool SwapChain::createSyncObjects(vk::Device device)
     {
-        m_synchronisations.resize(getRHI().getFrameInFlight());
+        m_synchronisations.resize(m_imageCount);
 
         vk::SemaphoreCreateInfo semaphoreCreateInfo{};
         vk::FenceCreateInfo fenceCreateInfo{};

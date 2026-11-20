@@ -4,6 +4,7 @@
 #include <concepts>
 #include <limits>
 #include <type_traits>
+
 namespace TiRHI::Private
 {
     template<typename T>

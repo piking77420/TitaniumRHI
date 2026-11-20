@@ -3,27 +3,35 @@
 
 #include <concepts>
 #include <string>
+#include <cassert>
+#include <Titanium/RHITypes.hpp>
 
 namespace TiRHI
 {
-#define RHI_MOVE_ONLY(Type)                                                                                  \
-    Type(const Type&) = delete;                                                                                        \
-    Type& operator=(const Type&) = delete;                                                                             \
-    Type(Type&&) noexcept = default;                                                                                   \
-    Type& operator=(Type&&) = default;
+    // TODO may add and submited value in order to deffered destory
 
     template<typename T, typename TRHI>
     class Object
     {
     public:
+        static constexpr TiRHI::RhiApi DerivedRhiApi = T::Api;
+
         Object() = delete;
         ~Object() = default;
-        RHI_MOVE_ONLY(Object)
-        Object(TRHI& rhi)
+        Object(const Object&) = delete;
+        Object& operator=(const Object&) = delete;
+        Object(Object&&) noexcept = default;
+        Object& operator=(Object&& other) noexcept
+        {
+            assert(&m_rhi == &other.m_rhi);
+            if (this != &other)
+                m_name = std::move(other.m_name);
+            return *this;
+        }
+
+        explicit Object(TRHI& rhi)
             : m_rhi(rhi)
         {
-            static_assert(std::is_move_constructible_v<Object<T, TRHI>>);
-            static_assert(std::is_nothrow_move_constructible_v<Object<T, TRHI>>);
         }
 
         TRHI& getRHI()

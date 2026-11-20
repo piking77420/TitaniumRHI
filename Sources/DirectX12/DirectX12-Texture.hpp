@@ -1,6 +1,9 @@
 #ifndef TITANIUM_DIRECTX12_TEXTURE_H
 #define TITANIUM_DIRECTX12_TEXTURE_H
 
+#include <D3D12MemAlloc.h>
+
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
@@ -13,6 +16,8 @@ namespace TiRHI::DirectX12
     class Texture : public BaseTexture<Texture, RHI>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
+
         Texture() = delete;
         ~Texture();
         RHI_MOVE_ONLY(Texture);
@@ -30,33 +35,59 @@ namespace TiRHI::DirectX12
                 return texture.m_image.Get();
             }
 
-            static bool getRtv(Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+            static const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>&
+            getRenderTargetViewHandle(const Texture& texture)
             {
-                return texture.getRtv(device, handle);
+                return texture.m_renderTargetView;
             }
 
-            static bool getRtv(const Texture& texture, Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle)
+            static const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>&
+            getShaderRenderViewHandle(const Texture& texture)
             {
-                return texture.getRtv(device, handle);
+                return texture.m_shaderRenderView;
             }
         };
 
         bool build(Device& device);
 
+        bool isValid() const
+        {
+            return m_image;
+        }
+
+        bool isInvalid() const
+        {
+            return !isValid();
+        }
+
+        operator bool() const
+        {
+            return isValid();
+        }
+
+        void setSubmissionValue(uint64_t value)
+        {
+            m_lastSubmitedValue = value;
+        }
+
     private:
         friend Private;
 
-        Device* m_device = nullptr;
+        Device* m_device{nullptr};
 
         MComPtr<ID3D12Resource> m_image;
 
-        TiRHI::DirectX12::CpuDescriptorHandle m_rtvCpuHandle;
+        MComPtr<D3D12MA::Allocation> m_allocation;
+
+        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_renderTargetView;
+
+        std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_shaderRenderView;
+
+        uint64_t m_lastSubmitedValue = 0;
 
         bool build(Device& device, MComPtr<ID3D12Resource> image);
 
-        bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle);
-
-        bool getRtv(Device& device, D3D12_CPU_DESCRIPTOR_HANDLE& handle) const;
+        bool createHandle(Device& device);
     };
 } // namespace TiRHI::DirectX12
 

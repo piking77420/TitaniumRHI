@@ -11,7 +11,8 @@ namespace TiRHI
     public:
         BaseSurface() = delete;
         ~BaseSurface() = default;
-        RHI_MOVE_ONLY(BaseSurface)
+        BaseSurface(BaseSurface&& other) = default;
+        BaseSurface& operator=(BaseSurface&& other) = default;
         BaseSurface(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {

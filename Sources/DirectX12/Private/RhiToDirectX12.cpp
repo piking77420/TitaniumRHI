@@ -9,61 +9,61 @@ namespace TiRHI::DirectX12::Private
     {
         switch (format)
         {
-        case Format::R8_UNorm:
+        case Format::R8UNorm:
             return DXGI_FORMAT_R8_UNORM;
 
-        case Format::R8G8_UNorm:
+        case Format::R8G8UNorm:
             return DXGI_FORMAT_R8G8_UNORM;
 
-        case Format::R8G8B8A8_UNorm:
+        case Format::R8G8B8A8UNorm:
             return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        case Format::R8G8B8A8_UNorm_SRGB:
+        case Format::R8G8B8A8UNormSRGB:
             return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
-        case Format::B8G8R8A8_UNorm:
+        case Format::B8G8R8A8UNorm:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        case Format::B8G8R8A8_UNorm_SRGB:
+        case Format::B8G8R8A8UNormSRGB:
             return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 
-        case Format::R16_Float:
+        case Format::R16Float:
             return DXGI_FORMAT_R16_FLOAT;
 
-        case Format::R16G16_Float:
+        case Format::R16G16Float:
             return DXGI_FORMAT_R16G16_FLOAT;
 
-        case Format::R16G16B16A16_Float:
+        case Format::R16G16B16A16Float:
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-        case Format::R32_Float:
+        case Format::R32Float:
             return DXGI_FORMAT_R32_FLOAT;
 
-        case Format::R32G32_Float:
+        case Format::R32G32Float:
             return DXGI_FORMAT_R32G32_FLOAT;
 
-        case Format::R32G32B32A32_Float:
+        case Format::R32G32B32A32Float:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
 
-        case Format::R32_UInt:
+        case Format::R32UInt:
             return DXGI_FORMAT_R32_UINT;
 
-        case Format::R32G32_UInt:
+        case Format::R32G32UInt:
             return DXGI_FORMAT_R32G32_UINT;
 
-        case Format::R32G32B32A32_UInt:
+        case Format::R32G32B32A32UInt:
             return DXGI_FORMAT_R32G32B32A32_UINT;
 
-        case Format::D16_UNorm:
+        case Format::D16UNorm:
             return DXGI_FORMAT_D16_UNORM;
 
-        case Format::D24_UNorm_S8_UInt:
+        case Format::D24UNormS8UInt:
             return DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-        case Format::D32_Float:
+        case Format::D32Float:
             return DXGI_FORMAT_D32_FLOAT;
 
-        case Format::D32_Float_S8_UInt:
+        case Format::D32FloatS8UInt:
             return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
         default:
@@ -75,6 +75,42 @@ namespace TiRHI::DirectX12::Private
         }
         return DXGI_FORMAT_UNKNOWN;
     }
+
+    D3D12_SHADER_VISIBILITY toDirectX12(ShaderStageFlags flag)
+    {
+        const uint32_t value = static_cast<uint32_t>(flag);
+
+        switch (value)
+        {
+        case static_cast<uint32_t>(ShaderStageFlags::Vertex):
+            return D3D12_SHADER_VISIBILITY_VERTEX;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Hull):
+            return D3D12_SHADER_VISIBILITY_HULL;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Domain):
+            return D3D12_SHADER_VISIBILITY_DOMAIN;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Geometry):
+            return D3D12_SHADER_VISIBILITY_GEOMETRY;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Pixel):
+            return D3D12_SHADER_VISIBILITY_PIXEL;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Amplification):
+            return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
+
+        case static_cast<uint32_t>(ShaderStageFlags::Mesh):
+            return D3D12_SHADER_VISIBILITY_MESH;
+
+        default:
+            // Compute, RayTracing, and multi-stage masks.
+            return D3D12_SHADER_VISIBILITY_ALL;
+        }
+
+        return D3D12_SHADER_VISIBILITY_ALL;
+    }
+
     D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE toDirectX12(LoadOp loadOp)
     {
         switch (loadOp)
@@ -270,6 +306,54 @@ namespace TiRHI::DirectX12::Private
             RHI_LOG_ERROR(std::format(L"Unsupported RHI FrontFace, Face = {}", toWString(frontFace)),
                           RhiApi::DirectX12);
             return FALSE;
+        }
+    }
+
+    D3D12_RESOURCE_FLAGS textureFlagtoDirectX12(TextureFlags flag, Format format)
+    {
+        D3D12_RESOURCE_FLAGS dx12flag;
+
+        switch (format)
+        {
+        case Format::D16UNorm:
+        case Format::D32Float:
+        case Format::D24UNormS8UInt:
+        case Format::D32FloatS8UInt:
+            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+            break;
+
+        case Format::R8UNorm:
+        case Format::R8G8UNorm:
+        case Format::R8G8B8A8UNorm:
+        case Format::R8G8B8A8UNormSRGB:
+        case Format::B8G8R8A8UNorm:
+        case Format::B8G8R8A8UNormSRGB:
+        case Format::R16Float:
+        case Format::R16G16Float:
+        case Format::R16G16B16A16Float:
+        case Format::R32Float:
+        case Format::R32G32Float:
+        case Format::R32G32B32A32Float:
+        case Format::R32UInt:
+        case Format::R32G32UInt:
+        case Format::R32G32B32A32UInt:
+            break;
+
+        default:
+            RHI_LOG_ERROR(
+                std::format(L"Unsupported RHI Format for textureFlagtoDirectX12 , Format = {}", toWString(format)),
+                RhiApi::Vulkan);
+            return {};
+        }
+
+        if ((flag & TextureFlags::RenderTarget) != TextureFlags::None)
+        {
+            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        }
+
+        if ((flag & TextureFlags::UnorderedAccess) != TextureFlags::None)
+        {
+            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
     }
 

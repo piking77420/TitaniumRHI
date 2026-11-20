@@ -10,6 +10,12 @@
 #include <Vulkan/Vulkan-CommandList.hpp>
 #include <vulkan/Vulkan-AcquiredFrame.hpp>
 
+// #define VMA_STATIC_VULKAN_FUNCTIONS 0
+// #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1 for volk
+
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
+
 namespace TiRHI::Vulkan
 {
     std::vector<const char*> getDeviceVkExtensionName(const std::span<const Adapter::Features>& features)
@@ -50,28 +56,48 @@ namespace TiRHI::Vulkan
     }
 
     Device::Device(RHI& rhi)
-        : BaseDevice<Device, RHI>(rhi)
+        : BaseDevice(rhi)
     {
+    }
+
+    Device& Device::operator=(Device&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        BaseDevice::operator=(std::move(other));
+        // Release fences
+        m_synchronisations.clear();
+        m_device = std::move(other.m_device);
+        m_physicalDevice = std::exchange(other.m_physicalDevice, vk::PhysicalDevice{});
+        m_queueProperties = std::move(other.m_queueProperties);
+        m_graphicQueue = std::exchange(other.m_graphicQueue, vk::Queue{});
+        m_graphicQueueIndex = std::exchange(other.m_graphicQueueIndex, 0);
+        m_presentQueue = std::exchange(other.m_presentQueue, vk::Queue{});
+        m_presentQueueIndex = std::exchange(other.m_presentQueueIndex, 0);
+        m_synchronisations = std::move(other.m_synchronisations);
+        m_dispatch = std::exchange(other.m_dispatch, VolkDeviceTable{});
+        return *this;
     }
 
     bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                        std::optional<size_t> index)
     {
-        const size_t adaptaterIndex = index ? *index : BaseDevice::getBestAdapter(adapters);
-
+        onBuild(adapters, index);
         const std::vector<vk::PhysicalDevice> nativePhysicalDevice = rhi.getNativeInstance().enumeratePhysicalDevices();
 #undef min;
-        if (adaptaterIndex >= nativePhysicalDevice.size())
+        if (m_adapterIndex >= nativePhysicalDevice.size())
             return false;
 
         assert(adapters.size() == nativePhysicalDevice.size());
         std::vector<Adapter::Features> finalFeatures;
 
         // clang-format off
-        return checkExtensionToEnableValid(adapters[adaptaterIndex], finalFeatures) &&
-               createDevice(nativePhysicalDevice[adaptaterIndex], surface.getSurfaceNative(), adapters[adaptaterIndex], finalFeatures) &&
+        return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
+               createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
-               createSynchronisationPrimitives();
+               createSynchronisationPrimitives() && 
+               initVmaAllocator(rhi.getInstance());
         // clang-format on
     }
 
@@ -80,44 +106,102 @@ namespace TiRHI::Vulkan
         m_dispatch.vkDeviceWaitIdle(static_cast<VkDevice>(m_device.get()));
     }
 
-    void Device::submit(std::span<const AcquiredFrame> acquiredFrames, std::span<CommandList*> commandLists)
+    void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)
     {
-        const uint32_t minSubmit =
-            std::min(static_cast<uint32_t>(acquiredFrames.size()), static_cast<uint32_t>(commandLists.size()));
+        if (submitPresentDesc.empty())
+            return;
 
-        vk::SubmitInfo submitInfo{};
+        // TODO: Give each window its own frame slots and submission fences.
+        // A single shared frame fence couples all windows' progress.
+        // Schedule rendering and presentation independently so the debug window
+        // can update without waiting for the main renderer's frame.
 
-        std::vector<vk::Semaphore> waitSemaphores;
-        waitSemaphores.reserve(minSubmit);
-
-        std::vector<vk::PipelineStageFlags> waitStages;
-        waitStages.reserve(minSubmit);
-
-        std::vector<vk::CommandBuffer> commandBuffers;
-        commandBuffers.reserve(minSubmit);
-
-        std::vector<vk::Semaphore> signalSemaphores;
-        signalSemaphores.reserve(minSubmit);
-
-        for (size_t i = 0; i < minSubmit; i++)
+        struct SubmissionStorage
         {
-            const auto& ac = acquiredFrames[i];
-            waitSemaphores.emplace_back(ac.getImageAvailableSemaphore());
-            // TODO track command list last output
-            waitStages.emplace_back(
-                static_cast<vk::PipelineStageFlags>(vk::PipelineStageFlagBits::eColorAttachmentOutput));
-            commandBuffers.emplace_back(commandLists[i] ? commandLists[i]->getcurrentFrameCmb() : VK_NULL_HANDLE);
-            signalSemaphores.emplace_back(ac.getRenderFinishSemaphore());
-        }
-        // clang-format off
-        submitInfo
-            .setWaitSemaphores(waitSemaphores)
-            .setWaitDstStageMask(waitStages)
-            .setCommandBuffers(commandBuffers)
-            .setSignalSemaphores(signalSemaphores);
-        // clang-format on
+            std::vector<vk::Semaphore> waitSemaphores;
+            std::vector<vk::PipelineStageFlags> waitStages;
+            std::vector<vk::CommandBuffer> commandBuffers;
+            std::vector<vk::Semaphore> signalSemaphores;
+        };
 
-        getNativeGraphicQueue().submit(submitInfo, getNativeInFlightFence());
+        std::vector<SubmissionStorage> storage(submitPresentDesc.size());
+        std::vector<vk::SubmitInfo> submitInfos(submitPresentDesc.size());
+
+        std::vector<vk::Semaphore> presentWaitSemaphores;
+        std::vector<vk::SwapchainKHR> swapChains;
+        std::vector<uint32_t> swapImageIndices;
+
+        for (size_t i = 0; i < submitPresentDesc.size(); ++i)
+        {
+            const auto& desc = submitPresentDesc[i];
+            auto& data = storage[i];
+
+            if (desc.commandList)
+                data.commandBuffers.push_back(desc.commandList->getcurrentFrameCmb());
+
+            for (const auto& frame : desc.acquireFrames)
+            {
+                data.waitSemaphores.push_back(frame.getImageAvailableSemaphore());
+
+                data.waitStages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
+                const auto renderFinished = frame.getRenderFinishSemaphore();
+                data.signalSemaphores.push_back(renderFinished);
+
+                presentWaitSemaphores.push_back(renderFinished);
+                swapChains.push_back(frame.getSwapChain());
+                swapImageIndices.push_back(frame.getSwapChainImageIndex());
+            }
+
+            submitInfos[i]
+                .setWaitSemaphores(data.waitSemaphores)
+                .setWaitDstStageMask(data.waitStages)
+                .setCommandBuffers(data.commandBuffers)
+                .setSignalSemaphores(data.signalSemaphores);
+        }
+
+        // https://vulkan.lunarg.com/doc/view/1.4.350.0/windows/antora/tutorial/latest/Synchronization/Frame_in_Flight/03_resource_lifetimes.html
+        const uint64_t submissionValue = ++m_timeLine.nextSubmissionValue;
+        const vk::Semaphore semaphore = m_timeLine.timeLineSemaphore.get();
+        auto& last = storage.back();
+        last.signalSemaphores.push_back(semaphore);
+
+        // One value per signal semaphore; binary semaphore values are ignored.
+        std::vector<uint64_t> signalValues(last.signalSemaphores.size(), 0);
+        signalValues.back() = submissionValue;
+
+        vk::TimelineSemaphoreSubmitInfo timelineInfo{};
+        timelineInfo.setSignalSemaphoreValues(signalValues);
+        submitInfos.back().setSignalSemaphores(last.signalSemaphores).setPNext(&timelineInfo);
+
+        // The current frame fence must already have been waited on and reset.
+
+        // reset fence
+        {
+            std::array fences = {getNativeInFlightFence()};
+            const VkFence* vkFences = reinterpret_cast<const VkFence*>(fences.data());
+            const uint32_t fencesCount = static_cast<uint32_t>(fences.size());
+            m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
+        }
+        getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
+
+        for (const auto& desc : submitPresentDesc)
+            if (desc.commandList)
+                CommandList::Private::setLastSubmissionValue(*desc.commandList, submissionValue);
+
+        m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
+
+        if (!swapChains.empty())
+        {
+            vk::PresentInfoKHR presentInfo{};
+            presentInfo.setWaitSemaphores(presentWaitSemaphores)
+                .setSwapchains(swapChains)
+                .setImageIndices(swapImageIndices)
+                .setPResults(nullptr);
+
+            const vk::Result result = m_presentQueue.presentKHR(presentInfo);
+            VulkanCheckErrorStatus(result);
+        }
     }
 
     void Device::beginFrame()
@@ -128,7 +212,10 @@ namespace TiRHI::Vulkan
 
         m_dispatch.vkWaitForFences(m_device.get(), fencesCount, vkFences, vk::True,
                                    std::numeric_limits<uint64_t>::max());
-        m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
+
+        // TODO COLLECT DATA
+        const uint64_t completed = m_device->getSemaphoreCounterValue(m_timeLine.timeLineSemaphore.get());
+        m_deferredDeletionQueue.collect(completed);
     }
 
     bool Device::checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures)
@@ -163,7 +250,7 @@ namespace TiRHI::Vulkan
                               const std::vector<Adapter::Features>& featuresToEnable)
     {
         m_physicalDevice = physicalDevice;
-        m_queueProperties = Private::DeviceQueueProperties(physicalDevice, surface);
+        m_queueProperties = Vulkan::Private::DeviceQueueProperties(physicalDevice, surface);
         auto properties = m_queueProperties.getQueuProperties();
 
         size_t allPropertiesQueuIndex = std::numeric_limits<size_t>::max();
@@ -197,9 +284,12 @@ namespace TiRHI::Vulkan
 
         std::vector<const char*> getDeviceExtensionName = getDeviceVkExtensionName(featuresToEnable);
 
+        vk::PhysicalDeviceTimelineSemaphoreFeatures enabledTimeline{};
+        enabledTimeline.setTimelineSemaphore(vk::True);
+
         vk::DeviceCreateInfo deviceCreateInfo{};
         deviceCreateInfo.sType = vk::StructureType::eDeviceCreateInfo;
-        deviceCreateInfo.pNext = nullptr;
+        deviceCreateInfo.pNext = &enabledTimeline;
         deviceCreateInfo.pQueueCreateInfos = queueCreateInfo.data();
         deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfo.size());
         deviceCreateInfo.pEnabledFeatures = nullptr;
@@ -208,20 +298,13 @@ namespace TiRHI::Vulkan
         deviceCreateInfo.ppEnabledExtensionNames = getDeviceExtensionName.data();
 
         m_device = physicalDevice.createDeviceUnique(deviceCreateInfo);
-        RHI_LOG_INFO(std::format(L"Create Device success {}",
-                                 [&]()
-                                 {
-                                     const std::string_view name = adapter.getName();
-                                     return std::wstring(name.begin(), name.end());
-                                 }()),
-                     RhiApi::Vulkan);
-
+        onCreateDeviceSuccess(adapter, m_device.get() != VK_NULL_HANDLE);
         m_graphicQueue = m_device->getQueue(allPropertiesQueuIndex, 0);
         m_graphicQueueIndex = allPropertiesQueuIndex;
         m_presentQueue = m_graphicQueue;
         m_presentQueueIndex = m_graphicQueueIndex;
 
-        return m_graphicQueue && m_presentQueue;
+        return m_device && m_graphicQueue && m_presentQueue;
     }
 
     bool Device::createSynchronisationPrimitives()
@@ -238,7 +321,16 @@ namespace TiRHI::Vulkan
             isOk &= s.inFlightFence.get() != VK_NULL_HANDLE;
         }
 
-        return isOk;
+        //
+        vk::SemaphoreTypeCreateInfo typeInfo{};
+        typeInfo.setSemaphoreType(vk::SemaphoreType::eTimeline).setInitialValue(0);
+
+        vk::SemaphoreCreateInfo createInfo{};
+        createInfo.setPNext(&typeInfo);
+        m_timeLine.timeLineSemaphore = m_device->createSemaphoreUnique(createInfo);
+        m_timeLine.nextSubmissionValueFrames.fill(0);
+
+        return isOk && m_timeLine.timeLineSemaphore;
     }
 
     vk::Fence Device::getNativeInFlightFence() const
@@ -254,6 +346,41 @@ namespace TiRHI::Vulkan
         volkLoadDeviceTable(&m_dispatch, m_device.get());
 
         return true;
+    }
+
+    bool Device::initVmaAllocator(Vulkan::Instance& instance)
+    {
+        VmaAllocatorCreateInfo createInfo{};
+
+        createInfo.instance = static_cast<VkInstance>(instance.getInstance());
+        createInfo.physicalDevice = static_cast<VkPhysicalDevice>(m_physicalDevice);
+        createInfo.device = static_cast<VkDevice>(m_device.get());
+
+        // Must match your enabled/supported Vulkan API version.
+        createInfo.vulkanApiVersion = instance.getApiVersion();
+
+        VmaVulkanFunctions functions{};
+        functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+        functions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+
+        createInfo.pVulkanFunctions = &functions;
+
+        VkResult result = vmaCreateAllocator(&createInfo, &m_vmaAllocator.vmaAllocator);
+
+        if (result != VK_SUCCESS)
+        {
+            RHI_LOG_FATAL(L"Failed to create vma allocator", RhiApi::Vulkan);
+            return false;
+        }
+
+        return true;
+    }
+
+    uint64_t Device::Private::getCurrentFrameSubmissionValue(const Device& device)
+    {
+        const size_t currentFrame = device.getRHI().getCurrentFrame();
+
+        return device.m_timeLine.nextSubmissionValueFrames[currentFrame];
     }
 
 } // namespace TiRHI::Vulkan
