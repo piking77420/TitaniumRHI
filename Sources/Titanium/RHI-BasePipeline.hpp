@@ -53,11 +53,11 @@ namespace TiRHI
 
         T& setDescriptorSetLayoutEntries(const std::span<const DescriptorSetLayoutEntry>& descriptorSetLayoutEntries)
         {
-            m_DescriptorSetLayoutEntries.clear();
-            m_DescriptorSetLayoutEntries.reserve(descriptorSetLayoutEntries.size());
+            m_descriptorSetLayoutEntries.clear();
+            m_descriptorSetLayoutEntries.reserve(descriptorSetLayoutEntries.size());
             for (const auto& layout : descriptorSetLayoutEntries)
             {
-                m_DescriptorSetLayoutEntries.emplace_back(layout);
+                m_descriptorSetLayoutEntries.emplace_back(layout);
             }
 
             return static_cast<T&>(*this);
@@ -65,7 +65,7 @@ namespace TiRHI
 
         std::span<const DescriptorSetLayoutEntry> getDescriptorSetLayoutEntries() const
         {
-            return m_DescriptorSetLayoutEntries;
+            return m_descriptorSetLayoutEntries;
         }
 
         T& setPushConstant(PushConstant pushConstant)
@@ -121,7 +121,7 @@ namespace TiRHI
         {
             uint32_t maxIndex = 0;
 
-            for (const auto& [layout, setIndex] : m_DescriptorSetLayoutEntries)
+            for (const auto& [layout, setIndex] : m_descriptorSetLayoutEntries)
                 maxIndex = std::max(maxIndex, setIndex);
 
             return maxIndex;
@@ -130,7 +130,7 @@ namespace TiRHI
     private:
         std::vector<BinaryModule> m_binaryModule;
 
-        std::vector<DescriptorSetLayoutEntry> m_DescriptorSetLayoutEntries;
+        std::vector<DescriptorSetLayoutEntry> m_descriptorSetLayoutEntries;
 
         std::optional<PushConstant> m_pushConstant;
     };
