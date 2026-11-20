@@ -28,6 +28,8 @@ namespace TiRHI::DirectX12::Private
 
     D3D12_RESOURCE_FLAGS textureFlagtoDirectX12(TextureFlags flag, Format format);
 
+    D3D12_INPUT_CLASSIFICATION toDirectX12(VertexInputRate vertexInputRate);
+
 } // TiRHI::DirectX12::Private
 
 #endif // TITANIUM_DIRECTX12_PRIVATE_RHI_TO_DIRECTX12_H

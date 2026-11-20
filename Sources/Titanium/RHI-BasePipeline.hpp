@@ -220,7 +220,7 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
-        std::span<const VertexBindingDescription> getVertexBindingDescription()
+        std::span<const VertexBindingDescription> getVertexBindingDescription() const
         {
             return m_vertexBindingDescriptions;
         }
@@ -234,7 +234,7 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
-        std::span<const VertexInputAttributeDescription> getVertexInputAttributeDescription()
+        std::span<const VertexInputAttributeDescription> getVertexInputAttributeDescription() const
         {
             return m_vertexInputAttributeDescriptions;
         }

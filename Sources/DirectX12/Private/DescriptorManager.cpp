@@ -120,12 +120,14 @@ namespace TiRHI::DirectX12::Private
 
     auto DescriptorManager::getOrCreateD3D12DescriptorRootSignatureLayout(
         const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& DescriptorSetLayoutEntries,
-        const std::optional<PushConstant> pushConstant) -> D3D12DescriptorRootSignatureLayout*
+        const std::optional<PushConstant> pushConstant, bool allowInputAssembler) -> D3D12DescriptorRootSignatureLayout*
     {
         if (!m_device)
             return nullptr;
 
-        auto it = m_rootSignatureMap.find(DescriptorSetLayoutEntries);
+        RootSignatureLayoutKeyView keyView{DescriptorSetLayoutEntries, pushConstant, true};
+
+        auto it = m_rootSignatureMap.find(keyView);
         if (it != m_rootSignatureMap.end())
         {
             return it->second.get();
@@ -228,7 +230,8 @@ namespace TiRHI::DirectX12::Private
         D3D12_ROOT_SIGNATURE_DESC1 desc{};
         desc.NumParameters = static_cast<UINT>(parameters.size());
         desc.pParameters = parameters.data();
-        desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+        desc.Flags = keyView.allowInputAssembler ? D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+                                                 : D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
         D3D12_VERSIONED_ROOT_SIGNATURE_DESC versionedDesc{};
         versionedDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -258,14 +261,17 @@ namespace TiRHI::DirectX12::Private
         if (FAILED(hr))
             return nullptr;
 
+        RootSignatureLayoutKey key = {.descriptorsLayouts = std::vector<DescriptorSet::DescriptorSetLayoutEntry>(
+                                          DescriptorSetLayoutEntries.begin(), DescriptorSetLayoutEntries.end()),
+                                      .pushConstant = keyView.pushConstant,
+                                      .allowInputAssembler = keyView.allowInputAssembler};
+
         auto rootLayout = std::make_unique<D3D12DescriptorRootSignatureLayout>();
         D3D12DescriptorRootSignatureLayout* result = rootLayout.get();
         result->rootSignature = rootSignature;
         result->spaceDescriptor = std::move(spaceDescriptor);
 
-        m_rootSignatureMap.emplace(std::vector<DescriptorSet::DescriptorSetLayoutEntry>(
-                                       DescriptorSetLayoutEntries.begin(), DescriptorSetLayoutEntries.end()),
-                                   std::move(rootLayout));
+        m_rootSignatureMap.emplace(std::move(key), std::move(rootLayout));
 
         return result;
     }

@@ -47,29 +47,67 @@ namespace TiRHI::DirectX12::Private
 
         bool build(MComPtr<ID3D12Device> device);
 
+        // TODO make a struct
+        // to hash that have DescriptorSetLayoutEntries
+        // push constant
+        // and input assembler
         D3D12DescriptorRootSignatureLayout* getOrCreateD3D12DescriptorRootSignatureLayout(
             const std::span<const DescriptorSet::DescriptorSetLayoutEntry>& layouts,
-            const std::optional<PushConstant> pushConstant);
+            const std::optional<PushConstant> pushConstant, bool allowInputAssembler);
 
         D3D12DescriptorRootSignatureLayout* getEmptyDescriptorRootSignatureLayout();
 
     private:
+        struct RootSignatureLayoutKeyView
+        {
+            std::span<const DescriptorSet::DescriptorSetLayoutEntry> descriptorsLayouts;
+            std::optional<PushConstant> pushConstant;
+            bool allowInputAssembler = false;
+        };
+
+        struct RootSignatureLayoutKey
+        {
+            std::vector<DescriptorSet::DescriptorSetLayoutEntry> descriptorsLayouts;
+            std::optional<PushConstant> pushConstant;
+            bool allowInputAssembler = false;
+
+            [[nodiscard]]
+            RootSignatureLayoutKeyView view() const
+            {
+                return {descriptorsLayouts, pushConstant, allowInputAssembler};
+            }
+        };
+
         struct BindingsLayoutsHash
         {
             using is_transparent = void;
 
-            size_t operator()(
-                std::span<const DescriptorSet::DescriptorSetLayoutEntry> DescriptorSetLayoutEntries) const noexcept
+            size_t operator()(const RootSignatureLayoutKeyView& key) const noexcept
             {
                 uint32_t hash = 0;
 
-                for (const auto& entry : DescriptorSetLayoutEntries)
+                for (const auto& entry : key.descriptorsLayouts)
                 {
                     hashCombine(hash, entry.setIndex);
                     hashCombine(hash, entry.layout.cachedHash);
                 }
 
+                hashCombine(hash, key.pushConstant.has_value());
+
+                if (key.pushConstant)
+                {
+                    hashCombine(hash, key.pushConstant->flag);
+                    hashCombine(hash, key.pushConstant->size);
+                }
+
+                hashCombine(hash, key.allowInputAssembler);
+
                 return static_cast<size_t>(hash);
+            }
+
+            size_t operator()(const RootSignatureLayoutKey& key) const noexcept
+            {
+                return (*this)(key.view());
             }
         };
 
@@ -77,17 +115,44 @@ namespace TiRHI::DirectX12::Private
         {
             using is_transparent = void;
 
-            bool operator()(std::span<const DescriptorSet::DescriptorSetLayoutEntry> a,
-                            std::span<const DescriptorSet::DescriptorSetLayoutEntry> b) const
+            bool operator()(const RootSignatureLayoutKeyView& a, const RootSignatureLayoutKeyView& b) const
             {
-                return std::ranges::equal(a, b);
+                if (a.allowInputAssembler != b.allowInputAssembler)
+                    return false;
+
+                if (a.pushConstant.has_value() != b.pushConstant.has_value())
+                    return false;
+
+                if (a.pushConstant)
+                {
+                    if (a.pushConstant->flag != b.pushConstant->flag || a.pushConstant->size != b.pushConstant->size)
+                        return false;
+                }
+
+                return std::ranges::equal(
+                    a.descriptorsLayouts, b.descriptorsLayouts, [](const auto& lhs, const auto& rhs)
+                    { return lhs.setIndex == rhs.setIndex && lhs.layout.cachedHash == rhs.layout.cachedHash; });
+            }
+
+            bool operator()(const RootSignatureLayoutKey& a, const RootSignatureLayoutKey& b) const
+            {
+                return (*this)(a.view(), b.view());
+            }
+
+            bool operator()(const RootSignatureLayoutKey& a, const RootSignatureLayoutKeyView& b) const
+            {
+                return (*this)(a.view(), b);
+            }
+
+            bool operator()(const RootSignatureLayoutKeyView& a, const RootSignatureLayoutKey& b) const
+            {
+                return (*this)(a, b.view());
             }
         };
 
         ID3D12Device* m_device{nullptr};
 
-        std::unordered_map<std::vector<DescriptorSet::DescriptorSetLayoutEntry>, RootSignatureLayoutPtr,
-                           BindingsLayoutsHash, BindingsLayoutsEqual>
+        std::unordered_map<RootSignatureLayoutKey, RootSignatureLayoutPtr, BindingsLayoutsHash, BindingsLayoutsEqual>
             m_rootSignatureMap;
 
         D3D12DescriptorRootSignatureLayout m_emptyDescriptorRootSignatureLayout;

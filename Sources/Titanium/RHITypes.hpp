@@ -753,6 +753,8 @@ namespace TiRHI
         uint32_t binding = 0;
         uint32_t stride = 0;
         VertexInputRate vertexInputRate = VertexInputRate::Vertex;
+
+        auto operator<=>(const VertexBindingDescription&) const = default;
     };
 
     struct VertexInputAttributeDescription
@@ -761,6 +763,8 @@ namespace TiRHI
         uint32_t location = 0;
         Format format{};
         uint32_t offset = 0;
+
+        auto operator<=>(const VertexInputAttributeDescription&) const = default;
     };
 
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);

@@ -263,6 +263,11 @@ namespace TiRHI::Vulkan
 
     void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint32_t offset, Buffer& buffer)
     {
+        if (!onBindVertexBuffer())
+        {
+            return;
+        }
+
         getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
     }
 
