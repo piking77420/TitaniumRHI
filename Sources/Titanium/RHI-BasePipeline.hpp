@@ -11,6 +11,7 @@
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHITypes.hpp>
+#include <Titanium/Log.hpp>
 
 namespace TiRHI
 {
@@ -140,6 +141,7 @@ namespace TiRHI
     class BaseGraphicPipiline : public BasePipeline<T, TRHI, TDescriptorSet>
     {
     public:
+        using _Derived = T;
         using _RenderPassDescriptor = TRenderPassDescriptor;
 
         BaseGraphicPipiline() = delete;
@@ -210,6 +212,53 @@ namespace TiRHI
             return m_frontFace;
         }
 
+        T& setVertexBindingDescription(std::span<const VertexBindingDescription> newVertexBindingDescriptions)
+        {
+            m_vertexBindingDescriptions.clear();
+            m_vertexBindingDescriptions.assign(newVertexBindingDescriptions.begin(),
+                                               newVertexBindingDescriptions.end());
+            return static_cast<T&>(*this);
+        }
+
+        std::span<const VertexBindingDescription> getVertexBindingDescription()
+        {
+            return m_vertexBindingDescriptions;
+        }
+
+        T& setVertexInputAttributeDescription(
+            std::span<const VertexInputAttributeDescription> newVertexInputAttributeDescription)
+        {
+            m_vertexInputAttributeDescriptions.clear();
+            m_vertexInputAttributeDescriptions.assign(newVertexInputAttributeDescription.begin(),
+                                                      newVertexInputAttributeDescription.end());
+            return static_cast<T&>(*this);
+        }
+
+        std::span<const VertexInputAttributeDescription> getVertexInputAttributeDescription()
+        {
+            return m_vertexInputAttributeDescriptions;
+        }
+
+    protected:
+        bool sanityCheck()
+        {
+            const auto bindings = getVertexBindingDescription();
+            const auto attributes = getVertexInputAttributeDescription();
+
+            if (bindings.empty() != attributes.empty())
+            {
+                RHI_LOG_ERROR(std::format(L"Graphics pipeline '{}': Invalid vertex input layout. "
+                                          L"Vertex bindings and vertex attributes must both be defined "
+                                          L"or both be empty (bindings: {}, attributes: {}).",
+                                          this->getNameW(), bindings.size(), attributes.size()),
+                              _Derived::Api);
+
+                return false;
+            }
+
+            return true;
+        }
+
     private:
         const _RenderPassDescriptor* m_renderPassDescritptor = nullptr;
 
@@ -220,6 +269,10 @@ namespace TiRHI
         CullModeFlag m_cullModeFlag = CullModeFlag::None;
 
         FrontFace m_frontFace = FrontFace::CounterClockwise;
+
+        std::vector<VertexBindingDescription> m_vertexBindingDescriptions;
+
+        std::vector<VertexInputAttributeDescription> m_vertexInputAttributeDescriptions;
     };
 
 } // namespace TiRHI

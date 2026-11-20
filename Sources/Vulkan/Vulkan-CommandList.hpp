@@ -67,6 +67,8 @@ namespace TiRHI::Vulkan
 
         void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
 
+        void bindVertexBuffer(uint32_t bindingIndex, uint32_t offset, Buffer& buffer);
+
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
         void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset,

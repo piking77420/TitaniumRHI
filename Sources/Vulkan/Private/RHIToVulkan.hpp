@@ -83,6 +83,13 @@ namespace TiRHI::Vulkan::Private
 
     vk::BufferUsageFlags toVulkan(BufferUsage usage);
 
+    vk::VertexInputRate toVulkan(VertexInputRate vertexInputRate);
+
+    vk::VertexInputBindingDescription toVulkan(const VertexBindingDescription& vertexBindingDescription);
+
+    vk::VertexInputAttributeDescription
+    toVulkan(const VertexInputAttributeDescription& vertexInputAttributeDescription);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

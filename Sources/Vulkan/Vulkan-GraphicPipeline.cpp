@@ -42,6 +42,11 @@ namespace TiRHI::Vulkan
         if (m_device == VK_NULL_HANDLE)
             return false;
 
+        if (!sanityCheck())
+        {
+            return false;
+        }
+
         const BinaryModule* vertexBinary = nullptr;
 
         const BinaryModule* fragmentBinary = nullptr;
@@ -84,8 +89,30 @@ namespace TiRHI::Vulkan
             .setModule(*fragmentModule)
             .setPName(fragmentBinary->entryPoint.data());
 
-        // 3. No vertex buffers
+        std::vector<vk::VertexInputBindingDescription> vkVertexBindingDescription;
+        std::vector<vk::VertexInputAttributeDescription> vkVertexInputAttributeDescriptions;
+
+        // 3. vertex buffers
         vk::PipelineVertexInputStateCreateInfo vertexInput{};
+        if (!getVertexBindingDescription().empty() || !getVertexInputAttributeDescription().empty())
+        {
+            vkVertexBindingDescription.reserve(getVertexBindingDescription().size());
+            vkVertexInputAttributeDescriptions.reserve(getVertexBindingDescription().size());
+
+            for (const auto& vertexBindingDescription : getVertexBindingDescription())
+                vkVertexBindingDescription.emplace_back(Vulkan::Private::toVulkan(vertexBindingDescription));
+
+            for (const auto& vertexInputAttributeDescription : getVertexInputAttributeDescription())
+                vkVertexInputAttributeDescriptions.emplace_back(
+                    Vulkan::Private::toVulkan(vertexInputAttributeDescription));
+
+            vertexInput.pVertexAttributeDescriptions = vkVertexInputAttributeDescriptions.data();
+            vertexInput.vertexAttributeDescriptionCount =
+                static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size());
+
+            vertexInput.pVertexBindingDescriptions = vkVertexBindingDescription.data();
+            vertexInput.vertexBindingDescriptionCount = static_cast<uint32_t>(vkVertexBindingDescription.size());
+        }
 
         // 4. Triangle list
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly{};

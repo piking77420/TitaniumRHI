@@ -1,6 +1,7 @@
 #ifndef TITANIUM_RHI_TYPES_H
 #define TITANIUM_RHI_TYPES_H
 
+#include <array>
 #include <functional>
 #include <type_traits>
 #include <variant>
@@ -122,6 +123,7 @@ namespace TiRHI
     X(R16G16B16A16Float)                                                                                               \
     X(R32Float)                                                                                                        \
     X(R32G32Float)                                                                                                     \
+    X(R32G32B32Float)                                                                                                  \
     X(R32G32B32A32Float)                                                                                               \
     X(R32UInt)                                                                                                         \
     X(R32G32UInt)                                                                                                      \
@@ -717,6 +719,48 @@ namespace TiRHI
     {
         ShaderStageFlags flag;
         uint32_t size;
+    };
+
+    struct float2
+    {
+        std::array<float, 2> data;
+    };
+
+    struct float3
+    {
+        std::array<float, 3> data;
+    };
+
+    struct float4
+    {
+        std::array<float, 4> data;
+    };
+
+#define RHI_VERTEX_INPUT_RATE(X)                                                                                       \
+    X(Vertex)                                                                                                          \
+    X(Instance)
+
+    enum struct VertexInputRate : uint8_t
+    {
+#define X(name) name,
+        RHI_VERTEX_INPUT_RATE(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(VertexInputRate, RHI_VERTEX_INPUT_RATE)
+
+    struct VertexBindingDescription
+    {
+        uint32_t binding = 0;
+        uint32_t stride = 0;
+        VertexInputRate vertexInputRate = VertexInputRate::Vertex;
+    };
+
+    struct VertexInputAttributeDescription
+    {
+        uint32_t binding = 0;
+        uint32_t location = 0;
+        Format format{};
+        uint32_t offset = 0;
     };
 
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);

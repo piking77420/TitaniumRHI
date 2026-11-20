@@ -261,6 +261,11 @@ namespace TiRHI::Vulkan
         }
     }
 
+    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint32_t offset, Buffer& buffer)
+    {
+        getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
+    }
+
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
         if (m_volkTable) [[likely]]

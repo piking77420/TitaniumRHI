@@ -40,6 +40,9 @@ namespace TiRHI::Vulkan::Private
         case TiRHI::Format::R32G32Float:
             return vk::Format::eR32G32Sfloat;
 
+        case TiRHI::Format::R32G32B32Float:
+            return vk::Format::eR32G32B32Sfloat;
+
         case TiRHI::Format::R32G32B32A32Float:
             return vk::Format::eR32G32B32A32Sfloat;
 
@@ -540,6 +543,44 @@ namespace TiRHI::Vulkan::Private
             flags |= vk::BufferUsageFlagBits::eTransferDst;
 
         return flags;
+    }
+
+    vk::VertexInputRate toVulkan(VertexInputRate vertexInputRate)
+    {
+        switch (vertexInputRate)
+        {
+        case TiRHI::VertexInputRate::Vertex:
+            return vk::VertexInputRate::eVertex;
+        case TiRHI::VertexInputRate::Instance:
+            return vk::VertexInputRate::eInstance;
+        default:
+            RHI_LOG_FATAL(std::format(L"Unsupported RHI VertexInputRate for vk::VertexInputRate, VertexInputRate = {}",
+                                      toWString(vertexInputRate)),
+                          RhiApi::Vulkan);
+        }
+
+        return {};
+    }
+
+    vk::VertexInputBindingDescription toVulkan(const VertexBindingDescription& vertexBindingDescription)
+    {
+        vk::VertexInputBindingDescription vertexInputBindingDescription{};
+        vertexInputBindingDescription.setBinding(vertexBindingDescription.binding)
+            .setInputRate(toVulkan(vertexBindingDescription.vertexInputRate))
+            .setStride(vertexBindingDescription.stride);
+
+        return vertexInputBindingDescription;
+    }
+
+    vk::VertexInputAttributeDescription toVulkan(const VertexInputAttributeDescription& vertexInputAttributeDescription)
+    {
+        vk::VertexInputAttributeDescription vkVertexInputAttributeDescription{};
+        vkVertexInputAttributeDescription.setBinding(vertexInputAttributeDescription.binding);
+        vkVertexInputAttributeDescription.setFormat(toVulkan(vertexInputAttributeDescription.format))
+            .setLocation(vertexInputAttributeDescription.location)
+            .setOffset(vertexInputAttributeDescription.binding);
+
+        return vkVertexInputAttributeDescription;
     }
 
 }
