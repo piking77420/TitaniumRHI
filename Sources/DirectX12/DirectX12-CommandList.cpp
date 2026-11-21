@@ -428,7 +428,7 @@ namespace TiRHI::DirectX12
         }
     }
 
-    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint32_t offset, Buffer& buffer)
+    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer)
     {
         if (!onBindBuffer())
         {
@@ -453,29 +453,22 @@ namespace TiRHI::DirectX12
         m_commandList->IASetVertexBuffers(bindingIndex, 1, &view);
     }
 
-    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint32_t offset, Buffer& buffer)
+    void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
     {
+        if (!buffer)
+            return;
+
         if (!onBindBuffer())
         {
             return;
         }
 
-        std::span<const uint32_t> stridesPerBinding = m_recordState.graphicPipeline->getStridesPerBinding();
-
-        if (stridesPerBinding.size() <= bindingIndex)
-        {
-            RHI_LOG_ERROR(std::format(L"Cannot bind vertex buffer at binding {}: graphics pipeline '{}' "
-                                      L"has no valid vertex stride for this binding.",
-                                      bindingIndex, m_recordState.graphicPipeline->getNameW()),
-                          _Derived::Api);
-        }
-
-        D3D12_VERTEX_BUFFER_VIEW view{};
+        D3D12_INDEX_BUFFER_VIEW view{};
         view.BufferLocation = buffer.getNativeBufferFrame()->GetGPUVirtualAddress() + offset;
         view.SizeInBytes = buffer.getSize();
-        view.StrideInBytes = stridesPerBinding[bindingIndex];
+        view.Format = DirectX12::Private::toDirectX12(format);
 
-        m_commandList->IASetVertexBuffers(bindingIndex, 1, &view);
+        m_commandList->IASetIndexBuffer(&view);
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)

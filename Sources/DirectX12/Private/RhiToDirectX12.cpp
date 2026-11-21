@@ -377,4 +377,23 @@ namespace TiRHI::DirectX12::Private
         return {};
     }
 
+    DXGI_FORMAT toDirectX12(IndexType type)
+    {
+        switch (type)
+        {
+        case IndexType::UInt16:
+            return DXGI_FORMAT_R16_UINT;
+
+        case IndexType::UInt32:
+            return DXGI_FORMAT_R32_UINT;
+
+        default:
+            RHI_LOG_FATAL(std::format(L"Unsupported RHI IndexType, IndexType = {}", toWString(type)),
+                          RhiApi::DirectX12);
+            return DXGI_FORMAT_UNKNOWN;
+        }
+
+        return DXGI_FORMAT_UNKNOWN;
+    }
+
 } // namespace TiRHI::DirectX12::Private

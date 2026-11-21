@@ -587,9 +587,9 @@ namespace TiRHI::Vulkan::Private
     {
         switch (indexType)
         {
-        case TiRHI::IndexType::Uint16:
+        case TiRHI::IndexType::UInt16:
             return vk::IndexType::eUint16;
-        case TiRHI::IndexType::Uint32:
+        case TiRHI::IndexType::UInt32:
             return vk::IndexType::eUint32;
         default:
             RHI_LOG_FATAL(

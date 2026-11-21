@@ -768,13 +768,13 @@ namespace TiRHI
     };
 
 #define RHI_INDEX_TYPE_LIST(X)                                                                                         \
-    X(Uint16)                                                                                                          \
-    X(Uint32)
+    X(UInt16)                                                                                                          \
+    X(UInt32)
 
     enum struct IndexType : uint8_t
     {
-#define X(name) name,
-        RHI_INDEX_TYPE_LIST(X)
+#define UInt16(name) name,
+        RHI_INDEX_TYPE_LIST(UInt16)
 #undef X
     };
     IMPLEMENT_TO_STRING_TITANIUM(IndexType, RHI_INDEX_TYPE_LIST)
