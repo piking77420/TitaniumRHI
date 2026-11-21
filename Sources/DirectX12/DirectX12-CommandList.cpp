@@ -326,6 +326,28 @@ namespace TiRHI::DirectX12
         texture.setState(state);
     }
 
+    void CommandList::transitionResource(Buffer& buffer, ResourceState state)
+    {
+        const ResourceState current = buffer.getState();
+        if (state == current)
+            return;
+
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Transition.pResource = buffer.getNativeBufferFrame();
+        barrier.Transition.StateBefore = Private::toDirectX12(current);
+        barrier.Transition.StateAfter = Private::toDirectX12(state);
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        if (barrier.Transition.StateBefore == barrier.Transition.StateAfter)
+        {
+            buffer.setState(state);
+            return;
+        }
+
+        m_commandList->ResourceBarrier(1, &barrier);
+        buffer.setState(state);
+    }
+
     void CommandList::bindPipeline(const _GraphicPipeline& graphicPipeline)
     {
         BaseCommandList::bindPipeline(graphicPipeline);
@@ -525,6 +547,37 @@ namespace TiRHI::DirectX12
         destination.SubresourceIndex = 0;
 
         m_commandList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+    }
+
+    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
+    {
+        if (!m_device || !m_commandList || !buffer || data.empty())
+            return;
+
+        ID3D12Device* nativeDevice = m_device->getNativeDevice().Get();
+
+        D3D12MA::Allocator& allocator = Device::Private::getAllocator(*m_device);
+
+        ID3D12Resource* dst = buffer.getNativeBufferFrame();
+
+        const uint64_t size = data.size_bytes();
+
+        assert(size > 0);
+        assert(offset <= dst->GetDesc().Width);
+        assert(size <= dst->GetDesc().Width - offset);
+
+        DirectX12::Private::StagingBuffer stagingBuffer(*m_device, size, m_lastSubmissionValue);
+
+        assert(SUCCEEDED(stagingBuffer.operator bool()));
+
+        D3D12_RANGE readRange{0, 0};
+        if (std::byte* ptr = stagingBuffer.mapData())
+        {
+            std::memcpy(ptr, data.data(), size);
+            stagingBuffer.unmapData();
+        }
+        m_commandList->CopyBufferRegion(dst, offset, stagingBuffer.getBuffer(), 0, size);
+        buffer.setLastTimeLineUsedFrame(m_lastSubmissionValue);
     }
 
     void CommandList::resetOnRecord()

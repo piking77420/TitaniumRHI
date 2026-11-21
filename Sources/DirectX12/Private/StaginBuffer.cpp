@@ -56,7 +56,7 @@ namespace TiRHI::DirectX12::Private
         void* mapped = nullptr;
 
         const HRESULT mapHr = getBuffer()->Map(0, &readRange, &mapped);
-
+        assert(SUCCEEDED(mapHr));
         if (FAILED(mapHr))
         {
             reset();
