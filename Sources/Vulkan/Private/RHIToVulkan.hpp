@@ -90,6 +90,8 @@ namespace TiRHI::Vulkan::Private
     vk::VertexInputAttributeDescription
     toVulkan(const VertexInputAttributeDescription& vertexInputAttributeDescription);
 
+    vk::IndexType toVulkan(IndexType indexType);
+
 } // namespace TiRHI::Vulkan::Private
 
 #endif // TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H

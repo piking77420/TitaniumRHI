@@ -268,12 +268,12 @@ namespace TiRHI
             return true;
         }
 
-        bool onBindVertexBuffer()
+        bool onBindBuffer()
         {
             if (!m_recordState.graphicPipeline)
             {
-                RHI_LOG_ERROR(L"Cannot bind vertex buffer: no graphics pipeline is currently bound. "
-                              L"Bind a graphics pipeline before binding vertex buffers.",
+                RHI_LOG_ERROR(L"Cannot bind buffer: no graphics pipeline is currently bound. "
+                              L"Bind a graphics pipeline before binding buffers.",
                               _Derived::Api);
                 return false;
             }

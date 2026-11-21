@@ -767,6 +767,18 @@ namespace TiRHI
         auto operator<=>(const VertexInputAttributeDescription&) const = default;
     };
 
+#define RHI_INDEX_TYPE_LIST(X)                                                                                         \
+    X(Uint16)                                                                                                          \
+    X(Uint32)
+
+    enum struct IndexType : uint8_t
+    {
+#define X(name) name,
+        RHI_INDEX_TYPE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(IndexType, RHI_INDEX_TYPE_LIST)
+
     using LogCallBackSignature = void (*)(const std::wstring&, RhiApi, RhiMessageSeverity);
 
     struct RhiCreate

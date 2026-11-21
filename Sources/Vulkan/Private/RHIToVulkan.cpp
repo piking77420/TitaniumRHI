@@ -583,4 +583,22 @@ namespace TiRHI::Vulkan::Private
         return vkVertexInputAttributeDescription;
     }
 
+    vk::IndexType toVulkan(IndexType indexType)
+    {
+        switch (indexType)
+        {
+        case TiRHI::IndexType::Uint16:
+            return vk::IndexType::eUint16;
+        case TiRHI::IndexType::Uint32:
+            return vk::IndexType::eUint32;
+        default:
+            RHI_LOG_FATAL(
+                std::format(L"Unsupported RHI IndexType for vk::IndexType, IndexType = {}", toWString(indexType)),
+                RhiApi::Vulkan);
+            break;
+        }
+
+        return {};
+    }
+
 }

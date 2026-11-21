@@ -307,14 +307,29 @@ namespace TiRHI::Vulkan
         }
     }
 
-    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint32_t offset, Buffer& buffer)
+    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer)
     {
-        if (!onBindVertexBuffer())
+        if (!buffer) [[unlikely]]
+            return;
+
+        if (!onBindBuffer()) [[unlikely]]
+            return;
+
+        getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
+    }
+
+    void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
+    {
+        if (!buffer) [[unlikely]]
+            return;
+
+        if (!onBindBuffer()) [[unlikely]]
         {
             return;
         }
 
-        getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
+        getcurrentFrameCmb().bindIndexBuffer(buffer.getVkBufferFrame(), static_cast<vk::DeviceSize>(offset),
+                                             Vulkan::Private::toVulkan(format));
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
