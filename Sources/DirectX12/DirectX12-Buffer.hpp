@@ -50,6 +50,8 @@ namespace TiRHI::DirectX12
 
         ID3D12Resource* getNativeBufferFrame();
 
+        const TiRHI::DirectX12::Private::DescriptorHandle* getDescriptorHandleFrame() const;
+
         void setLastTimeLineUsedFrame(uint64_t timeLine);
 
     private:
@@ -62,10 +64,13 @@ namespace TiRHI::DirectX12
         };
 
         std::vector<AllocatedBuffer> m_allocatedBuffers;
+        std::vector<std::optional<TiRHI::DirectX12::Private::DescriptorHandle>> m_constantBufferViews;
 
         void destroy();
 
         AllocatedBuffer* getAllocatedBufferFrame();
+
+        bool createHandle();
     };
 } // namespace TiRHI::DirectX12
 

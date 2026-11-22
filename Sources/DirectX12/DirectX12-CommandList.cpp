@@ -388,13 +388,12 @@ namespace TiRHI::DirectX12
             std::visit(
                 overloads{[&](const DescriptorSet::SampledTexture& sampledTexture)
                           {
+                              if (!sampledTexture.texture || !sampledTexture.sampler)
+                                  return;
                               forEachShaderStage(
                                   sampledTexture.shaderStageFlag,
                                   [&]([[maybe_unused]] ShaderStageFlags stage, uint32_t index)
                                   {
-                                      if (!sampledTexture.texture || !sampledTexture.sampler)
-                                          return;
-
                                       std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleTexture =
                                           Texture::Private::getShaderRenderViewHandle(*sampledTexture.texture);
                                       std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleSampler =
@@ -420,6 +419,29 @@ namespace TiRHI::DirectX12
 
                                       sampledTexture.texture->setSubmissionValue(m_lastSubmissionValue);
                                       sampledTexture.sampler->setSubmissionValue(m_lastSubmissionValue);
+                                  });
+                          },
+                          [&](const DescriptorSet::ConstantBuffer& constantBuffer)
+                          {
+                              if (!constantBuffer.buffer)
+                                  return;
+
+                              const TiRHI::DirectX12::Private::DescriptorHandle* handleBuffer =
+                                  constantBuffer.buffer->getDescriptorHandleFrame();
+
+                              if (!handleBuffer)
+                                  return;
+
+                              forEachShaderStage(
+                                  constantBuffer.shaderStageFlag,
+                                  [&]([[maybe_unused]] ShaderStageFlags stage, uint32_t index)
+                                  {
+                                      auto& offsetAndCount =
+                                          spaceDescriptor.bindingsSetTableOffset[index][constantBuffer.bindingIndex];
+                                      auto& rootParameterBindingBuffer =
+                                          spaceDescriptor.rootParameterTable[index][offsetAndCount.offset];
+                                      m_commandList->SetGraphicsRootDescriptorTable(
+                                          rootParameterBindingBuffer.rootParameterIndex, handleBuffer->gpuHandle);
                                   });
                           },
                           [&](auto&& value)

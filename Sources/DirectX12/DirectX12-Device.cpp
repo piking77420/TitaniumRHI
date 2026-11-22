@@ -131,6 +131,7 @@ namespace TiRHI::DirectX12
             const MComPtr<IDXGIAdapter1>& adapter = nativeAdapter[m_adapterIndex];
 
             const bool success = createDevice(nativeAdapter[m_adapterIndex]);
+            m_adapter = adapters[m_adapterIndex];
             onCreateDeviceSuccess(adapters[m_adapterIndex], success);
             return success && initMemoryAllocator(adapter) &&
                    m_descriptorAllocatorRtv
@@ -381,7 +382,7 @@ namespace TiRHI::DirectX12
             WaitForSingleObjectEx(m_synchronization.frameFenceEvent, INFINITE, FALSE);
         }
 
-        deferredDeletionQueue.collect(completedValue);
+        m_deferredDeletionQueue.collect(completedValue);
     }
 
     void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)

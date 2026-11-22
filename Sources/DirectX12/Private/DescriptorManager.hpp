@@ -26,6 +26,7 @@ namespace TiRHI::DirectX12::Private
         // map rhiBinding to set
         RootParameterTable rootParameterTable;
         // offset for each set in each table of rootParameterTable
+        // Store
         BindingsSetTableOffset bindingsSetTableOffset;
 
         uint32_t pushConstantParameterIndex = 0;

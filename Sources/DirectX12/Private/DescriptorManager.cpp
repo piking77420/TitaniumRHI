@@ -124,9 +124,12 @@ namespace TiRHI::DirectX12::Private
     {
         if (!m_device)
             return nullptr;
-
+        // Create a view key
+        // that avoid to copy the actual binding as vector
         RootSignatureLayoutKeyView keyView{DescriptorSetLayoutEntries, pushConstant, true};
 
+        // if there already a root signature with same signature
+        // then return it
         auto it = m_rootSignatureMap.find(keyView);
         if (it != m_rootSignatureMap.end())
         {
@@ -155,20 +158,21 @@ namespace TiRHI::DirectX12::Private
                         {
                             using T = std::remove_cvref_t<decltype(value)>;
 
+                            auto getKey = [&](D3D12_DESCRIPTOR_RANGE_TYPE type) -> DescriptorRangeKey
+                            {
+                                DescriptorRangeKey descriptorRangeKey;
+                                descriptorRangeKey.type = type;
+                                descriptorRangeKey.count = value.count;
+                                descriptorRangeKey.bindingIndex = value.bindingIndex;
+                                descriptorRangeKey.setIndex = entry.setIndex;
+                                descriptorRangeKey.flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
+                                descriptorRangeKey.offset = 0;
+
+                                return descriptorRangeKey;
+                            };
+
                             if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::SampledTexture>)
                             {
-                                auto getKey = [&](D3D12_DESCRIPTOR_RANGE_TYPE type) -> DescriptorRangeKey
-                                {
-                                    DescriptorRangeKey descriptorRangeKey;
-                                    descriptorRangeKey.type = type;
-                                    descriptorRangeKey.count = value.count;
-                                    descriptorRangeKey.bindingIndex = value.bindingIndex;
-                                    descriptorRangeKey.setIndex = entry.setIndex;
-                                    descriptorRangeKey.flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
-                                    descriptorRangeKey.offset = 0;
-
-                                    return descriptorRangeKey;
-                                };
 
                                 const uint32_t textureRangeIndex = rangesBuilder.getOrCreateRangeIndex(
                                     getKey(D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_SRV));
@@ -201,6 +205,37 @@ namespace TiRHI::DirectX12::Private
                                         rangesBuilder.addReference(textureParameterIndex + 1, samplerRangeIndex);
                                     });
                             }
+                            else if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::ConstantBuffer>)
+                            {
+                                const uint32_t constantBufferRangeIndex = rangesBuilder.getOrCreateRangeIndex(
+                                    getKey(D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_CBV));
+
+                                forEachShaderStage(
+                                    value.shaderStageFlag,
+                                    [&](TiRHI::ShaderStageFlags flagBit, uint32_t index) -> void
+                                    {
+                                        auto& shaderStageBindings = bindingsSetTableOffset[index];
+                                        // TODO refactor
+                                        // in the rhi binding are made like vulkan which means
+                                        // there cannot have a duplicate binding index within an set
+                                        shaderStageBindings.resize(std::max(
+                                            value.bindingIndex + 1, static_cast<uint32_t>(shaderStageBindings.size())));
+
+                                        auto& offsetAndCount = shaderStageBindings[value.bindingIndex];
+
+                                        offsetAndCount.offset = rootParameterTable[index].size();
+                                        offsetAndCount.count = 1;
+                                        rootParameterTable[index].resize(rootParameterTable[index].size() + 1);
+
+                                        const uint32_t parameterIndex = static_cast<uint32_t>(parameters.size());
+                                        RootParameterMapping& rootParameterMapping =
+                                            rootParameterTable[index][rootParameterTable[index].size() - 1];
+                                        rootParameterMapping.rootParameterIndex = parameterIndex;
+
+                                        parameters.resize(parameters.size() + 1);
+                                        rangesBuilder.addReference(parameterIndex, constantBufferRangeIndex);
+                                    });
+                            }
                             else
                             {
                                 static_assert(sizeof(T) == 0, "Unsupported binding type");
@@ -216,6 +251,8 @@ namespace TiRHI::DirectX12::Private
         // Add root paremet type 32 at the end
         if (pushConstant)
         {
+            assert(pushConstant->size % sizeof(uint32_t) == 0);
+
             spaceDescriptor.pushConstantParameterIndex = static_cast<uint32_t>(parameters.size());
             auto& pushConstantParameter = parameters.emplace_back();
             pushConstantParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;

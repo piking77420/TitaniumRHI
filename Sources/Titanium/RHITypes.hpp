@@ -797,6 +797,16 @@ namespace TiRHI
         s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
     }
 
+    constexpr uint32_t alignUp(uint32_t size, uint32_t alignment)
+    {
+        return (size + alignment - 1) & ~(alignment - 1);
+    }
+
+    constexpr uint64_t alignUp(uint64_t size, uint64_t alignment)
+    {
+        return (size + alignment - 1) & ~(alignment - 1);
+    }
+
     constexpr size_t MaxFramesInFlight = 3;
 
 } // namespace TiRHI

@@ -11,12 +11,13 @@ namespace TiRHI::DirectX12
     class Device;
     class Texture;
     class Sampler;
+    class Buffer;
 
-    class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>
+    class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler, Buffer>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
-        using BaseType = typename BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler>;
+        using BaseType = typename BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler, Buffer>;
         using BindingsLayout = typename BaseType::BindingsLayout;
 
         DescriptorSet() = delete;

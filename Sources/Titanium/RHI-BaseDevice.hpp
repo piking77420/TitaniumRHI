@@ -49,10 +49,28 @@ namespace TiRHI
             return reinterpret_cast<T&>(*this);
         }
 
+        uint32_t alignConstantBuffer(uint32_t size)
+        {
+            if (m_adapter.getProperties().limits.minUniformBufferOffset == 0)
+                return 0;
+
+            alignUp(size, m_adapter.getProperties().limits.minUniformBufferOffset);
+        }
+
+        uint64_t alignConstantBuffer(uint64_t size)
+        {
+            if (m_adapter.getProperties().limits.minUniformBufferOffset == 0)
+                return 0;
+
+            alignUp(size, static_cast<uint64_t>(m_adapter.getProperties().limits.minUniformBufferOffset));
+        }
+
     protected:
         size_t m_adapterIndex = 0;
 
         std::vector<Adapter::Features> m_featuresEnable;
+
+        Adapter m_adapter;
 
         void onBuild(const std::span<const Adapter>& adapters, std::optional<size_t> index = {})
         {
