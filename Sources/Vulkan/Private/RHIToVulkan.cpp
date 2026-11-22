@@ -578,7 +578,7 @@ namespace TiRHI::Vulkan::Private
         vkVertexInputAttributeDescription.setBinding(vertexInputAttributeDescription.binding);
         vkVertexInputAttributeDescription.setFormat(toVulkan(vertexInputAttributeDescription.format))
             .setLocation(vertexInputAttributeDescription.location)
-            .setOffset(vertexInputAttributeDescription.binding);
+            .setOffset(vertexInputAttributeDescription.offset);
 
         return vkVertexInputAttributeDescription;
     }
