@@ -171,8 +171,44 @@ namespace TiRHI::DirectX12::Private
                                 return descriptorRangeKey;
                             };
 
+                            auto emplaceOffsetAndCountParameterTable =
+                                [&](uint32_t shaderTableIndex, size_t count, uint32_t bindingIndex)
+                            {
+                                auto& shaderStageBindingsOffset = bindingsSetTableOffset[shaderTableIndex];
+
+                                // in the rhi binding are made like vulkan which means
+                                // there cannot have a duplicate binding index within an set
+                                shaderStageBindingsOffset.resize(
+                                    std::max(static_cast<size_t>(bindingIndex) + 1, shaderStageBindingsOffset.size()));
+
+                                auto& offsetAndCount = shaderStageBindingsOffset[bindingIndex];
+
+                                offsetAndCount.offset = rootParameterTable[shaderTableIndex].size();
+                                offsetAndCount.count = count;
+
+                                rootParameterTable[shaderTableIndex].resize(offsetAndCount.offset + count);
+                            };
+
+                            auto pushRootParameter = [&](uint32_t shaderTableIndex, uint32_t rangeIndex,
+                                                         uint32_t offsetFromEnd, D3D12_SHADER_VISIBILITY visibility)
+                            {
+                                const uint32_t parameterIndex = static_cast<uint32_t>(parameters.size());
+
+                                RootParameterMapping& mapping =
+                                    rootParameterTable[shaderTableIndex]
+                                                      [rootParameterTable[shaderTableIndex].size() - offsetFromEnd];
+
+                                mapping.rootParameterIndex = parameterIndex;
+
+                                auto& parameter = parameters.emplace_back();
+                                parameter.ShaderVisibility = visibility;
+
+                                rangesBuilder.addReference(parameterIndex, rangeIndex);
+                            };
                             if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::SampledTexture>)
                             {
+                                // for texture and sampler
+                                constexpr uint32_t count = 2;
 
                                 const uint32_t textureRangeIndex = rangesBuilder.getOrCreateRangeIndex(
                                     getKey(D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_SRV));
@@ -184,57 +220,31 @@ namespace TiRHI::DirectX12::Private
                                     value.shaderStageFlag,
                                     [&](TiRHI::ShaderStageFlags flagBit, uint32_t index) -> void
                                     {
-                                        auto& offsetAndCount = bindingsSetTableOffset[index].emplace_back();
-                                        offsetAndCount.offset = rootParameterTable[index].size();
-                                        offsetAndCount.count = 2;
+                                        const D3D12_SHADER_VISIBILITY visibility = Private::toDirectX12(flagBit);
 
-                                        rootParameterTable[index].resize(rootParameterTable[index].size() + 2);
+                                        emplaceOffsetAndCountParameterTable(index, count, value.bindingIndex);
+                                        // SRV: second-to-last mapping
+                                        pushRootParameter(index, textureRangeIndex, 2u, visibility);
 
-                                        const uint32_t textureParameterIndex = static_cast<uint32_t>(parameters.size());
-                                        const uint32_t samplerParameterIndex = textureParameterIndex + 1;
-                                        RootParameterMapping& rootParameterMappingTexture =
-                                            rootParameterTable[index][rootParameterTable[index].size() - 2];
-                                        RootParameterMapping& rootParameterMappingSampler =
-                                            rootParameterTable[index][rootParameterTable[index].size() - 1];
-                                        rootParameterMappingTexture.rootParameterIndex = textureParameterIndex;
-                                        rootParameterMappingSampler.rootParameterIndex = samplerParameterIndex;
-
-                                        parameters.resize(parameters.size() + 2);
-
-                                        rangesBuilder.addReference(textureParameterIndex, textureRangeIndex);
-                                        rangesBuilder.addReference(textureParameterIndex + 1, samplerRangeIndex);
+                                        // Sampler: last mapping
+                                        pushRootParameter(index, samplerRangeIndex, 1u, visibility);
                                     });
                             }
                             else if constexpr (std::is_same_v<T, DirectX12::DescriptorSet::ConstantBuffer>)
                             {
+                                constexpr uint32_t count = 1;
                                 const uint32_t constantBufferRangeIndex = rangesBuilder.getOrCreateRangeIndex(
                                     getKey(D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_CBV));
 
-                                forEachShaderStage(
-                                    value.shaderStageFlag,
-                                    [&](TiRHI::ShaderStageFlags flagBit, uint32_t index) -> void
-                                    {
-                                        auto& shaderStageBindings = bindingsSetTableOffset[index];
-                                        // TODO refactor
-                                        // in the rhi binding are made like vulkan which means
-                                        // there cannot have a duplicate binding index within an set
-                                        shaderStageBindings.resize(std::max(
-                                            value.bindingIndex + 1, static_cast<uint32_t>(shaderStageBindings.size())));
+                                forEachShaderStage(value.shaderStageFlag,
+                                                   [&](TiRHI::ShaderStageFlags flagBit, uint32_t index) -> void
+                                                   {
+                                                       emplaceOffsetAndCountParameterTable(index, 1,
+                                                                                           value.bindingIndex);
 
-                                        auto& offsetAndCount = shaderStageBindings[value.bindingIndex];
-
-                                        offsetAndCount.offset = rootParameterTable[index].size();
-                                        offsetAndCount.count = 1;
-                                        rootParameterTable[index].resize(rootParameterTable[index].size() + 1);
-
-                                        const uint32_t parameterIndex = static_cast<uint32_t>(parameters.size());
-                                        RootParameterMapping& rootParameterMapping =
-                                            rootParameterTable[index][rootParameterTable[index].size() - 1];
-                                        rootParameterMapping.rootParameterIndex = parameterIndex;
-
-                                        parameters.resize(parameters.size() + 1);
-                                        rangesBuilder.addReference(parameterIndex, constantBufferRangeIndex);
-                                    });
+                                                       pushRootParameter(index, constantBufferRangeIndex, 1,
+                                                                         Private::toDirectX12(flagBit));
+                                                   });
                             }
                             else
                             {
