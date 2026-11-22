@@ -91,8 +91,8 @@ namespace TiRHI::Vulkan
 
         assert(adapters.size() == nativePhysicalDevice.size());
         std::vector<Adapter::Features> finalFeatures;
-
         // clang-format off
+        m_adapter = adapters[m_adapterIndex];
         return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
                createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 

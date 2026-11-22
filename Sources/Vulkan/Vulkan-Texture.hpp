@@ -68,7 +68,7 @@ namespace TiRHI::Vulkan
 
         VmaAllocation m_allocation = nullptr;
 
-        uint64_t m_submissionValue = 0;
+        uint64_t submissionValue = 0;
 
         bool build(Device& device, vk::Image image, Format format);
 

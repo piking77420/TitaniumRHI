@@ -1,7 +1,7 @@
 #ifndef TITANIUM_VULKAN_RENDER_PASS_DESCRIPTOR_H
 #define TITANIUM_VULKAN_RENDER_PASS_DESCRIPTOR_H
 
-#include <vulkan/vulkan.hpp>
+#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseRenderPassDescriptor.hpp>
 
 namespace TiRHI::Vulkan

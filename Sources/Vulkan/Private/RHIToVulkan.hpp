@@ -1,6 +1,10 @@
 #ifndef TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H
 #define TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H
 
+#if defined(_WIN32)
+#define NOMINMAX
+#endif
+
 #include <vulkan/vulkan.hpp>
 #include <Titanium/RHITypes.hpp>
 

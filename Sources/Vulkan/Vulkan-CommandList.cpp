@@ -298,6 +298,10 @@ namespace TiRHI::Vulkan
                         if (value.sampler)
                             value.sampler->setSubmissionValue(m_lastSubmissionValue);
                     }
+                    else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
+                    {
+                        value.buffer->setSubmissionValue(m_lastSubmissionValue);
+                    }
                     else
                     {
                         static_assert(AlwaysFalse<T>, "Unsupported descriptor binding type");

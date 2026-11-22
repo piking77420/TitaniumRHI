@@ -2,14 +2,12 @@
 #define TITANIUM_VULKAN_DEVICE_H
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
-#include <Volk/volk.h>
+#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
 #include <Private/DescriptorManager.hpp>
 #include <Titanium/Private/DeferredDeletionQueue.hpp>
-#include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
 {

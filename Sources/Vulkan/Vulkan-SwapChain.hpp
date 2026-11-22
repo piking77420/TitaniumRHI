@@ -1,7 +1,7 @@
 #ifndef TITANIUM_VULKAN_SWAPCHAIN_H
 #define TITANIUM_VULKAN_SWAPCHAIN_H
 
-#include <vulkan/vulkan.hpp>
+#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseSwapChain.hpp>
 #include <Vulkan/Vulkan-AcquiredFrame.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>

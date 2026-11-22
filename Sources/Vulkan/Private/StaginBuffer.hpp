@@ -22,6 +22,7 @@ namespace TiRHI::Vulkan::Private
         vk::Buffer buffer{};
         VmaAllocation allocation = VK_NULL_HANDLE;
         VmaAllocationInfo allocationInfo{};
+        uint64_t submissionValue = 0;
 
         AllocatedBuffer() = default;
         ~AllocatedBuffer() = default;
@@ -93,7 +94,6 @@ namespace TiRHI::Vulkan::Private
         AllocatedBuffer m_allocatedBuffer;
         std::byte* m_mappedData = nullptr;
         uint64_t m_size = 0;
-        uint64_t m_submissionValue = 0;
 
         void reset();
     };

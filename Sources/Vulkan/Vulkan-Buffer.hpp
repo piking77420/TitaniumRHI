@@ -49,12 +49,20 @@ namespace TiRHI::Vulkan
 
         void setSubmissionValue(uint64_t timeLine);
 
+        std::span<Vulkan::Private::AllocatedBuffer> getAllocatedBuffer()
+        {
+            return m_allocatedBuffer;
+        }
+
+        std::span<const Vulkan::Private::AllocatedBuffer> getAllocatedBuffer() const
+        {
+            return m_allocatedBuffer;
+        }
+
     private:
         Device* m_device = nullptr;
 
         std::vector<Vulkan::Private::AllocatedBuffer> m_allocatedBuffer;
-
-        std::vector<uint64_t> m_lastTimeLineUsed;
 
         bool build(Device& device, vk::Image image, Format format);
 

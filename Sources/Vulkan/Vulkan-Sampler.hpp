@@ -33,7 +33,7 @@ namespace TiRHI::Vulkan
 
         void setSubmissionValue(uint64_t value)
         {
-            m_submissionValue = value;
+            submissionValue = value;
         }
 
     private:
@@ -43,7 +43,7 @@ namespace TiRHI::Vulkan
 
         vk::UniqueSampler m_sampler;
 
-        uint64_t m_submissionValue = 0;
+        uint64_t submissionValue = 0;
     };
 
 } // namespace TiRHI::Vulkan
