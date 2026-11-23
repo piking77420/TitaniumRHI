@@ -91,8 +91,8 @@ namespace TiRHI::Vulkan
 
         assert(adapters.size() == nativePhysicalDevice.size());
         std::vector<Adapter::Features> finalFeatures;
-
         // clang-format off
+        m_adapter = adapters[m_adapterIndex];
         return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
                createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
@@ -184,10 +184,6 @@ namespace TiRHI::Vulkan
             m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
         }
         getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
-
-        for (const auto& desc : submitPresentDesc)
-            if (desc.commandList)
-                CommandList::Private::setLastSubmissionValue(*desc.commandList, submissionValue);
 
         m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
 
@@ -376,7 +372,7 @@ namespace TiRHI::Vulkan
         return true;
     }
 
-    uint64_t Device::Private::getCurrentFrameSubmissionValue(const Device& device)
+    uint64_t Device::Private::getNextSubmissionValue(const Device& device)
     {
         const size_t currentFrame = device.getRHI().getCurrentFrame();
 

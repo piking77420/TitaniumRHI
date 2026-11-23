@@ -2,14 +2,12 @@
 #define TITANIUM_VULKAN_DEVICE_H
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
-#include <Volk/volk.h>
+#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseDevice.hpp>
 #include <Titanium/RHI-Adapter.hpp>
 #include <Private/DeviceQueueFamily.hpp>
 #include <Private/DescriptorManager.hpp>
 #include <Titanium/Private/DeferredDeletionQueue.hpp>
-#include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
 {
@@ -59,7 +57,7 @@ namespace TiRHI::Vulkan
                 return device.m_descriporManager;
             }
 
-            static uint64_t getCurrentFrameSubmissionValue(const Device& device);
+            static uint64_t getNextSubmissionValue(const Device& device);
 
             static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
             {

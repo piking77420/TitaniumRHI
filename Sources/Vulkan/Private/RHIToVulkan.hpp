@@ -1,6 +1,10 @@
 #ifndef TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H
 #define TITANIUM_VULKAN_PRIVATE_RHI_TO_VULKAN_H
 
+#if defined(_WIN32)
+#define NOMINMAX
+#endif
+
 #include <vulkan/vulkan.hpp>
 #include <Titanium/RHITypes.hpp>
 
@@ -82,6 +86,15 @@ namespace TiRHI::Vulkan::Private
     vk::ImageAspectFlags imageAspectFlagBitsFromFormat(Format format);
 
     vk::BufferUsageFlags toVulkan(BufferUsage usage);
+
+    vk::VertexInputRate toVulkan(VertexInputRate vertexInputRate);
+
+    vk::VertexInputBindingDescription toVulkan(const VertexBindingDescription& vertexBindingDescription);
+
+    vk::VertexInputAttributeDescription
+    toVulkan(const VertexInputAttributeDescription& vertexInputAttributeDescription);
+
+    vk::IndexType toVulkan(IndexType indexType);
 
 } // namespace TiRHI::Vulkan::Private
 

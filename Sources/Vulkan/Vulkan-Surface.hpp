@@ -1,6 +1,10 @@
 #ifndef TITANIUM_VULKAN_SURFACE_H
 #define TITANIUM_VULKAN_SURFACE_H
 
+#if defined(_WIN32)
+#define NOMINMAX
+#endif
+
 #include <Titanium/RHI-Surface.hpp>
 #include <Titanium/RHITypes.hpp>
 #include <vulkan/vulkan.hpp>

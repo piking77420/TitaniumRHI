@@ -14,14 +14,12 @@ namespace TiRHI::Vulkan::Private
         , m_allocatedBuffer(std::exchange(other.m_allocatedBuffer, {}))
         , m_mappedData(std::exchange(other.m_mappedData, nullptr))
         , m_size(std::exchange(other.m_size, 0))
-        , m_submissionValue(std::exchange(other.m_submissionValue, 0))
     {
     }
 
     StagingBuffer::StagingBuffer(Device& device, uint64_t size, uint64_t timeLineFrame)
         : m_deferredDeletionQueue(Device::Private::getDeferredDeletionQueue(device))
         , m_allocator(Device::Private::getAllocator(device))
-        , m_submissionValue(timeLineFrame)
         , m_size(size)
     {
         if (size == 0)
@@ -53,6 +51,7 @@ namespace TiRHI::Vulkan::Private
         m_allocatedBuffer.buffer = vk::Buffer(nativeBuffer);
         m_allocatedBuffer.allocation = allocation;
         m_allocatedBuffer.allocationInfo = allocationInfo;
+        m_allocatedBuffer.submissionValue = timeLineFrame;
     }
 
     std::byte* StagingBuffer::mapData() noexcept
@@ -95,12 +94,14 @@ namespace TiRHI::Vulkan::Private
             unmapData();
 
         if (m_allocatedBuffer)
+        {
+            const uint64_t retireValue = m_allocatedBuffer.submissionValue;
             m_deferredDeletionQueue.retire(
-                m_submissionValue, [allocator = m_allocator, allocatedBuffer = std::move(m_allocatedBuffer)]()
+                retireValue, [allocator = m_allocator, allocatedBuffer = std::move(m_allocatedBuffer)]()
                 { vmaDestroyBuffer(allocator, allocatedBuffer.buffer, allocatedBuffer.allocation); });
+        }
 
         m_allocator = nullptr;
         m_size = 0;
-        m_submissionValue = 0;
     }
 }

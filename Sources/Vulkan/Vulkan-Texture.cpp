@@ -121,7 +121,7 @@ namespace TiRHI::Vulkan
                 Device::Private::getDeferredDeletionQueue(*m_device);
 
             deferredDeletionQueue.retire(
-                m_submissionValue, [allocator = Device::Private::getAllocator(*m_device), image = std::move(m_image),
+                submissionValue, [allocator = Device::Private::getAllocator(*m_device), image = std::move(m_image),
                                     allocation = std::move(m_allocation), view = std::move(m_uniqueView)]()
                 { vmaDestroyImage(allocator, static_cast<VkImage>(image), allocation); });
         }
@@ -131,17 +131,17 @@ namespace TiRHI::Vulkan
             TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
                 Device::Private::getDeferredDeletionQueue(*m_device);
 
-            deferredDeletionQueue.retire(m_submissionValue, [view = std::move(m_uniqueView)]() {});
+            deferredDeletionQueue.retire(submissionValue, [view = std::move(m_uniqueView)]() {});
         }
 
         m_image = vk::Image{};
         m_allocation = nullptr;
-        m_submissionValue = 0;
+        submissionValue = 0;
     }
 
     void Texture::setSubmissionValue(uint64_t value)
     {
-        m_submissionValue = value;
+        submissionValue = value;
     }
 
 } // namespace TiRHI::Vulkan

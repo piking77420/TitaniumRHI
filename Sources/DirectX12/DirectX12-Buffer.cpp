@@ -95,7 +95,7 @@ namespace TiRHI::DirectX12
         }
 
         m_device = &device;
-        return true;
+        return createHandle();
     }
 
     std::byte* Buffer::beginDynamicUpdate()
@@ -162,6 +162,18 @@ namespace TiRHI::DirectX12
         return m_allocatedBuffers.size() >= (index + 1) ? m_allocatedBuffers[index].allocation->GetResource() : nullptr;
     }
 
+    const TiRHI::DirectX12::Private::DescriptorHandle* Buffer::getDescriptorHandleFrame() const
+    {
+        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+
+        if (index >= m_constantBufferViews.size())
+            return nullptr;
+
+        const auto& descriptor = m_constantBufferViews[index];
+
+        return descriptor ? &descriptor.value() : nullptr;
+    }
+
     void Buffer::setLastTimeLineUsedFrame(uint64_t timeLine)
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
@@ -174,12 +186,12 @@ namespace TiRHI::DirectX12
         if (!m_device)
             return;
 
-        TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
+        TiRHI::Private::DeferredDeletionQueue& m_deferredDeletionQueue =
             Device::Private::getDeferredDeletionQueue(*m_device);
 
         for (AllocatedBuffer& allocatedBuffer : m_allocatedBuffers)
         {
-            deferredDeletionQueue.retire(allocatedBuffer.lastTimeLineUsed,
+            m_deferredDeletionQueue.retire(allocatedBuffer.lastTimeLineUsed,
                                          [allocation = std::move(allocatedBuffer.allocation)]() mutable
                                          { allocation.Reset(); });
         }
@@ -189,6 +201,35 @@ namespace TiRHI::DirectX12
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
         return m_allocatedBuffers.size() >= (index + 1) ? &m_allocatedBuffers[index] : nullptr;
+    }
+
+    bool Buffer::createHandle()
+    {
+        if (!m_device)
+            return false;
+
+        m_constantBufferViews.reserve(m_allocatedBuffers.size());
+
+        for (size_t i = 0; i < m_allocatedBuffers.size(); i++)
+        {
+            auto& alloc = m_allocatedBuffers[i];
+            if (!alloc.allocation)
+                return false;
+
+            if ((getUsage() & BufferUsage::Constant) != BufferUsage::None)
+            {
+                auto& handle = m_constantBufferViews.emplace_back(
+                    Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).create(*m_device));
+                if (!handle)
+                    return false;
+
+                D3D12_CONSTANT_BUFFER_VIEW_DESC desc{};
+                desc.BufferLocation = alloc.allocation->GetResource()->GetGPUVirtualAddress();
+                desc.SizeInBytes = getSize();
+                m_device->getNativeDevice()->CreateConstantBufferView(&desc, handle->cpuHandle);
+            }
+        }
+        return true;
     }
 
 } // namespace TiRHI::DirectX12

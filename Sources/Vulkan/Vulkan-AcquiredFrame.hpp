@@ -1,7 +1,7 @@
 #ifndef TITANIUM_VULKAN_ACQUIRE_FRAME_H
 #define TITANIUM_VULKAN_ACQUIRE_FRAME_H
 
-#include <vulkan/vulkan.hpp>
+#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseAcquiredFrame.hpp>
 
 namespace TiRHI::Vulkan

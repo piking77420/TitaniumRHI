@@ -18,7 +18,14 @@ namespace TiRHI::Vulkan
     {
     }
 
-    SwapChain::~SwapChain() = default;
+    SwapChain::~SwapChain()
+    {
+        if (!m_device)
+            return;
+
+        // we need to wiat that all present work has to finish before destroying swapchian
+        m_presentQueue.waitIdle();
+    }
 
     SwapChain::SwapChain(SwapChain&& other) noexcept
         : SwapChain(other.getRHI())
@@ -59,6 +66,7 @@ namespace TiRHI::Vulkan
             RHI_LOG_ERROR(L"Failed to retreive device present queue", RhiApi::Vulkan);
             return false;
         }
+        m_device = &device;
 
         return recreateSwapChain(device, surface) && createSyncObjects(device.getNativeDevice());
     }
@@ -97,6 +105,7 @@ namespace TiRHI::Vulkan
             .setSwapChainImageIndex(m_imageIndex)
             .setSwapChain(m_swapchain.get());
         // clang-format on
+        m_submisionValue = Device::Private::getNextSubmissionValue(device);
         return acquiredFrame;
     }
 
@@ -183,7 +192,7 @@ namespace TiRHI::Vulkan
 
         if (!m_swapchain)
         {
-            RHI_LOG_ERROR(std::format(L"Failed to create SwapChain {}", getNameW()), RhiApi::Vulkan);
+            RHI_LOG_FATAL(std::format(L"Failed to create SwapChain {}", getNameW()), RhiApi::Vulkan);
             return false;
         }
 
@@ -202,6 +211,9 @@ namespace TiRHI::Vulkan
             }
         }
 
+        auto& defferedQueue = Device::Private::getDeferredDeletionQueue(*m_device);
+        // we need to wiat that all present work has to finish before destroying swapchian
+        m_presentQueue.waitIdle();
         return createRenderTargets(device);
     }
 

@@ -14,12 +14,13 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TTexture, typename TSampler>
+    template<typename T, typename TRHI, typename TTexture, typename TSampler, typename TBuffer>
     class BaseDescriptorSet : public Object<T, TRHI>
     {
     public:
         using Texture = TTexture;
         using Sampler = TSampler;
+        using _Buffer = TBuffer;
 
         struct BaseBinding
         {
@@ -48,7 +49,13 @@ namespace TiRHI
         };
         // TODO add storage texrture for compute
 
-        using Binding = std::variant<SampledTexture>;
+        struct ConstantBuffer : public BaseBinding
+        {
+            _Buffer* buffer{nullptr};
+            auto operator<=>(const ConstantBuffer&) const = default;
+        };
+
+        using Binding = std::variant<SampledTexture, ConstantBuffer>;
 
         struct BindingsLayout
         {
@@ -150,7 +157,7 @@ namespace TiRHI
         BaseDescriptorSet(TRHI& rhi)
             : Object<T, TRHI>(rhi)
         {
-            static_assert(std::derived_from<T, BaseDescriptorSet<T, TRHI, TTexture, TSampler>>);
+            static_assert(std::derived_from<T, BaseDescriptorSet<T, TRHI, TTexture, TSampler, _Buffer>>);
         }
 
         T& bindSampledTexture(ShaderStageFlags shaderStageFlags, Texture* texture, Sampler* sampler,
@@ -165,6 +172,22 @@ namespace TiRHI
                 sampledTexture.shaderStageFlag = shaderStageFlags;
                 sampledTexture.texture = texture;
                 sampledTexture.sampler = sampler;
+            }
+
+            return static_cast<T&>(*this);
+        };
+
+        T& bindConstantBuffer(ShaderStageFlags shaderStageFlags, _Buffer* buffer, uint32_t bindingIndex,
+                              uint32_t count = 1)
+        {
+            if (buffer)
+            {
+                Binding& binding = m_bindingsLayout.bindings.emplace_back();
+                ConstantBuffer& constantBuffer = binding.emplace<ConstantBuffer>();
+                constantBuffer.bindingIndex = bindingIndex;
+                constantBuffer.count = count;
+                constantBuffer.shaderStageFlag = shaderStageFlags;
+                constantBuffer.buffer = buffer;
             }
 
             return static_cast<T&>(*this);

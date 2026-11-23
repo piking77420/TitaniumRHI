@@ -4,7 +4,7 @@
 #include <set>
 #include <string>
 
-#include <vulkan/vulkan.hpp>
+#include <Vulkan/Vulkan-Header.hpp>
 
 #include <Titanium/RHITypes.hpp>
 

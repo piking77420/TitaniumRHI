@@ -65,7 +65,7 @@ namespace TiRHI::DirectX12
 
             static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
             {
-                return device.deferredDeletionQueue;
+                return device.m_deferredDeletionQueue;
             }
         };
 
@@ -125,13 +125,17 @@ namespace TiRHI::DirectX12
 
         } m_synchronization;
 
-        TiRHI::Private::DeferredDeletionQueue deferredDeletionQueue;
         MComPtr<D3D12MA::Allocator> m_allocator;
+
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorRtv;
+
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
+
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorCbvSrvUav;
 
         DirectX12::Private::DescriptorManager m_descritproManager;
+
+        TiRHI::Private::DeferredDeletionQueue m_deferredDeletionQueue;
 
         bool createDevice(const MComPtr<IDXGIAdapter1>& adapter1);
 

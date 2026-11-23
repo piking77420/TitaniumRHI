@@ -11,6 +11,7 @@
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-EnumToString.hpp>
 #include <Titanium/RHITypes.hpp>
+#include <Titanium/Log.hpp>
 
 namespace TiRHI
 {
@@ -53,11 +54,11 @@ namespace TiRHI
 
         T& setDescriptorSetLayoutEntries(const std::span<const DescriptorSetLayoutEntry>& descriptorSetLayoutEntries)
         {
-            m_DescriptorSetLayoutEntries.clear();
-            m_DescriptorSetLayoutEntries.reserve(descriptorSetLayoutEntries.size());
+            m_descriptorSetLayoutEntries.clear();
+            m_descriptorSetLayoutEntries.reserve(descriptorSetLayoutEntries.size());
             for (const auto& layout : descriptorSetLayoutEntries)
             {
-                m_DescriptorSetLayoutEntries.emplace_back(layout);
+                m_descriptorSetLayoutEntries.emplace_back(layout);
             }
 
             return static_cast<T&>(*this);
@@ -65,7 +66,7 @@ namespace TiRHI
 
         std::span<const DescriptorSetLayoutEntry> getDescriptorSetLayoutEntries() const
         {
-            return m_DescriptorSetLayoutEntries;
+            return m_descriptorSetLayoutEntries;
         }
 
         T& setPushConstant(PushConstant pushConstant)
@@ -121,7 +122,7 @@ namespace TiRHI
         {
             uint32_t maxIndex = 0;
 
-            for (const auto& [layout, setIndex] : m_DescriptorSetLayoutEntries)
+            for (const auto& [layout, setIndex] : m_descriptorSetLayoutEntries)
                 maxIndex = std::max(maxIndex, setIndex);
 
             return maxIndex;
@@ -130,7 +131,7 @@ namespace TiRHI
     private:
         std::vector<BinaryModule> m_binaryModule;
 
-        std::vector<DescriptorSetLayoutEntry> m_DescriptorSetLayoutEntries;
+        std::vector<DescriptorSetLayoutEntry> m_descriptorSetLayoutEntries;
 
         std::optional<PushConstant> m_pushConstant;
     };
@@ -140,6 +141,7 @@ namespace TiRHI
     class BaseGraphicPipiline : public BasePipeline<T, TRHI, TDescriptorSet>
     {
     public:
+        using _Derived = T;
         using _RenderPassDescriptor = TRenderPassDescriptor;
 
         BaseGraphicPipiline() = delete;
@@ -210,6 +212,53 @@ namespace TiRHI
             return m_frontFace;
         }
 
+        T& setVertexBindingDescription(std::span<const VertexBindingDescription> newVertexBindingDescriptions)
+        {
+            m_vertexBindingDescriptions.clear();
+            m_vertexBindingDescriptions.assign(newVertexBindingDescriptions.begin(),
+                                               newVertexBindingDescriptions.end());
+            return static_cast<T&>(*this);
+        }
+
+        std::span<const VertexBindingDescription> getVertexBindingDescription() const
+        {
+            return m_vertexBindingDescriptions;
+        }
+
+        T& setVertexInputAttributeDescription(
+            std::span<const VertexInputAttributeDescription> newVertexInputAttributeDescription)
+        {
+            m_vertexInputAttributeDescriptions.clear();
+            m_vertexInputAttributeDescriptions.assign(newVertexInputAttributeDescription.begin(),
+                                                      newVertexInputAttributeDescription.end());
+            return static_cast<T&>(*this);
+        }
+
+        std::span<const VertexInputAttributeDescription> getVertexInputAttributeDescription() const
+        {
+            return m_vertexInputAttributeDescriptions;
+        }
+
+    protected:
+        bool sanityCheck()
+        {
+            const auto bindings = getVertexBindingDescription();
+            const auto attributes = getVertexInputAttributeDescription();
+
+            if (bindings.empty() != attributes.empty())
+            {
+                RHI_LOG_ERROR(std::format(L"Graphics pipeline '{}': Invalid vertex input layout. "
+                                          L"Vertex bindings and vertex attributes must both be defined "
+                                          L"or both be empty (bindings: {}, attributes: {}).",
+                                          this->getNameW(), bindings.size(), attributes.size()),
+                              _Derived::Api);
+
+                return false;
+            }
+
+            return true;
+        }
+
     private:
         const _RenderPassDescriptor* m_renderPassDescritptor = nullptr;
 
@@ -220,6 +269,10 @@ namespace TiRHI
         CullModeFlag m_cullModeFlag = CullModeFlag::None;
 
         FrontFace m_frontFace = FrontFace::CounterClockwise;
+
+        std::vector<VertexBindingDescription> m_vertexBindingDescriptions;
+
+        std::vector<VertexInputAttributeDescription> m_vertexInputAttributeDescriptions;
     };
 
 } // namespace TiRHI

@@ -50,6 +50,7 @@ namespace TiRHI
     class BaseCommandList : public Object<T, TRHI>
     {
     public:
+        using _Derived = T;
         using _RenderPassDescriptor = TRenderPassDescriptor;
         using _RenderTarget = TRenderTarget;
         using _GraphicPipeline = TGraphicPipeline;
@@ -264,6 +265,19 @@ namespace TiRHI
             }
 
             m_recordState.descriptorSet = &_DescriptorSet;
+            return true;
+        }
+
+        bool onBindBuffer()
+        {
+            if (!m_recordState.graphicPipeline)
+            {
+                RHI_LOG_ERROR(L"Cannot bind buffer: no graphics pipeline is currently bound. "
+                              L"Bind a graphics pipeline before binding buffers.",
+                              _Derived::Api);
+                return false;
+            }
+
             return true;
         }
     };

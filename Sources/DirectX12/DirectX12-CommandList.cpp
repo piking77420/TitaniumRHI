@@ -326,6 +326,28 @@ namespace TiRHI::DirectX12
         texture.setState(state);
     }
 
+    void CommandList::transitionResource(Buffer& buffer, ResourceState state)
+    {
+        const ResourceState current = buffer.getState();
+        if (state == current)
+            return;
+
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Transition.pResource = buffer.getNativeBufferFrame();
+        barrier.Transition.StateBefore = Private::toDirectX12(current);
+        barrier.Transition.StateAfter = Private::toDirectX12(state);
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        if (barrier.Transition.StateBefore == barrier.Transition.StateAfter)
+        {
+            buffer.setState(state);
+            return;
+        }
+
+        m_commandList->ResourceBarrier(1, &barrier);
+        buffer.setState(state);
+    }
+
     void CommandList::bindPipeline(const _GraphicPipeline& graphicPipeline)
     {
         BaseCommandList::bindPipeline(graphicPipeline);
@@ -366,13 +388,12 @@ namespace TiRHI::DirectX12
             std::visit(
                 overloads{[&](const DescriptorSet::SampledTexture& sampledTexture)
                           {
+                              if (!sampledTexture.texture || !sampledTexture.sampler)
+                                  return;
                               forEachShaderStage(
                                   sampledTexture.shaderStageFlag,
                                   [&]([[maybe_unused]] ShaderStageFlags stage, uint32_t index)
                                   {
-                                      if (!sampledTexture.texture || !sampledTexture.sampler)
-                                          return;
-
                                       std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleTexture =
                                           Texture::Private::getShaderRenderViewHandle(*sampledTexture.texture);
                                       std::optional<TiRHI::DirectX12::Private::DescriptorHandle> handleSampler =
@@ -400,10 +421,76 @@ namespace TiRHI::DirectX12
                                       sampledTexture.sampler->setSubmissionValue(m_lastSubmissionValue);
                                   });
                           },
+                          [&](const DescriptorSet::ConstantBuffer& constantBuffer)
+                          {
+                              if (!constantBuffer.buffer)
+                                  return;
+
+                              const TiRHI::DirectX12::Private::DescriptorHandle* handleBuffer =
+                                  constantBuffer.buffer->getDescriptorHandleFrame();
+
+                              if (!handleBuffer)
+                                  return;
+
+                              forEachShaderStage(
+                                  constantBuffer.shaderStageFlag,
+                                  [&]([[maybe_unused]] ShaderStageFlags stage, uint32_t index)
+                                  {
+                                      auto& offsetAndCount =
+                                          spaceDescriptor.bindingsSetTableOffset[index][constantBuffer.bindingIndex];
+                                      auto& rootParameterBindingBuffer =
+                                          spaceDescriptor.rootParameterTable[index][offsetAndCount.offset];
+                                      m_commandList->SetGraphicsRootDescriptorTable(
+                                          rootParameterBindingBuffer.rootParameterIndex, handleBuffer->gpuHandle);
+                                  });
+                          },
                           [&](auto&& value)
                           { static_assert(AlwaysFalse<decltype(value)>, "Unsupported binding type"); }},
                 binding);
         }
+    }
+
+    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer)
+    {
+        if (!onBindBuffer())
+        {
+            return;
+        }
+
+        std::span<const uint32_t> stridesPerBinding = m_recordState.graphicPipeline->getStridesPerBinding();
+
+        if (stridesPerBinding.size() <= bindingIndex)
+        {
+            RHI_LOG_ERROR(std::format(L"Cannot bind vertex buffer at binding {}: graphics pipeline '{}' "
+                                      L"has no valid vertex stride for this binding.",
+                                      bindingIndex, m_recordState.graphicPipeline->getNameW()),
+                          _Derived::Api);
+        }
+
+        D3D12_VERTEX_BUFFER_VIEW view{};
+        view.BufferLocation = buffer.getNativeBufferFrame()->GetGPUVirtualAddress() + offset;
+        view.SizeInBytes = buffer.getSize();
+        view.StrideInBytes = stridesPerBinding[bindingIndex];
+
+        m_commandList->IASetVertexBuffers(bindingIndex, 1, &view);
+    }
+
+    void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
+    {
+        if (!buffer)
+            return;
+
+        if (!onBindBuffer())
+        {
+            return;
+        }
+
+        D3D12_INDEX_BUFFER_VIEW view{};
+        view.BufferLocation = buffer.getNativeBufferFrame()->GetGPUVirtualAddress() + offset;
+        view.SizeInBytes = buffer.getSize();
+        view.Format = DirectX12::Private::toDirectX12(format);
+
+        m_commandList->IASetIndexBuffer(&view);
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -500,6 +587,37 @@ namespace TiRHI::DirectX12
         destination.SubresourceIndex = 0;
 
         m_commandList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+    }
+
+    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
+    {
+        if (!m_device || !m_commandList || !buffer || data.empty())
+            return;
+
+        ID3D12Device* nativeDevice = m_device->getNativeDevice().Get();
+
+        D3D12MA::Allocator& allocator = Device::Private::getAllocator(*m_device);
+
+        ID3D12Resource* dst = buffer.getNativeBufferFrame();
+
+        const uint64_t size = data.size_bytes();
+
+        assert(size > 0);
+        assert(offset <= dst->GetDesc().Width);
+        assert(size <= dst->GetDesc().Width - offset);
+
+        DirectX12::Private::StagingBuffer stagingBuffer(*m_device, size, m_lastSubmissionValue);
+
+        assert(SUCCEEDED(stagingBuffer.operator bool()));
+
+        D3D12_RANGE readRange{0, 0};
+        if (std::byte* ptr = stagingBuffer.mapData())
+        {
+            std::memcpy(ptr, data.data(), size);
+            stagingBuffer.unmapData();
+        }
+        m_commandList->CopyBufferRegion(dst, offset, stagingBuffer.getBuffer(), 0, size);
+        buffer.setLastTimeLineUsedFrame(m_lastSubmissionValue);
     }
 
     void CommandList::resetOnRecord()

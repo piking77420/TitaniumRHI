@@ -1,6 +1,10 @@
 #ifndef TITANIUM_VULKAN_PRIVATE_DEVICE_QUEUE_PROPERTIES_H
 #define TITANIUM_VULKAN_PRIVATE_DEVICE_QUEUE_PROPERTIES_H
 
+#if defined(_WIN32)
+#define NOMINMAX
+#endif
+
 #include <span>
 #include <vector>
 #include <vulkan/vulkan.hpp>

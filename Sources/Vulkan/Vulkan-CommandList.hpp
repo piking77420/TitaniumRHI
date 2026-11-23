@@ -4,8 +4,8 @@
 #include <optional>
 #include <memory_resource>
 #include <map>
-#include <Volk/volk.h>
-#include <Vulkan/vulkan.hpp>
+
+#include <Vulkan/Vulkan-Header.hpp>
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <Vulkan/Vulkan-RenderTargets.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
@@ -36,7 +36,7 @@ namespace TiRHI::Vulkan
         {
             static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
             {
-                commandlist.m_lastSubmissionValue = lastSubmissionValue;
+                commandlist.m_submissionValue = lastSubmissionValue;
             }
         };
 
@@ -60,12 +60,17 @@ namespace TiRHI::Vulkan
 
         void setScissors(const Rect2D& rect2d);
 
-        // TODO make some overload for batching barriers
         void transitionResource(Texture& texture, ResourceState state);
+
+        void transitionResource(Buffer& buffer, ResourceState state);
 
         void bindPipeline(const GraphicPipeline& graphicPipeline);
 
         void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+
+        void bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer);
+
+        void bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format);
 
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
@@ -75,6 +80,8 @@ namespace TiRHI::Vulkan
         void pushConstant(void* data, uint32_t size);
 
         void upload2d(Texture& texture, std::span<const std::byte> data);
+
+        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 
@@ -94,9 +101,11 @@ namespace TiRHI::Vulkan
 
         Device* m_device{nullptr}; // TODO fix this ugly
 
-        uint64_t m_lastSubmissionValue = 0;
+        uint64_t m_submissionValue = 0;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
+
+        static vk::BufferMemoryBarrier makeBufferBarrier(Buffer& buffer, ResourceState current, ResourceState target);
     };
 
 } // namespace TiRHI::Vulkan

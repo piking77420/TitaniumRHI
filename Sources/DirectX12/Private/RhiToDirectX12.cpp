@@ -42,6 +42,9 @@ namespace TiRHI::DirectX12::Private
         case Format::R32G32Float:
             return DXGI_FORMAT_R32G32_FLOAT;
 
+        case Format::R32G32B32Float:
+            return DXGI_FORMAT_R32G32B32_FLOAT;
+
         case Format::R32G32B32A32Float:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
 
@@ -355,6 +358,42 @@ namespace TiRHI::DirectX12::Private
         {
             dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
+    }
+
+    D3D12_INPUT_CLASSIFICATION toDirectX12(VertexInputRate vertexInputRate)
+    {
+        switch (vertexInputRate)
+        {
+        case TiRHI::VertexInputRate::Vertex:
+            return D3D12_INPUT_CLASSIFICATION::D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+        case TiRHI::VertexInputRate::Instance:
+            return D3D12_INPUT_CLASSIFICATION::D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+        default:
+            RHI_LOG_FATAL(
+                std::format(L"Unsupported RHI VertexInputRate, VertexInputRate = {}", toWString(vertexInputRate)),
+                RhiApi::DirectX12);
+        }
+
+        return {};
+    }
+
+    DXGI_FORMAT toDirectX12(IndexType type)
+    {
+        switch (type)
+        {
+        case IndexType::UInt16:
+            return DXGI_FORMAT_R16_UINT;
+
+        case IndexType::UInt32:
+            return DXGI_FORMAT_R32_UINT;
+
+        default:
+            RHI_LOG_FATAL(std::format(L"Unsupported RHI IndexType, IndexType = {}", toWString(type)),
+                          RhiApi::DirectX12);
+            return DXGI_FORMAT_UNKNOWN;
+        }
+
+        return DXGI_FORMAT_UNKNOWN;
     }
 
 } // namespace TiRHI::DirectX12::Private

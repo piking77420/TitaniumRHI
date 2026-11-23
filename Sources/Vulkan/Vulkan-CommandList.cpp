@@ -14,6 +14,23 @@
 
 namespace TiRHI::Vulkan
 {
+    [[nodiscard]]
+    constexpr bool isValidBufferState(ResourceState state) noexcept
+    {
+        switch (state)
+        {
+        case ResourceState::RenderTarget:
+        case ResourceState::DepthWrite:
+        case ResourceState::DepthRead:
+        case ResourceState::Present:
+        case ResourceState::Count:
+            return false;
+
+        default:
+            return true;
+        }
+    }
+
     CommandList::CommandList(RHI& rhi)
         : BaseCommandList(rhi)
     {
@@ -65,6 +82,10 @@ namespace TiRHI::Vulkan
         if (!onBeginRecord())
             return false;
 
+        if (!m_device)
+            return false;
+
+        m_submissionValue = Device::Private::getNextSubmissionValue(*m_device);
         vk::CommandBufferBeginInfo beginInfo{};
         beginInfo.flags = {};
         getcurrentFrameCmb().reset();
@@ -167,16 +188,16 @@ namespace TiRHI::Vulkan
         for (auto& texture : renderTargets.getColorAttachements())
         {
             if (texture)
-                texture->setSubmissionValue(m_lastSubmissionValue);
+                texture->setSubmissionValue(m_submissionValue);
         }
 
         if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
         {
             if (texture)
-                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+                (*texture)->setSubmissionValue(m_submissionValue);
         }
 
-        renderTargets.setSubmissionValue(m_lastSubmissionValue);
+        renderTargets.setSubmissionValue(m_submissionValue);
         return true;
     }
 
@@ -221,6 +242,35 @@ namespace TiRHI::Vulkan
         texture.setState(state);
     }
 
+    void CommandList::transitionResource(Buffer& buffer, ResourceState state)
+    {
+        const ResourceState currentState = buffer.getState();
+
+        if (currentState == state)
+            return;
+
+        if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
+        {
+            RHI_LOG_ERROR(L"Cannot transition buffer: the Vulkan buffer handle is null.", Api);
+            return;
+        }
+
+        if (!isValidBufferState(state))
+        {
+            RHI_LOG_ERROR(std::format(L"Cannot transition buffer from '{}' to '{}': "
+                                      L"the requested resource state is invalid for buffers.",
+                                      toWString(currentState), toWString(state)),
+                          Api);
+        }
+        using namespace Private;
+        const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
+        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+
+        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
+                                             {}, {}, barrier, {});
+        buffer.setState(state);
+    }
+
     void CommandList::bindPipeline(const GraphicPipeline& graphicPipeline)
     {
         BaseCommandList::bindPipeline(graphicPipeline);
@@ -247,10 +297,14 @@ namespace TiRHI::Vulkan
                     if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
                     {
                         if (value.texture)
-                            value.texture->setSubmissionValue(m_lastSubmissionValue);
+                            value.texture->setSubmissionValue(m_submissionValue);
 
                         if (value.sampler)
-                            value.sampler->setSubmissionValue(m_lastSubmissionValue);
+                            value.sampler->setSubmissionValue(m_submissionValue);
+                    }
+                    else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
+                    {
+                        value.buffer->setSubmissionValue(m_submissionValue);
                     }
                     else
                     {
@@ -259,6 +313,31 @@ namespace TiRHI::Vulkan
                 },
                 binding);
         }
+    }
+
+    void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer)
+    {
+        if (!buffer) [[unlikely]]
+            return;
+
+        if (!onBindBuffer()) [[unlikely]]
+            return;
+
+        getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
+    }
+
+    void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
+    {
+        if (!buffer) [[unlikely]]
+            return;
+
+        if (!onBindBuffer()) [[unlikely]]
+        {
+            return;
+        }
+
+        getcurrentFrameCmb().bindIndexBuffer(buffer.getVkBufferFrame(), static_cast<vk::DeviceSize>(offset),
+                                             Vulkan::Private::toVulkan(format));
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -317,8 +396,8 @@ namespace TiRHI::Vulkan
         if (vktexture == VK_NULL_HANDLE) [[unlikely]]
             return;
 
-        // TODO set m_lastSubmissionValue for texture
-        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_lastSubmissionValue);
+        // TODO set m_submissionValue for texture
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_submissionValue);
 
         if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
             return;
@@ -331,7 +410,43 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
                                                vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
-        texture.setSubmissionValue(m_lastSubmissionValue);
+        texture.setSubmissionValue(m_submissionValue);
+    }
+
+    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
+    {
+        if (!m_device || !buffer) [[unlikely]]
+            return;
+
+        if (data.empty())
+            return;
+
+        assert(buffer.getState() == ResourceState::CopyDestination);
+
+        assert(offset <= buffer.getSize());
+        assert(data.size_bytes() <= buffer.getSize() - offset);
+
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_submissionValue);
+
+        if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
+            return;
+
+        std::byte* ptr = stagingBuffer.mapData();
+
+        if (!ptr) [[unlikely]]
+            return;
+
+        std::memcpy(ptr, data.data(), data.size_bytes());
+        stagingBuffer.unmapData();
+
+        vk::BufferCopy region{};
+        region.srcOffset = static_cast<vk::DeviceSize>(0);
+        region.dstOffset = static_cast<vk::DeviceSize>(offset);
+        region.size = data.size_bytes();
+
+        getcurrentFrameCmb().copyBuffer(stagingBuffer.getBuffer(), buffer.getVkBufferFrame(), region);
+
+        buffer.setSubmissionValue(m_submissionValue);
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
@@ -364,6 +479,25 @@ namespace TiRHI::Vulkan
 
         barrier.image = Texture::Private::getImage(texture);
         barrier.subresourceRange = range;
+
+        return barrier;
+    }
+
+    vk::BufferMemoryBarrier CommandList::makeBufferBarrier(Buffer& buffer, ResourceState current, ResourceState target)
+    {
+        using namespace Private;
+
+        vk::BufferMemoryBarrier barrier{};
+
+        barrier.srcAccessMask = getAccessMask(current);
+        barrier.dstAccessMask = getAccessMask(target);
+
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        barrier.buffer = buffer.getVkBufferFrame();
+        barrier.offset = 0;
+        barrier.size = VK_WHOLE_SIZE;
 
         return barrier;
     }

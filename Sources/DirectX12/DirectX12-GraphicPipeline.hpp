@@ -43,12 +43,21 @@ namespace TiRHI::DirectX12
 
         bool build(Device& device);
 
+        std::span<const uint32_t> getStridesPerBinding() const
+        {
+            return m_stridesPerBinding;
+        }
+
     private:
         friend Private;
 
         DirectX12::Private::D3D12DescriptorRootSignatureLayout* m_D3D12DescriptorRootSignatureLayout{nullptr};
 
         MComPtr<ID3D12PipelineState> m_pipelineState;
+
+        std::vector<uint32_t> m_stridesPerBinding;
+
+        std::vector<D3D12_INPUT_ELEMENT_DESC> getInputElement() const;
     };
 
 } // namespace TiRHI::DirectX12

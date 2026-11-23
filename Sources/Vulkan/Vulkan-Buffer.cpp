@@ -15,7 +15,6 @@ namespace TiRHI::Vulkan
         : BaseBuffer(std::move(other))
         , m_device(std::exchange(other.m_device, nullptr))
         , m_allocatedBuffer(std::exchange(other.m_allocatedBuffer, {}))
-        , m_lastTimeLineUsed(std::exchange(other.m_lastTimeLineUsed, {}))
     {
     }
 
@@ -28,7 +27,6 @@ namespace TiRHI::Vulkan
         BaseBuffer::operator=(std::move(other));
         m_device = std::exchange(other.m_device, nullptr);
         m_allocatedBuffer = std::exchange(other.m_allocatedBuffer, {});
-        m_lastTimeLineUsed = std::exchange(other.m_lastTimeLineUsed, {});
 
         return *this;
     }
@@ -68,7 +66,6 @@ namespace TiRHI::Vulkan
         }
 
         m_allocatedBuffer.resize(m_updateMode == BufferUpdateMode::Static ? 1 : getRHI().getFrameInFlight());
-        m_lastTimeLineUsed.resize(m_allocatedBuffer.size(), 0);
         for (auto& allocatedBuffer : m_allocatedBuffer)
         {
             const vk::Result vkResult = static_cast<vk::Result>(vmaCreateBuffer(
@@ -145,16 +142,12 @@ namespace TiRHI::Vulkan
         TiRHI::Private::DeferredDeletionQueue& defferdDeferredDeletionQueue =
             Device::Private::getDeferredDeletionQueue(*m_device);
 
-        assert(m_allocatedBuffer.size() == m_lastTimeLineUsed.size());
-        if (m_allocatedBuffer.size() != m_lastTimeLineUsed.size())
-            return;
-
         for (size_t i = 0; i < m_allocatedBuffer.size(); i++)
         {
             auto& allocatedBuffer = m_allocatedBuffer[i];
             if (allocatedBuffer.allocation && m_device)
             {
-                defferdDeferredDeletionQueue.retire(m_lastTimeLineUsed[i],
+                defferdDeferredDeletionQueue.retire(allocatedBuffer.submissionValue,
                                                     [allocator = Device::Private::getAllocator(*m_device),
                                                      allocatedBuffer = std::move(allocatedBuffer)]()
                                                     {
@@ -166,7 +159,6 @@ namespace TiRHI::Vulkan
         }
 
         m_allocatedBuffer.clear();
-        m_lastTimeLineUsed.clear();
     }
 
     vk::Buffer Buffer::getVkBufferFrame()
@@ -176,11 +168,11 @@ namespace TiRHI::Vulkan
         return allocatedBuffer ? allocatedBuffer->buffer : VK_NULL_HANDLE;
     }
 
-    void Buffer::setLastTimeLineUsedFrame(uint64_t timeLine)
+    void Buffer::setSubmissionValue(uint64_t timeLine)
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
-        if (index < m_lastTimeLineUsed.size())
-            m_lastTimeLineUsed[index] = timeLine;
+        if (index < m_allocatedBuffer.size())
+            m_allocatedBuffer[index].submissionValue = timeLine;
     }
 
     Vulkan::Private::AllocatedBuffer* Buffer::getAllocatedBufferFrame()

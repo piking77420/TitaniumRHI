@@ -50,9 +50,15 @@ namespace TiRHI::DirectX12
 
         void transitionResource(Texture& texture, ResourceState state);
 
+        void transitionResource(Buffer& buffer, ResourceState state);
+
         void bindPipeline(const _GraphicPipeline& graphicPipeline);
 
         void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+
+        void bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer);
+
+        void bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format);
 
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
@@ -62,6 +68,8 @@ namespace TiRHI::DirectX12
         void pushConstant(void* data, size_t size);
 
         void upload2d(Texture& texture, std::span<const std::byte> data);
+
+        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {

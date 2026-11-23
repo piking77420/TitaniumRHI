@@ -5,6 +5,7 @@
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
 #include <Vulkan/Vulkan-Texture.hpp>
 #include <Vulkan/Vulkan-Sampler.hpp>
+#include <Vulkan/Vulkan-Buffer.hpp>
 
 namespace TiRHI::Vulkan::Private
 {
@@ -172,6 +173,10 @@ namespace TiRHI::Vulkan::Private
                     {
                         vkBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
                     }
+                    else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
+                    {
+                        vkBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+                    }
                     else
                     {
                         static_assert(false);
@@ -225,6 +230,9 @@ namespace TiRHI::Vulkan::Private
         std::vector<vk::DescriptorImageInfo> vkDescriptorImageInfos;
         vkDescriptorImageInfos.reserve(writeCount);
 
+        std::vector<vk::DescriptorBufferInfo> vkDescriptorBufferInfo;
+        vkDescriptorBufferInfo.reserve(writeCount);
+
         for (size_t i = 0; i < handle.descriptorCount; i++)
         {
             for (const auto& binding : layout.bindings)
@@ -244,17 +252,48 @@ namespace TiRHI::Vulkan::Private
                     binding);
 
                 std::visit(
-                    [&](const DescriptorSet::SampledTexture& sampledTexture)
+                    [&](const auto& value)
                     {
-                        vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                        using T = std::remove_cvref_t<decltype(value)>;
+                        if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
+                        {
+                            vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
-                        auto& descriptorImageInfo = vkDescriptorImageInfos.emplace_back();
-                        descriptorImageInfo.setSampler(Sampler::Private::getSampler(*sampledTexture.sampler))
-                            .setImageView(Texture::Private::getImageView(*sampledTexture.texture))
-                            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+                            auto& descriptorImageInfo = vkDescriptorImageInfos.emplace_back();
+                            descriptorImageInfo.setSampler(Sampler::Private::getSampler(*value.sampler))
+                                .setImageView(Texture::Private::getImageView(*value.texture))
+                                .setImageLayout(layout);
 
-                        descriptorWrite.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-                            .setPImageInfo(&descriptorImageInfo);
+                            descriptorWrite.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+                                .setPImageInfo(&descriptorImageInfo);
+                        }
+                        else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
+                        {
+                            if (!value.buffer)
+                                return;
+
+                            std::span<const Vulkan::Private::AllocatedBuffer> allocatedBuffer =
+                                std::as_const(*value.buffer).getAllocatedBuffer();
+
+                            if (allocatedBuffer.empty())
+                            {
+                                RHI_LOG_ERROR(std::format(L"Descriptor Manager, Buffer {} should be valid before "
+                                                          L"binding to descriptor set",
+                                                          value.buffer->getNameW()),
+                                              TiRHI::RhiApi::Vulkan);
+                                return;
+                            }
+
+                            const uint32_t index = std::max(static_cast<uint32_t>(0), static_cast<uint32_t>(i));
+
+                            auto& bufferInfo = vkDescriptorBufferInfo.emplace_back()
+                                                   .setBuffer(allocatedBuffer[index].buffer)
+                                                   .setOffset(0)
+                                                   .setRange(vk::WholeSize);
+
+                            descriptorWrite.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                                .setPBufferInfo(&bufferInfo);
+                        }
                     },
                     binding);
             }

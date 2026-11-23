@@ -32,12 +32,15 @@ namespace TiRHI
         case Format::D32FloatS8UInt:
             return 8;
 
+        case Format::R32G32B32Float:
+            return 12;
+
         case Format::R32G32B32A32Float:
         case Format::R32G32B32A32UInt:
             return 16;
 
         default:
-            RHI_LOG_ERROR(
+            RHI_LOG_FATAL(
                 std::format(L"Unsupported RHI Format for Vulkan image aspect, Format = {}", toWString(format)),
                 RhiApi::Vulkan);
             return 0;

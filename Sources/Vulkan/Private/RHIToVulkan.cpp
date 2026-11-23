@@ -40,6 +40,9 @@ namespace TiRHI::Vulkan::Private
         case TiRHI::Format::R32G32Float:
             return vk::Format::eR32G32Sfloat;
 
+        case TiRHI::Format::R32G32B32Float:
+            return vk::Format::eR32G32B32Sfloat;
+
         case TiRHI::Format::R32G32B32A32Float:
             return vk::Format::eR32G32B32A32Sfloat;
 
@@ -515,31 +518,87 @@ namespace TiRHI::Vulkan::Private
     {
         vk::BufferUsageFlags flags{};
 
-        if (static_cast<bool>(usage & BufferUsage::Vertex))
+        if ((usage & BufferUsage::Vertex) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eVertexBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Index))
+        if ((usage & BufferUsage::Index) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eIndexBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Constant))
+        if ((usage & BufferUsage::Constant) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eUniformBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Structured))
+        if ((usage & BufferUsage::Structured) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eStorageBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Raw))
+        if ((usage & BufferUsage::Raw) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eStorageBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::Indirect))
+        if ((usage & BufferUsage::Indirect) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eIndirectBuffer;
 
-        if (static_cast<bool>(usage & BufferUsage::CopySource))
+        if ((usage & BufferUsage::CopySource) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eTransferSrc;
 
-        if (static_cast<bool>(usage & BufferUsage::CopyDestination))
+        if ((usage & BufferUsage::CopyDestination) != BufferUsage::None)
             flags |= vk::BufferUsageFlagBits::eTransferDst;
 
         return flags;
+    }
+
+    vk::VertexInputRate toVulkan(VertexInputRate vertexInputRate)
+    {
+        switch (vertexInputRate)
+        {
+        case TiRHI::VertexInputRate::Vertex:
+            return vk::VertexInputRate::eVertex;
+        case TiRHI::VertexInputRate::Instance:
+            return vk::VertexInputRate::eInstance;
+        default:
+            RHI_LOG_FATAL(std::format(L"Unsupported RHI VertexInputRate for vk::VertexInputRate, VertexInputRate = {}",
+                                      toWString(vertexInputRate)),
+                          RhiApi::Vulkan);
+        }
+
+        return {};
+    }
+
+    vk::VertexInputBindingDescription toVulkan(const VertexBindingDescription& vertexBindingDescription)
+    {
+        vk::VertexInputBindingDescription vertexInputBindingDescription{};
+        vertexInputBindingDescription.setBinding(vertexBindingDescription.binding)
+            .setInputRate(toVulkan(vertexBindingDescription.vertexInputRate))
+            .setStride(vertexBindingDescription.stride);
+
+        return vertexInputBindingDescription;
+    }
+
+    vk::VertexInputAttributeDescription toVulkan(const VertexInputAttributeDescription& vertexInputAttributeDescription)
+    {
+        vk::VertexInputAttributeDescription vkVertexInputAttributeDescription{};
+        vkVertexInputAttributeDescription.setBinding(vertexInputAttributeDescription.binding);
+        vkVertexInputAttributeDescription.setFormat(toVulkan(vertexInputAttributeDescription.format))
+            .setLocation(vertexInputAttributeDescription.location)
+            .setOffset(vertexInputAttributeDescription.offset);
+
+        return vkVertexInputAttributeDescription;
+    }
+
+    vk::IndexType toVulkan(IndexType indexType)
+    {
+        switch (indexType)
+        {
+        case TiRHI::IndexType::UInt16:
+            return vk::IndexType::eUint16;
+        case TiRHI::IndexType::UInt32:
+            return vk::IndexType::eUint32;
+        default:
+            RHI_LOG_FATAL(
+                std::format(L"Unsupported RHI IndexType for vk::IndexType, IndexType = {}", toWString(indexType)),
+                RhiApi::Vulkan);
+            break;
+        }
+
+        return {};
     }
 
 }

@@ -1,7 +1,12 @@
 #ifndef TITANIUM_VULKAN_HEADER_H
 #define TITANIUM_VULKAN_HEADER_H
 
+#if defined(_WIN32)
+#define NOMINMAX
+#endif
+#include <Volk/volk.h>
 #include <vulkan/vulkan.hpp>
+#include <vma/vk_mem_alloc.h>
 #include <string_view>
 #include <Titanium/Log.hpp>
 
