@@ -18,6 +18,8 @@ namespace TiRHI::Vulkan
     class RenderPassDescriptor;
     class GraphicPipeline;
     class DescriptorSet;
+    class Sampler;
+    using TrackedResource = std::variant<Texture*, Sampler*, Buffer*, RenderTargets*, GraphicPipeline*, Private::StagingBuffer>;
 
     class CommandList : public BaseCommandList<CommandList, Device, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
                                                Vulkan::GraphicPipeline, DescriptorSet>
@@ -31,14 +33,6 @@ namespace TiRHI::Vulkan
         CommandList& operator=(const CommandList&) = delete;
         CommandList(CommandList&&) noexcept = default;
         CommandList& operator=(CommandList&& other) noexcept = default;
-
-        struct Private
-        {
-            static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
-            {
-                commandlist.m_submissionValue = lastSubmissionValue;
-            }
-        };
 
         explicit CommandList(Device& device);
 
@@ -64,7 +58,7 @@ namespace TiRHI::Vulkan
 
         void transitionResource(Buffer& buffer, ResourceState state);
 
-        void bindPipeline(const GraphicPipeline& graphicPipeline);
+        void bindPipeline(GraphicPipeline& graphicPipeline);
 
         void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
 
@@ -85,23 +79,19 @@ namespace TiRHI::Vulkan
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 
-    private:
-        friend Private;
+        void markResourceFrame(uint64_t submisionValue);
 
+    private:
         vk::UniqueCommandPool m_commandPool;
 
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
-        const VolkDeviceTable* m_volkTable{nullptr};
+        std::vector<TrackedResource> m_resourceReference;
 
         struct VulkanStorage
         {
             std::vector<vk::ClearValue> clearValues;
         } m_vulkanStorage;
-
-        Device* m_device{nullptr}; // TODO fix this ugly
-
-        uint64_t m_submissionValue = 0;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
 

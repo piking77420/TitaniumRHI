@@ -146,7 +146,7 @@ namespace TiRHI::Contract
     template<typename T>
     concept CommandListContract = requires(T& commandList, const Viewport& viewport,
                                            const Rect2D& rect2D, const BeginRenderPass& beginRenderPass,
-                                           RenderTargets& renderTargets, const GraphicPipeline& graphicPipeline,
+                                           RenderTargets& renderTargets, GraphicPipeline& graphicPipeline,
                                            void* ptr, uint32_t uint) {
         { commandList.build() } -> std::same_as<bool>;
         { commandList.beginRecord() } -> std::same_as<bool>;

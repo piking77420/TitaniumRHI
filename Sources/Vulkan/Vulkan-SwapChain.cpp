@@ -20,9 +20,6 @@ namespace TiRHI::Vulkan
 
     SwapChain::~SwapChain()
     {
-        if (!m_device)
-            return;
-
         // we need to wiat that all present work has to finish before destroying swapchian
         m_presentQueue.waitIdle();
     }
@@ -104,7 +101,6 @@ namespace TiRHI::Vulkan
             .setSwapChainImageIndex(m_imageIndex)
             .setSwapChain(m_swapchain.get());
         // clang-format on
-        m_submisionValue = Device::Private::getNextSubmissionValue(getDevice());
         return acquiredFrame;
     }
 
@@ -210,7 +206,7 @@ namespace TiRHI::Vulkan
             }
         }
 
-        auto& defferedQueue = Device::Private::getDeferredDeletionQueue(*m_device);
+        auto& defferedQueue = Device::Private::getDeferredDeletionQueue(getDevice());
         // we need to wiat that all present work has to finish before destroying swapchian
         m_presentQueue.waitIdle();
         return createRenderTargets();

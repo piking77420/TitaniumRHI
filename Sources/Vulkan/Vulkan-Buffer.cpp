@@ -121,6 +121,19 @@ namespace TiRHI::Vulkan
         vmaUnmapMemory(allocator, allocatedBuffer->allocation);
     }
 
+    std::uint64_t Buffer::getLastFrameUsed() const noexcept
+    {
+        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+        return m_allocatedBuffer[index].getLastFrameUsed();
+    }
+
+    Buffer& Buffer::setLastFrameUsed(std::uint64_t value) noexcept
+    {
+        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+        m_allocatedBuffer[index].setLastFrameUsed(value);
+        return *this;
+    }
+
     void Buffer::destroy()
     {
         TiRHI::Private::DeferredDeletionQueue& defferdDeferredDeletionQueue =
@@ -131,7 +144,7 @@ namespace TiRHI::Vulkan
             auto& allocatedBuffer = m_allocatedBuffer[i];
             if (allocatedBuffer.allocation)
             {
-                defferdDeferredDeletionQueue.retire(allocatedBuffer.submissionValue,
+                defferdDeferredDeletionQueue.retire(allocatedBuffer.getLastFrameUsed(),
                                                     [allocator = Device::Private::getAllocator(getDevice()),
                                                      allocatedBuffer = std::move(allocatedBuffer)]()
                                                     {
@@ -150,13 +163,6 @@ namespace TiRHI::Vulkan
         Vulkan::Private::AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
 
         return allocatedBuffer ? allocatedBuffer->buffer : VK_NULL_HANDLE;
-    }
-
-    void Buffer::setSubmissionValue(uint64_t timeLine)
-    {
-        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
-        if (index < m_allocatedBuffer.size())
-            m_allocatedBuffer[index].submissionValue = timeLine;
     }
 
     Vulkan::Private::AllocatedBuffer* Buffer::getAllocatedBufferFrame()

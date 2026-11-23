@@ -17,6 +17,7 @@ namespace TiRHI::Vulkan
 
     Texture::Texture(Texture&& other) noexcept
         : BaseTexture(std::move(other))
+        , Vulkan::Private::FrameTracked<Texture>(std::move(other))
         , m_image(std::exchange(other.m_image, vk::Image{}))
         , m_uniqueView(std::move(other.m_uniqueView))
         , m_allocation(std::exchange(other.m_allocation, nullptr))
@@ -30,6 +31,7 @@ namespace TiRHI::Vulkan
 
         destroy();
         BaseTexture::operator=(std::move(other));
+        Vulkan::Private::FrameTracked<Texture>::operator=(std::move(other));
         m_image = std::exchange(other.m_image, vk::Image{});
         m_uniqueView = std::move(other.m_uniqueView);
         m_allocation = std::exchange(other.m_allocation, nullptr);
@@ -117,7 +119,7 @@ namespace TiRHI::Vulkan
                 Device::Private::getDeferredDeletionQueue(getDevice());
 
             deferredDeletionQueue.retire(
-                submissionValue, [allocator = Device::Private::getAllocator(getDevice()), image = std::move(m_image),
+                getLastFrameUsed(), [allocator = Device::Private::getAllocator(getDevice()), image = std::move(m_image),
                                     allocation = std::move(m_allocation), view = std::move(m_uniqueView)]()
                 { vmaDestroyImage(allocator, static_cast<VkImage>(image), allocation); });
         }
@@ -127,17 +129,12 @@ namespace TiRHI::Vulkan
             TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
                 Device::Private::getDeferredDeletionQueue(getDevice());
 
-            deferredDeletionQueue.retire(submissionValue, [view = std::move(m_uniqueView)]() {});
+            deferredDeletionQueue.retire(getLastFrameUsed(), [view = std::move(m_uniqueView)]() {});
         }
 
         m_image = vk::Image{};
         m_allocation = nullptr;
-        submissionValue = 0;
-    }
-
-    void Texture::setSubmissionValue(uint64_t value)
-    {
-        submissionValue = value;
+        setLastFrameUsed(0);
     }
 
 } // namespace TiRHI::Vulkan

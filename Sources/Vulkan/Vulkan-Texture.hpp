@@ -3,6 +3,7 @@
 
 #include <Titanium/RHI-BaseTexture.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Vulkan/Private/FrameTracked.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Vulkan
@@ -10,7 +11,7 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
 
-    class Texture : public BaseTexture<Texture, Device>
+    class Texture : public BaseTexture<Texture, Device>, public Private::FrameTracked<Texture>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
@@ -55,8 +56,6 @@ namespace TiRHI::Vulkan
             return isValid();
         }
 
-        void setSubmissionValue(uint64_t value);
-
     private:
         friend Private;
 
@@ -65,8 +64,6 @@ namespace TiRHI::Vulkan
         vk::UniqueImageView m_uniqueView;
 
         VmaAllocation m_allocation = nullptr;
-
-        uint64_t submissionValue = 0;
 
         bool build(vk::Image image, Format format);
 

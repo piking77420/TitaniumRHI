@@ -154,8 +154,6 @@ namespace TiRHI::Vulkan
         timelineInfo.setSignalSemaphoreValues(signalValues);
         submitInfos.back().setSignalSemaphores(last.signalSemaphores).setPNext(&timelineInfo);
 
-        // The current frame fence must already have been waited on and reset.
-
         // reset fence
         {
             std::array fences = {getNativeInFlightFence()};
@@ -164,7 +162,11 @@ namespace TiRHI::Vulkan
             m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
         }
         getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
-
+        for (const SubmitPresentDesc& submitPresentDesc : submitPresentDesc)
+        {
+            if (submitPresentDesc.commandList)
+                submitPresentDesc.commandList->markResourceFrame(submissionValue);
+        }
         m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
 
         if (!swapChains.empty())

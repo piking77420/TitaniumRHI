@@ -34,6 +34,7 @@ namespace TiRHI
         explicit Object(_Device& rhi)
             : m_device(rhi)
         {
+            static_assert(std::derived_from<T, Object<T, _Device>>);
         }
 
         _Device& getDevice()
@@ -68,26 +69,23 @@ namespace TiRHI
 
         T& setName(std::string&& newName)
         {
-            static_assert(std::derived_from<T, Object<T, _Device>>);
             m_name = std::move(newName);
-            return reinterpret_cast<T&>(*this);
+            return static_cast<T&>(*this);
         }
 
         T& setName(const std::string& newName)
         {
-            static_assert(std::derived_from<T, Object<T, _Device>>);
             m_name = newName;
-            return reinterpret_cast<T&>(*this);
+            return static_cast<T&>(*this);
         }
 
         T& setName(const std::wstring& newName)
         {
-            static_assert(std::derived_from<T, Object<T, _Device>>);
             if (!newName.empty())
             {
                 m_name = std::string(newName.begin(), newName.end());
             }
-            return reinterpret_cast<T&>(*this);
+            return static_cast<T&>(*this);
         }
 
     private:

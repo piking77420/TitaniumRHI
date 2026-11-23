@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Private/FrameTracked.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Private
@@ -17,12 +18,11 @@ namespace TiRHI::Vulkan
 
 namespace TiRHI::Vulkan::Private
 {
-    struct AllocatedBuffer
+    struct AllocatedBuffer : public FrameTracked<AllocatedBuffer>
     {
         vk::Buffer buffer{};
         VmaAllocation allocation = VK_NULL_HANDLE;
         VmaAllocationInfo allocationInfo{};
-        uint64_t submissionValue = 0;
 
         AllocatedBuffer() = default;
         ~AllocatedBuffer() = default;
@@ -55,7 +55,7 @@ namespace TiRHI::Vulkan::Private
         }
     };
 
-    class StagingBuffer
+    class StagingBuffer : public AllocatedBuffer
     {
     public:
         StagingBuffer() = delete;
@@ -67,11 +67,11 @@ namespace TiRHI::Vulkan::Private
         StagingBuffer(StagingBuffer&& other) noexcept;
         StagingBuffer& operator=(StagingBuffer&& other) noexcept = delete;
 
-        StagingBuffer(Device& device, uint64_t size, uint64_t timeLineFrame);
+        StagingBuffer(Device& device, uint64_t size);
 
         vk::Buffer getBuffer() const noexcept
         {
-            return m_allocatedBuffer ? m_allocatedBuffer.buffer : VK_NULL_HANDLE;
+            return buffer ? buffer : VK_NULL_HANDLE;
         }
 
         std::byte* mapData() noexcept;
@@ -85,13 +85,12 @@ namespace TiRHI::Vulkan::Private
 
         explicit operator bool() const noexcept
         {
-            return m_allocatedBuffer.operator bool();
+            return AllocatedBuffer::operator bool() && m_size != 0;
         }
 
     private:
         TiRHI::Private::DeferredDeletionQueue& m_deferredDeletionQueue;
         VmaAllocator m_allocator;
-        AllocatedBuffer m_allocatedBuffer;
         std::byte* m_mappedData = nullptr;
         uint64_t m_size = 0;
 
