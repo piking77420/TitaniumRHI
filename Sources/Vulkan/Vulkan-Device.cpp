@@ -185,10 +185,6 @@ namespace TiRHI::Vulkan
         }
         getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
 
-        for (const auto& desc : submitPresentDesc)
-            if (desc.commandList)
-                CommandList::Private::setLastSubmissionValue(*desc.commandList, submissionValue);
-
         m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
 
         if (!swapChains.empty())
@@ -376,7 +372,7 @@ namespace TiRHI::Vulkan
         return true;
     }
 
-    uint64_t Device::Private::getCurrentFrameSubmissionValue(const Device& device)
+    uint64_t Device::Private::getNextSubmissionValue(const Device& device)
     {
         const size_t currentFrame = device.getRHI().getCurrentFrame();
 

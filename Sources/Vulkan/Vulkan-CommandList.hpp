@@ -36,7 +36,7 @@ namespace TiRHI::Vulkan
         {
             static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
             {
-                commandlist.m_lastSubmissionValue = lastSubmissionValue;
+                commandlist.m_submissionValue = lastSubmissionValue;
             }
         };
 
@@ -101,7 +101,7 @@ namespace TiRHI::Vulkan
 
         Device* m_device{nullptr}; // TODO fix this ugly
 
-        uint64_t m_lastSubmissionValue = 0;
+        uint64_t m_submissionValue = 0;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
 

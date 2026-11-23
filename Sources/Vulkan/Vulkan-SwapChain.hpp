@@ -51,6 +51,8 @@ namespace TiRHI::Vulkan
         vk::Semaphore getNativeRenderFinishedSemaphore() const;
 
     private:
+        Device* m_device{nullptr};
+
         vk::UniqueSwapchainKHR m_swapchain;
 
         vk::SurfaceFormatKHR m_currentFormat;
@@ -74,6 +76,8 @@ namespace TiRHI::Vulkan
         uint32_t m_imageIndex = 0;
 
         vk::Queue m_presentQueue = VK_NULL_HANDLE;
+
+        uint64_t m_submisionValue = 0;
 
         vk::SurfaceFormatKHR getSurfaceFormat() const noexcept;
 

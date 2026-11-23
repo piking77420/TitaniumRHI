@@ -82,6 +82,10 @@ namespace TiRHI::Vulkan
         if (!onBeginRecord())
             return false;
 
+        if (!m_device)
+            return false;
+
+        m_submissionValue = Device::Private::getNextSubmissionValue(*m_device);
         vk::CommandBufferBeginInfo beginInfo{};
         beginInfo.flags = {};
         getcurrentFrameCmb().reset();
@@ -184,16 +188,16 @@ namespace TiRHI::Vulkan
         for (auto& texture : renderTargets.getColorAttachements())
         {
             if (texture)
-                texture->setSubmissionValue(m_lastSubmissionValue);
+                texture->setSubmissionValue(m_submissionValue);
         }
 
         if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
         {
             if (texture)
-                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+                (*texture)->setSubmissionValue(m_submissionValue);
         }
 
-        renderTargets.setSubmissionValue(m_lastSubmissionValue);
+        renderTargets.setSubmissionValue(m_submissionValue);
         return true;
     }
 
@@ -293,14 +297,14 @@ namespace TiRHI::Vulkan
                     if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
                     {
                         if (value.texture)
-                            value.texture->setSubmissionValue(m_lastSubmissionValue);
+                            value.texture->setSubmissionValue(m_submissionValue);
 
                         if (value.sampler)
-                            value.sampler->setSubmissionValue(m_lastSubmissionValue);
+                            value.sampler->setSubmissionValue(m_submissionValue);
                     }
                     else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
                     {
-                        value.buffer->setSubmissionValue(m_lastSubmissionValue);
+                        value.buffer->setSubmissionValue(m_submissionValue);
                     }
                     else
                     {
@@ -392,8 +396,8 @@ namespace TiRHI::Vulkan
         if (vktexture == VK_NULL_HANDLE) [[unlikely]]
             return;
 
-        // TODO set m_lastSubmissionValue for texture
-        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_lastSubmissionValue);
+        // TODO set m_submissionValue for texture
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_submissionValue);
 
         if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
             return;
@@ -406,7 +410,7 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
                                                vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
-        texture.setSubmissionValue(m_lastSubmissionValue);
+        texture.setSubmissionValue(m_submissionValue);
     }
 
     void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
@@ -422,7 +426,7 @@ namespace TiRHI::Vulkan
         assert(offset <= buffer.getSize());
         assert(data.size_bytes() <= buffer.getSize() - offset);
 
-        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_lastSubmissionValue);
+        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_submissionValue);
 
         if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
             return;
@@ -442,7 +446,7 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBuffer(stagingBuffer.getBuffer(), buffer.getVkBufferFrame(), region);
 
-        buffer.setSubmissionValue(m_lastSubmissionValue);
+        buffer.setSubmissionValue(m_submissionValue);
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const

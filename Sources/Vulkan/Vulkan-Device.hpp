@@ -57,7 +57,7 @@ namespace TiRHI::Vulkan
                 return device.m_descriporManager;
             }
 
-            static uint64_t getCurrentFrameSubmissionValue(const Device& device);
+            static uint64_t getNextSubmissionValue(const Device& device);
 
             static TiRHI::Private::DeferredDeletionQueue& getDeferredDeletionQueue(Device& device)
             {
