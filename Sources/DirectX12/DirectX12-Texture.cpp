@@ -7,23 +7,20 @@
 
 namespace TiRHI::DirectX12
 {
-    Texture::Texture(RHI& rhi)
-        : BaseTexture(rhi)
+    Texture::Texture(Device& device)
+        : BaseTexture(device)
     {
     }
 
     Texture::~Texture()
     {
-        if (!m_device)
-            return;
-
         // there an allocation if this an not an swap chain image
         if (m_allocation)
         {
-            auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+            auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
             deferredDestroy.retire(
                 m_lastSubmitedValue,
-                [device = m_device, image = std::move(m_image), alloc = std::move(m_allocation),
+                [device = &getDevice(), image = std::move(m_image), alloc = std::move(m_allocation),
                  renderTargetView = std::exchange(m_renderTargetView, std::nullopt),
                  shaderRenderView = std::exchange(m_shaderRenderView, std::nullopt)]() mutable
                 {
@@ -49,13 +46,13 @@ namespace TiRHI::DirectX12
         {
             if (m_renderTargetView)
             {
-                Device::Private::getDescriptorAllocatorRTV(*m_device).release(*m_renderTargetView);
+                Device::Private::getDescriptorAllocatorRTV(getDevice()).release(*m_renderTargetView);
                 m_renderTargetView.reset();
             }
 
             if (m_shaderRenderView)
             {
-                Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).release(*m_shaderRenderView);
+                Device::Private::getDescriptorAllocatorCbvSrvUav(getDevice()).release(*m_shaderRenderView);
                 m_shaderRenderView.reset();
             }
 
@@ -65,10 +62,8 @@ namespace TiRHI::DirectX12
         }
     };
 
-    bool Texture::build(Device& device)
+    bool Texture::build()
     {
-        m_device = &device;
-
         D3D12MA::ALLOCATION_DESC allocDesc = {};
         allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -83,7 +78,7 @@ namespace TiRHI::DirectX12
         desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
         desc.Flags = DirectX12::Private::textureFlagtoDirectX12(getFlags(), getFormat());
 
-        D3D12MA::Allocator& allocator = Device::Private::getAllocator(device);
+        D3D12MA::Allocator& allocator = Device::Private::getAllocator(getDevice());
 
         const HRESULT hr = allocator.CreateResource(&allocDesc, &desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
                                                     m_allocation.ReleaseAndGetAddressOf(),
@@ -98,38 +93,38 @@ namespace TiRHI::DirectX12
         const std::wstring name = getNameW();
         m_allocation->GetResource()->SetName(name.c_str());
 
-        return m_image && createHandle(device);
+        return m_image && createHandle();
     }
 
-    bool Texture::build(Device& device, MComPtr<ID3D12Resource> image)
+    bool Texture::build(MComPtr<ID3D12Resource> image)
     {
-        m_device = &device;
-
         m_image = image;
         const std::wstring name = getNameW();
         m_image->SetName(name.data());
 
-        return m_image && createHandle(device);
+        return m_image && createHandle();
     }
 
-    bool Texture::createHandle(Device& device)
+    bool Texture::createHandle()
     {
         bool isOk = true;
 
         if ((getFlags() & TextureFlags::RenderTarget) != TextureFlags::None)
         {
-            m_renderTargetView = Device::Private::getDescriptorAllocatorRTV(device).create(device);
+            m_renderTargetView = Device::Private::getDescriptorAllocatorRTV(getDevice()).create(getDevice());
             assert(m_renderTargetView);
-            device.getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr, m_renderTargetView->cpuHandle);
+            getDevice().getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr,
+                                                                  m_renderTargetView->cpuHandle);
             if (!m_renderTargetView)
                 isOk = false;
         }
 
         if ((getFlags() & TextureFlags::ShaderResource) != TextureFlags::None)
         {
-            m_shaderRenderView = Device::Private::getDescriptorAllocatorCbvSrvUav(device).create(device);
+            m_shaderRenderView = Device::Private::getDescriptorAllocatorCbvSrvUav(getDevice()).create(getDevice());
             assert(m_shaderRenderView);
-            device.getNativeDevice()->CreateShaderResourceView(m_image.Get(), nullptr, m_shaderRenderView->cpuHandle);
+            getDevice().getNativeDevice()->CreateShaderResourceView(m_image.Get(), nullptr,
+                                                                    m_shaderRenderView->cpuHandle);
             if (!m_shaderRenderView)
                 isOk = false;
         }

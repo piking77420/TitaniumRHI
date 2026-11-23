@@ -9,15 +9,15 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
 
-    class Sampler : public TiRHI::BaseSampler<Sampler, RHI>
+    class Sampler : public TiRHI::BaseSampler<Sampler, Device>
     {
     public:
         Sampler() = delete;
         ~Sampler();
         Sampler(Sampler&&) = default;
         Sampler& operator=(Sampler&&) = default;
-        Sampler(RHI& rhi)
-            : BaseSampler(rhi)
+        Sampler(Device& device)
+            : BaseSampler(device)
         {
         }
 
@@ -29,7 +29,7 @@ namespace TiRHI::Vulkan
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
         void setSubmissionValue(uint64_t value)
         {

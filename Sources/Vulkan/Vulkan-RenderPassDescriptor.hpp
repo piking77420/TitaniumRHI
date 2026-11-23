@@ -9,7 +9,7 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
 
-    class RenderPassDescriptor : public BaseRenderPassDescriptor<RenderPassDescriptor, RHI>
+    class RenderPassDescriptor : public BaseRenderPassDescriptor<RenderPassDescriptor, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
@@ -20,9 +20,9 @@ namespace TiRHI::Vulkan
         RenderPassDescriptor& operator=(const RenderPassDescriptor&) = delete;
         RenderPassDescriptor(RenderPassDescriptor&&) noexcept = default;
         RenderPassDescriptor& operator=(RenderPassDescriptor&&) noexcept = default;
-        explicit RenderPassDescriptor(RHI& rhi);
+        explicit RenderPassDescriptor(Device& device);
 
-        bool build(Device& device);
+        bool build();
 
         vk::RenderPass getNativeRenderPass() const
         {

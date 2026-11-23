@@ -11,10 +11,7 @@ namespace TiRHI::Vulkan
 {
     RenderTargets::~RenderTargets()
     {
-        if (!m_device)
-            return;
-
-        auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
         deferredDestroy.retire(m_lastSubmitedValue,
                                [frameBuffer = std::move(m_frameBuffer)]() mutable
                                {
@@ -22,12 +19,11 @@ namespace TiRHI::Vulkan
                                });
     }
 
-    bool RenderTargets::build(Device& device)
+    bool RenderTargets::build()
     {
         if (!BaseRenderTargets::build())
             return false;
 
-        m_device = &device;
         // m_renderPassDescriptor shoudl be valid
         assert(getRenderPassDescriptor());
 
@@ -42,7 +38,7 @@ namespace TiRHI::Vulkan
             .setHeight(getHeight())
             .setLayers(1);
 
-        m_frameBuffer = device.getNativeDevice().createFramebufferUnique(framebufferInfo);
+        m_frameBuffer = getDevice().getNativeDevice().createFramebufferUnique(framebufferInfo);
 
         if (!m_frameBuffer)
         {

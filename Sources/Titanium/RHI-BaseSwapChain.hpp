@@ -9,13 +9,12 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TDevice, typename TRenderPassDescriptor, typename TRenderTarget,
+    template<typename T, typename TDevice, typename TRenderPassDescriptor, typename TRenderTarget,
              typename TTexture>
-    class BaseSwapChain : public Object<T, TRHI>
+    class BaseSwapChain : public Object<T, TDevice>
     {
     public:
         using _Derived = T;
-        using _RHI = TRHI;
         using _Device = TDevice;
         using _Texture = TTexture;
 
@@ -25,12 +24,12 @@ namespace TiRHI
         BaseSwapChain& operator=(const BaseSwapChain&) = delete;
         BaseSwapChain(BaseSwapChain&&) noexcept = default;
         BaseSwapChain& operator=(BaseSwapChain&&) noexcept = default;
-        BaseSwapChain(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+        BaseSwapChain(TDevice& rhi)
+            : Object<T, TDevice>(rhi)
             , m_renderPassDescriptor(rhi)
         {
             static_assert(
-                std::derived_from<T, BaseSwapChain<T, TRHI, TDevice, TRenderPassDescriptor, TRenderTarget, TTexture>>);
+                std::derived_from<T, BaseSwapChain<T, TDevice, TRenderPassDescriptor, TRenderTarget, TTexture>>);
         }
 
         bool getVsync() const noexcept
@@ -100,7 +99,7 @@ namespace TiRHI
             return true;
         }
 
-        bool createRenderPassDescriptor(_Device& device) noexcept
+        bool createRenderPassDescriptor() noexcept
         {
             AttachmentDescriptor attachement{};
             attachement.setFormat(m_format)
@@ -114,7 +113,7 @@ namespace TiRHI
 
             return m_renderPassDescriptor.setColorAttachements(attachments)
                 .setAcceptedPipelineType(PipelineType::Graphics)
-                .build(device);
+                .build();
         }
 
     protected:

@@ -13,8 +13,8 @@
 
 namespace TiRHI::Vulkan
 {
-    SwapChain::SwapChain(RHI& rhi)
-        : BaseSwapChain(rhi)
+    SwapChain::SwapChain(Device& device)
+        : BaseSwapChain(device)
     {
     }
 
@@ -28,7 +28,7 @@ namespace TiRHI::Vulkan
     }
 
     SwapChain::SwapChain(SwapChain&& other) noexcept
-        : SwapChain(other.getRHI())
+        : SwapChain(other.getDevice())
     {
         *this = std::move(other);
     }
@@ -38,7 +38,7 @@ namespace TiRHI::Vulkan
         if (this == &other)
             return *this;
 
-        assert(&getRHI() == &other.getRHI());
+        assert(&getDevice() == &other.getDevice());
         m_renderTargets.clear();
         m_textures.clear();
         BaseSwapChain::operator=(std::move(other));
@@ -53,29 +53,28 @@ namespace TiRHI::Vulkan
         return *this;
     }
 
-    bool SwapChain::build(Device& device, Surface& surface)
+    bool SwapChain::build(Surface& surface)
     {
         if (!BaseSwapChain::build())
         {
             return false;
         }
 
-        m_presentQueue = device.getNativePresentQueue();
+        m_presentQueue = getDevice().getNativePresentQueue();
         if (m_presentQueue == VK_NULL_HANDLE)
         {
             RHI_LOG_ERROR(L"Failed to retreive device present queue", RhiApi::Vulkan);
             return false;
         }
-        m_device = &device;
 
-        return recreateSwapChain(device, surface) && createSyncObjects(device.getNativeDevice());
+        return recreateSwapChain(surface) && createSyncObjects();
     }
 
-    AcquiredFrame SwapChain::acquireNextImage(Device& device)
+    AcquiredFrame SwapChain::acquireNextImage()
     {
         // TODO CHECK IF SUBOTIMAL
         {
-            const vk::ResultValue<uint32_t> result = device.getNativeDevice().acquireNextImageKHR(
+            const vk::ResultValue<uint32_t> result = getDevice().getNativeDevice().acquireNextImageKHR(
                 m_swapchain.get(), std::numeric_limits<uint64_t>::max(), getNativeImageAvailableSemaphore());
 
             VulkanCheckErrorStatus(result.result);
@@ -85,15 +84,15 @@ namespace TiRHI::Vulkan
         }
 
         { // handle out of order swap chain
-            if (m_imageCount > getRHI().getFrameInFlight() &&
+            if (m_imageCount > getDevice().getRHI().getFrameInFlight() &&
                 (m_synchronisations[m_imageIndex].imageInFlight != VK_NULL_HANDLE) &&
-                m_synchronisations[m_imageIndex].imageInFlight != device.getNativeInFlightFence())
+                m_synchronisations[m_imageIndex].imageInFlight != getDevice().getNativeInFlightFence())
             {
-                vk::Result result = device.getNativeDevice().waitForFences(
+                vk::Result result = getDevice().getNativeDevice().waitForFences(
                     m_synchronisations[m_imageIndex].imageInFlight, vk::True, std::numeric_limits<uint64_t>::max());
                 VulkanCheckErrorStatus(result);
             }
-            m_synchronisations[m_imageIndex].imageInFlight = device.getNativeInFlightFence();
+            m_synchronisations[m_imageIndex].imageInFlight = getDevice().getNativeInFlightFence();
         }
 
         AcquiredFrame acquiredFrame(true);
@@ -105,14 +104,12 @@ namespace TiRHI::Vulkan
             .setSwapChainImageIndex(m_imageIndex)
             .setSwapChain(m_swapchain.get());
         // clang-format on
-        m_submisionValue = Device::Private::getNextSubmissionValue(device);
+        m_submisionValue = Device::Private::getNextSubmissionValue(getDevice());
         return acquiredFrame;
     }
 
-    vk::SwapchainCreateInfoKHR SwapChain::getSwapChainCreateInfo(Device& device, Surface& surface) const
+    vk::SwapchainCreateInfoKHR SwapChain::getSwapChainCreateInfo(Surface& surface) const
     {
-        vk::Device vkDevice = device.getNativeDevice();
-        vk::PhysicalDevice physicalDevice = device.getNativePhysicalDevice();
         vk::SurfaceKHR vkSurface = surface.getSurfaceNative();
 
         vk::PresentModeKHR presentMode = getPresentMode();
@@ -129,7 +126,7 @@ namespace TiRHI::Vulkan
             .setImageArrayLayers(1)
             .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
             .setImageSharingMode(
-                device.getNativePresentQueue() == device.getNativeGraphicQueue() 
+                getDevice().getNativePresentQueue() == getDevice().getNativeGraphicQueue() 
                 ? vk::SharingMode::eExclusive 
                 : vk::SharingMode::eConcurrent)
             .setQueueFamilyIndexCount(1)
@@ -143,7 +140,7 @@ namespace TiRHI::Vulkan
         return vkSwapChainCreateInfo;
     }
 
-    bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
+    bool SwapChain::recreateSwapChain(Surface& surface)
     {
         /// keep previous one
         vk::UniqueSwapchainKHR oldSwapchain = std::move(m_swapchain);
@@ -152,8 +149,8 @@ namespace TiRHI::Vulkan
         m_renderTargets.clear();
         m_textures.clear();
 
-        vk::Device vkDevice = device.getNativeDevice();
-        vk::PhysicalDevice physicalDevice = device.getNativePhysicalDevice();
+        vk::Device vkDevice = getDevice().getNativeDevice();
+        vk::PhysicalDevice physicalDevice = getDevice().getNativePhysicalDevice();
         vk::SurfaceKHR vkSurface = surface.getSurfaceNative();
 
         m_swapChainSupportDetails.capabilities = physicalDevice.getSurfaceCapabilitiesKHR(vkSurface);
@@ -176,7 +173,7 @@ namespace TiRHI::Vulkan
             std::span colorAttachement = m_renderPassDescriptor.getColorAttachements();
             if (colorAttachement.empty() || colorAttachement[0].format != Private::toRhi(m_currentFormat.format))
             {
-                if (!createRenderPassDescriptor(device))
+                if (!createRenderPassDescriptor())
                 {
                     RHI_LOG_ERROR(L"Failed to create render pass descriptor of swapChain", RhiApi::Vulkan);
                     return false;
@@ -184,7 +181,7 @@ namespace TiRHI::Vulkan
             }
         }
 
-        vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(device, surface);
+        vk::SwapchainCreateInfoKHR createInfo = getSwapChainCreateInfo(surface);
         createInfo.setOldSwapchain(oldSwapchain ? oldSwapchain.get() : VK_NULL_HANDLE);
 
         m_format = Private::toRhi(createInfo.imageFormat);
@@ -193,6 +190,8 @@ namespace TiRHI::Vulkan
         if (!m_swapchain)
         {
             RHI_LOG_FATAL(std::format(L"Failed to create SwapChain {}", getNameW()), RhiApi::Vulkan);
+            // we need to wiat that all present work has to finish before destroying swapchian
+            m_presentQueue.waitIdle();
             return false;
         }
 
@@ -203,8 +202,8 @@ namespace TiRHI::Vulkan
             m_textures.reserve(images.size());
             for (const auto& image : images)
             {
-                auto& texture = m_textures.emplace_back(getRHI());
-                if (!Texture::Private::build(texture, device, image, m_format))
+                auto& texture = m_textures.emplace_back(getDevice());
+                if (!Texture::Private::build(texture, image, m_format))
                 {
                     RHI_LOG_ERROR(std::format(L"Failed to build Swapchain {}", getNameW()), RhiApi::Vulkan);
                 }
@@ -214,7 +213,7 @@ namespace TiRHI::Vulkan
         auto& defferedQueue = Device::Private::getDeferredDeletionQueue(*m_device);
         // we need to wiat that all present work has to finish before destroying swapchian
         m_presentQueue.waitIdle();
-        return createRenderTargets(device);
+        return createRenderTargets();
     }
 
     const RenderTargets& SwapChain::getCurrentRenderTargets() const
@@ -239,7 +238,7 @@ namespace TiRHI::Vulkan
 
     vk::Semaphore SwapChain::getNativeImageAvailableSemaphore() const
     {
-        return m_synchronisations[getRHI().getCurrentFrame()].imageAvailableSemaphore.get();
+        return m_synchronisations[getDevice().getRHI().getCurrentFrame()].imageAvailableSemaphore.get();
     }
 
     vk::Semaphore SwapChain::getNativeRenderFinishedSemaphore() const
@@ -299,20 +298,20 @@ namespace TiRHI::Vulkan
         return extent;
     }
 
-    bool SwapChain::createRenderTargets(Device& device)
+    bool SwapChain::createRenderTargets()
     {
         const vk::Extent2D ext = getExtent2D();
         m_renderTargets.reserve(m_textures.size());
 
         for (size_t i = 0; i < m_textures.size(); ++i)
         {
-            auto& renderTarget = m_renderTargets.emplace_back(getRHI());
+            auto& renderTarget = m_renderTargets.emplace_back(getDevice());
             const bool build = renderTarget.setWidth(ext.width)
                                    .setHeight(ext.height)
                                    .setRenderPassDescriptor(&m_renderPassDescriptor)
                                    .setName(std::format("{} Swap Chain's RenderTargets {}", getName(), i))
                                    .bindColorAttachement(m_textures[i], 0)
-                                   .build(device);
+                                   .build();
 
             if (!build)
             {
@@ -324,7 +323,7 @@ namespace TiRHI::Vulkan
         return true;
     }
 
-    bool SwapChain::createSyncObjects(vk::Device device)
+    bool SwapChain::createSyncObjects()
     {
         m_synchronisations.resize(m_imageCount);
 
@@ -336,8 +335,8 @@ namespace TiRHI::Vulkan
         for (size_t i = 0; i < m_synchronisations.size(); i++)
         {
             Synchronisation& s = m_synchronisations[i];
-            s.imageAvailableSemaphore = device.createSemaphoreUnique(semaphoreCreateInfo);
-            s.renderFinishedSemaphore = device.createSemaphoreUnique(semaphoreCreateInfo);
+            s.imageAvailableSemaphore = getDevice().getNativeDevice().createSemaphoreUnique(semaphoreCreateInfo);
+            s.renderFinishedSemaphore = getDevice().getNativeDevice().createSemaphoreUnique(semaphoreCreateInfo);
             isOK &= s.imageAvailableSemaphore && s.renderFinishedSemaphore;
         }
 

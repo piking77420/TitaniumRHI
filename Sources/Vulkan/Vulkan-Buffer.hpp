@@ -11,7 +11,7 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
 
-    class Buffer : public BaseBuffer<Buffer, Device, RHI>
+    class Buffer : public BaseBuffer<Buffer, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
@@ -19,12 +19,12 @@ namespace TiRHI::Vulkan
         ~Buffer();
         Buffer(Buffer&& other) noexcept;
         Buffer& operator=(Buffer&& other) noexcept;
-        Buffer(RHI& rhi)
-            : BaseBuffer<Buffer, Device, RHI>(rhi)
+        Buffer(Device& device)
+            : BaseBuffer<Buffer, Device>(device)
         {
         }
 
-        bool build(Device& device);
+        bool build();
 
         bool isValid() const
         {
@@ -60,8 +60,6 @@ namespace TiRHI::Vulkan
         }
 
     private:
-        Device* m_device = nullptr;
-
         std::vector<Vulkan::Private::AllocatedBuffer> m_allocatedBuffer;
 
         bool build(Device& device, vk::Image image, Format format);

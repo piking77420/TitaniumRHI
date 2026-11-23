@@ -13,7 +13,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
 
-    class Texture : public BaseTexture<Texture, RHI>
+    class Texture : public BaseTexture<Texture, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -21,13 +21,13 @@ namespace TiRHI::DirectX12
         Texture() = delete;
         ~Texture();
         RHI_MOVE_ONLY(Texture);
-        Texture(RHI& rhi);
+        Texture(Device& device);
 
         struct Private
         {
-            static bool build(Texture& texture, Device& device, MComPtr<ID3D12Resource> image)
+            static bool build(Texture& texture, MComPtr<ID3D12Resource> image)
             {
-                return texture.build(device, image);
+                return texture.build(image);
             }
 
             static ID3D12Resource* getImage(const Texture& texture)
@@ -48,7 +48,7 @@ namespace TiRHI::DirectX12
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
         bool isValid() const
         {
@@ -73,8 +73,6 @@ namespace TiRHI::DirectX12
     private:
         friend Private;
 
-        Device* m_device{nullptr};
-
         MComPtr<ID3D12Resource> m_image;
 
         MComPtr<D3D12MA::Allocation> m_allocation;
@@ -85,9 +83,9 @@ namespace TiRHI::DirectX12
 
         uint64_t m_lastSubmitedValue = 0;
 
-        bool build(Device& device, MComPtr<ID3D12Resource> image);
+        bool build(MComPtr<ID3D12Resource> image);
 
-        bool createHandle(Device& device);
+        bool createHandle();
     };
 } // namespace TiRHI::DirectX12
 

@@ -26,14 +26,14 @@ namespace TiRHI::Vulkan
         return *this;
     }
 
-    bool DescriptorSet::build(Device& device)
+    bool DescriptorSet::build()
     {
-        m_descriptorManager = &Device::Private::getDescriptorManager(device);
+        m_descriptorManager = &Device::Private::getDescriptorManager(getDevice());
         if (!m_descriptorManager)
             return false;
 
         const std::optional<TiRHI::Vulkan::Private::DescriptorSetHandle> handle =
-            m_descriptorManager->allocAndWriteDescriptors(device.getNativeDevice(), getBindingsLayout(),
+            m_descriptorManager->allocAndWriteDescriptors(getDevice().getNativeDevice(), getBindingsLayout(),
                                                           getNbrOfDescriptorSet());
         if (!handle)
             return false;

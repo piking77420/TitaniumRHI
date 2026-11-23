@@ -19,7 +19,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Surface;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, RenderPassDescriptor, RenderTargets, Texture>
+    class SwapChain : public BaseSwapChain<SwapChain, Device, RenderPassDescriptor, RenderTargets, Texture>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -27,17 +27,17 @@ namespace TiRHI::DirectX12
         SwapChain() = delete;
         ~SwapChain();
         RHI_MOVE_ONLY(SwapChain);
-        SwapChain(RHI& rhi);
+        SwapChain(Device& device);
 
         struct Private
         {
         };
 
-        bool build(Device& device, Surface& surface);
+        bool build(Surface& surface);
 
-        AcquiredFrame acquireNextImage(Device& device);
+        AcquiredFrame acquireNextImage();
 
-        bool recreateSwapChain(Device& device, Surface& surface);
+        bool recreateSwapChain(Surface& surface);
 
         const RenderTargets& getCurrentRenderTargets() const;
 
@@ -54,11 +54,11 @@ namespace TiRHI::DirectX12
 
         uint32_t m_swapchainFrameIndex = 0u;
 
-        bool createSwapChain(Device& device, Surface& surface);
+        bool createSwapChain(Surface& surface);
 
-        bool queryBuffer(Device& device);
+        bool queryBuffer();
 
-        bool createRenderTarget(Device& device);
+        bool createRenderTarget();
     };
 
 } // namespace TiRHI::DirectX12

@@ -5,8 +5,8 @@
 
 namespace TiRHI::DirectX12
 {
-    Surface::Surface(RHI& rhi)
-        : BaseSurface(rhi)
+    Surface::Surface(Device& device)
+        : BaseSurface(device)
     {
     }
 

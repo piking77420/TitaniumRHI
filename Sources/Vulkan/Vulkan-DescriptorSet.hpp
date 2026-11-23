@@ -18,11 +18,11 @@ namespace TiRHI::Vulkan
     class Sampler;
     class Buffer;
 
-    class DescriptorSet : public BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler, Buffer>
+    class DescriptorSet : public BaseDescriptorSet<DescriptorSet, Device, Texture, Sampler, Buffer>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
-        using BaseType = typename BaseDescriptorSet<DescriptorSet, RHI, Texture, Sampler, Buffer>;
+        using BaseType = typename BaseDescriptorSet<DescriptorSet, Device, Texture, Sampler, Buffer>;
         using BindingsLayout = typename BaseType::BindingsLayout;
 
         DescriptorSet() = delete;
@@ -33,8 +33,8 @@ namespace TiRHI::Vulkan
         DescriptorSet(DescriptorSet&& other) noexcept;
         DescriptorSet& operator=(DescriptorSet&& other) noexcept;
 
-        DescriptorSet(RHI& rhi)
-            : BaseDescriptorSet(rhi)
+        DescriptorSet(Device& device)
+            : BaseDescriptorSet(device)
         {
         }
 
@@ -52,7 +52,7 @@ namespace TiRHI::Vulkan
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
     private:
         friend Private;

@@ -11,7 +11,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
 
-    class Sampler : public BaseSampler<Sampler, RHI>
+    class Sampler : public BaseSampler<Sampler, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -20,9 +20,9 @@ namespace TiRHI::DirectX12
         ~Sampler();
         Sampler(Sampler&&) noexcept = default;
         Sampler& operator=(Sampler&&) noexcept = default;
-        explicit Sampler(RHI& rhi);
+        explicit Sampler(Device& device);
 
-        bool build(Device& device);
+        bool build();
 
         const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& getShaderViewHandle() const
         {

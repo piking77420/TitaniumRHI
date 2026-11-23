@@ -21,7 +21,7 @@ namespace TiRHI
         BaseDevice() = delete;
         ~BaseDevice() = default;
         BaseDevice(BaseDevice&& other) = default;
-        BaseDevice& operator=(BaseDevice&& other) = default;
+        BaseDevice& operator=(BaseDevice&& other) = delete;
         BaseDevice(TRHI& rhi)
             : m_rhi(rhi)
         {
@@ -54,6 +54,15 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
+         T& setName(const std::wstring& newName)
+        {
+            if (!newName.empty())
+            {
+                m_name = std::string(newName.begin(), newName.end());
+            }
+            return reinterpret_cast<T&>(*this);
+        }
+
 
         struct SubmitPresentDesc
         {
@@ -82,7 +91,7 @@ namespace TiRHI
             if (m_adapter.getProperties().limits.minUniformBufferOffset == 0)
                 return 0;
 
-            alignUp(size, m_adapter.getProperties().limits.minUniformBufferOffset);
+            return alignUp(size, m_adapter.getProperties().limits.minUniformBufferOffset);
         }
 
         uint64_t alignConstantBuffer(uint64_t size)
@@ -90,7 +99,7 @@ namespace TiRHI
             if (m_adapter.getProperties().limits.minUniformBufferOffset == 0)
                 return 0;
 
-            alignUp(size, static_cast<uint64_t>(m_adapter.getProperties().limits.minUniformBufferOffset));
+            return alignUp(size, static_cast<uint64_t>(m_adapter.getProperties().limits.minUniformBufferOffset));
         }
 
     protected:

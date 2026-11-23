@@ -5,12 +5,12 @@
 
 namespace TiRHI::DirectX12
 {
-    RenderTargets::RenderTargets(RHI& rhi)
-        : BaseRenderTargets(rhi)
+    RenderTargets::RenderTargets(Device& device)
+        : BaseRenderTargets(device)
     {
     }
 
-    bool RenderTargets::build(Device& device)
+    bool RenderTargets::build()
     {
 
         return true;

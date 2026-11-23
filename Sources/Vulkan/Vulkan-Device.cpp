@@ -60,32 +60,12 @@ namespace TiRHI::Vulkan
     {
     }
 
-    Device& Device::operator=(Device&& other) noexcept
-    {
-        if (this == &other)
-            return *this;
-
-        BaseDevice::operator=(std::move(other));
-        // Release fences
-        m_synchronisations.clear();
-        m_device = std::move(other.m_device);
-        m_physicalDevice = std::exchange(other.m_physicalDevice, vk::PhysicalDevice{});
-        m_queueProperties = std::move(other.m_queueProperties);
-        m_graphicQueue = std::exchange(other.m_graphicQueue, vk::Queue{});
-        m_graphicQueueIndex = std::exchange(other.m_graphicQueueIndex, 0);
-        m_presentQueue = std::exchange(other.m_presentQueue, vk::Queue{});
-        m_presentQueueIndex = std::exchange(other.m_presentQueueIndex, 0);
-        m_synchronisations = std::move(other.m_synchronisations);
-        m_dispatch = std::exchange(other.m_dispatch, VolkDeviceTable{});
-        return *this;
-    }
-
-    bool Device::build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+    bool Device::build(Surface& surface, const std::span<const Adapter>& adapters,
                        std::optional<size_t> index)
     {
         onBuild(adapters, index);
-        const std::vector<vk::PhysicalDevice> nativePhysicalDevice = rhi.getNativeInstance().enumeratePhysicalDevices();
-#undef min;
+        const std::vector<vk::PhysicalDevice> nativePhysicalDevice =
+            getRHI().getNativeInstance().enumeratePhysicalDevices();
         if (m_adapterIndex >= nativePhysicalDevice.size())
             return false;
 
@@ -97,7 +77,7 @@ namespace TiRHI::Vulkan
                createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
                createSynchronisationPrimitives() && 
-               initVmaAllocator(rhi.getInstance());
+               initVmaAllocator(getRHI().getInstance());
         // clang-format on
     }
 

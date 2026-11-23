@@ -11,7 +11,7 @@ namespace TiRHI::Vulkan
     class Device;
     class RenderPassDescriptor;
 
-    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, DescriptorSet, RenderPassDescriptor>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, Device, DescriptorSet, RenderPassDescriptor>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
@@ -23,8 +23,8 @@ namespace TiRHI::Vulkan
         GraphicPipeline(GraphicPipeline&&) noexcept;
         GraphicPipeline& operator=(GraphicPipeline&&) noexcept;
 
-        GraphicPipeline(RHI& rhi)
-            : BaseGraphicPipiline(rhi)
+        GraphicPipeline(Device& device)
+            : BaseGraphicPipiline(device)
         {
         }
 
@@ -41,12 +41,10 @@ namespace TiRHI::Vulkan
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
     private:
         friend Private;
-
-        vk::Device m_device = VK_NULL_HANDLE;
 
         vk::PipelineLayout m_pipelineLayout;
 

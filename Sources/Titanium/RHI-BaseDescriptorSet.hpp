@@ -14,8 +14,8 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TTexture, typename TSampler, typename TBuffer>
-    class BaseDescriptorSet : public Object<T, TRHI>
+    template<typename T, typename TDevice, typename TTexture, typename TSampler, typename TBuffer>
+    class BaseDescriptorSet : public Object<T, TDevice>
     {
     public:
         using Texture = TTexture;
@@ -135,7 +135,7 @@ namespace TiRHI
         BaseDescriptorSet& operator=(const BaseDescriptorSet&) = delete;
 
         BaseDescriptorSet(BaseDescriptorSet&& other) noexcept
-            : Object<T, TRHI>(std::move(other))
+            : Object<T, TDevice>(std::move(other))
             , m_bindingsLayout(std::exchange(other.m_bindingsLayout, {}))
             , m_descriptorSetType(std::exchange(other.m_descriptorSetType, {}))
             , m_isDirty(std::exchange(other.m_isDirty, {}))
@@ -146,7 +146,7 @@ namespace TiRHI
         {
             if (this == &other)
                 return *this;
-            Object<T, TRHI>::operator=(std::move(other));
+            Object<T, TDevice>::operator=(std::move(other));
             m_bindingsLayout = std::exchange(other.m_bindingsLayout, {});
             m_descriptorSetType = std::exchange(other.m_descriptorSetType, {});
             m_isDirty = std::exchange(other.m_isDirty, {});
@@ -154,10 +154,10 @@ namespace TiRHI
             return *this;
         }
 
-        BaseDescriptorSet(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+        BaseDescriptorSet(TDevice& device)
+            : Object<T, TDevice>(device)
         {
-            static_assert(std::derived_from<T, BaseDescriptorSet<T, TRHI, TTexture, TSampler, _Buffer>>);
+            static_assert(std::derived_from<T, BaseDescriptorSet<T, TDevice, TTexture, TSampler, _Buffer>>);
         }
 
         T& bindSampledTexture(ShaderStageFlags shaderStageFlags, Texture* texture, Sampler* sampler,

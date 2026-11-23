@@ -11,8 +11,8 @@
 
 namespace TiRHI::DirectX12
 {
-    SwapChain::SwapChain(RHI& rhi)
-        : BaseSwapChain(rhi)
+    SwapChain::SwapChain(Device& device)
+        : BaseSwapChain(device)
     {
     }
 
@@ -20,19 +20,19 @@ namespace TiRHI::DirectX12
     {
     }
 
-    bool SwapChain::build(Device& device, Surface& surface)
+    bool SwapChain::build(Surface& surface)
     {
-        return createSwapChain(device, surface);
+        return createSwapChain(surface);
     }
 
-    AcquiredFrame SwapChain::acquireNextImage([[maybe_unused]] Device& device)
+    AcquiredFrame SwapChain::acquireNextImage()
     {
         // Update frame index.
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
         return AcquiredFrame(true, m_swapchain.Get(), m_vsync);
     }
 
-    bool SwapChain::recreateSwapChain(Device& device, Surface& surface)
+    bool SwapChain::recreateSwapChain(Surface& surface)
     {
         // ResizeBuffers requires all references to the existing swapchain backbuffers
         // to be released. We must first wait for the GPU to finish using them, then
@@ -40,7 +40,8 @@ namespace TiRHI::DirectX12
         // Otherwise, outstanding references would cause ResizeBuffers to fail.
 
         // Wait until the GPU has finished using the backbuffers.
-        device.wait();
+        // TODO wait present queue
+        getDevice().wait();
 
         // Release references to the swapchain images.
         m_textures.clear();
@@ -58,10 +59,10 @@ namespace TiRHI::DirectX12
 
         m_swapchainFrameIndex = m_swapchain->GetCurrentBackBufferIndex();
 
-        return queryBuffer(device) && createRenderTarget(device);
+        return queryBuffer() && createRenderTarget();
     }
 
-    bool SwapChain::createSwapChain(Device& device, Surface& surface)
+    bool SwapChain::createSwapChain(Surface& surface)
     {
         if (!getRHI().getNativeFactory())
         {
@@ -91,7 +92,8 @@ namespace TiRHI::DirectX12
 
         MComPtr<IDXGISwapChain1> swapchain1;
         const HRESULT hrSwapChainCreated = getRHI().getNativeFactory()->CreateSwapChainForHwnd(
-            device.getNativeGraphicQueue().Get(), reinterpret_cast<HWND>(surface.getWindowHandle()), &desc, nullptr,
+            getDevice().getNativeGraphicQueue().Get(), reinterpret_cast<HWND>(surface.getWindowHandle()), &desc,
+            nullptr,
             nullptr, &swapchain1);
 
         std::string_view name = getName();
@@ -118,10 +120,10 @@ namespace TiRHI::DirectX12
             RHI_LOG_ERROR(std::format(L"SwapChain cast failed! \n Error Code: {}", hrSwapChainCast), RhiApi::DirectX12);
         }
 
-        return queryBuffer(device) && createRenderPassDescriptor(device) && createRenderTarget(device);
+        return queryBuffer() && createRenderPassDescriptor() && createRenderTarget();
     }
 
-    bool SwapChain::queryBuffer(Device& device)
+    bool SwapChain::queryBuffer()
     {
         m_textures.clear();
         m_textures.reserve(getImageCount());
@@ -138,10 +140,10 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                auto& texture = m_textures.emplace_back(getRHI()).setFlags(
+                auto& texture = m_textures.emplace_back(getDevice()).setFlags(
                     TextureFlags::RenderTarget); // Had to do this in order to create rtv handle
                 texture.setName("SwapchainBackBuffer [" + std::to_string(i) + "]");
-                Texture::Private::build(texture, device, image);
+                Texture::Private::build(texture, image);
 
                 RHI_LOG_INFO(std::format(L"Get SwapChain Buffer [%1] success.\n handle: {}, name: {}", i,
                                          texture.getNameW(), static_cast<void*>(Texture::Private::getImage(texture))),
@@ -152,20 +154,20 @@ namespace TiRHI::DirectX12
         return true;
     }
 
-    bool SwapChain::createRenderTarget(Device& device)
+    bool SwapChain::createRenderTarget()
     {
         m_renderTargets.clear();
         m_renderTargets.reserve(m_textures.size());
         for (UINT i = 0; i < m_textures.size(); ++i)
         {
-            auto& currentRenderTarget = m_renderTargets.emplace_back(getRHI());
+            auto& currentRenderTarget = m_renderTargets.emplace_back(getDevice());
             currentRenderTarget.setWidth(getWidth())
                 .setHeight(getHeight())
                 .setName(std::format("SwapChain Rendertarget {}", i))
                 .setRenderPassDescriptor(&m_renderPassDescriptor);
             currentRenderTarget.bindColorAttachement(m_textures[i], 0);
 
-            if (!currentRenderTarget.build(device))
+            if (!currentRenderTarget.build())
             {
                 RHI_LOG_ERROR(L"Failed to build render targets of swapChain image", RhiApi::DirectX12);
             }

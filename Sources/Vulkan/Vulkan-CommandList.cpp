@@ -31,21 +31,21 @@ namespace TiRHI::Vulkan
         }
     }
 
-    CommandList::CommandList(RHI& rhi)
-        : BaseCommandList(rhi)
+    CommandList::CommandList(Device& device)
+        : BaseCommandList(device)
     {
     }
 
     CommandList::~CommandList() = default;
 
-    bool CommandList::build(Device& device)
+    bool CommandList::build()
     {
         vk::CommandPoolCreateInfo vkCommandPoolCreateInfo{};
         vkCommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
         vkCommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-        vkCommandPoolCreateInfo.queueFamilyIndex = device.getNativeGraphicQueueIndex();
+        vkCommandPoolCreateInfo.queueFamilyIndex = getDevice().getNativeGraphicQueueIndex();
 
-        vk::Device vkDevice = device.getNativeDevice();
+        vk::Device vkDevice = getDevice().getNativeDevice();
         if (vkDevice == VK_NULL_HANDLE)
         {
             RHI_LOG_ERROR(L"vkDevice was null handle", RhiApi::Vulkan);
@@ -72,8 +72,8 @@ namespace TiRHI::Vulkan
             return false;
         }
 
-        m_volkTable = &device.getVolkTable();
-        m_device = &device;
+        m_volkTable = &getDevice().getVolkTable();
+        m_device = &getDevice();
         return m_device && m_volkTable;
     }
 

@@ -31,7 +31,7 @@ namespace TiRHI::Vulkan
     }
 
     Surface::Surface(Surface&& other)
-        : BaseSurface<Surface, RHI>(std::move(other))
+        : BaseSurface(std::move(other))
         , m_surface(std::exchange(other.m_surface, vk::SurfaceKHR{}))
     {
     }
@@ -41,7 +41,7 @@ namespace TiRHI::Vulkan
         if (this == &other)
             return *this;
         destroy();
-        BaseSurface<Surface, RHI>::operator=(std::move(other));
+        BaseSurface::operator=(std::move(other));
         m_surface = std::exchange(other.m_surface, vk::SurfaceKHR{});
 
         return *this;

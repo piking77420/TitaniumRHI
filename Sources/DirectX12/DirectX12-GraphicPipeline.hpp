@@ -17,7 +17,7 @@ namespace TiRHI::DirectX12
     class Device;
     class RenderPassDescriptor;
 
-    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, RHI, DescriptorSet, RenderPassDescriptor>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, Device, DescriptorSet, RenderPassDescriptor>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -25,7 +25,7 @@ namespace TiRHI::DirectX12
         GraphicPipeline() = delete;
         ~GraphicPipeline() = default;
         RHI_MOVE_ONLY(GraphicPipeline);
-        explicit GraphicPipeline(RHI& rhi);
+        explicit GraphicPipeline(Device& device);
 
         struct Private
         {
@@ -41,7 +41,7 @@ namespace TiRHI::DirectX12
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
         std::span<const uint32_t> getStridesPerBinding() const
         {

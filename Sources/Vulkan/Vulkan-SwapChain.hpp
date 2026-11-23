@@ -15,7 +15,8 @@ namespace TiRHI::Vulkan
     class Surface;
     class CommandList;
 
-    class SwapChain : public BaseSwapChain<SwapChain, RHI, Device, Vulkan::RenderPassDescriptor, Vulkan::RenderTargets,
+    class SwapChain : public BaseSwapChain<SwapChain, Device, Vulkan::RenderPassDescriptor,
+                                           Vulkan::RenderTargets,
                                            Vulkan::Texture>
     {
     public:
@@ -25,13 +26,13 @@ namespace TiRHI::Vulkan
         SwapChain& operator=(const SwapChain&) = delete;
         SwapChain(SwapChain&&) noexcept;
         SwapChain& operator=(SwapChain&&) noexcept;
-        explicit SwapChain(RHI& rhi);
+        explicit SwapChain(Device& device);
 
-        bool build(Device& device, Surface& surface);
+        bool build(Surface& surface);
 
-        AcquiredFrame acquireNextImage(Device& device);
+        AcquiredFrame acquireNextImage();
 
-        bool recreateSwapChain(Device& device, Surface& surface);
+        bool recreateSwapChain(Surface& surface);
 
         const RenderTargets& getCurrentRenderTargets() const;
 
@@ -85,11 +86,11 @@ namespace TiRHI::Vulkan
 
         vk::Extent2D getExtent2D() const noexcept;
 
-        vk::SwapchainCreateInfoKHR getSwapChainCreateInfo(Device& device, Surface& surface) const;
+        vk::SwapchainCreateInfoKHR getSwapChainCreateInfo(Surface& surface) const;
 
-        bool createRenderTargets(Device& device);
+        bool createRenderTargets();
 
-        bool createSyncObjects(vk::Device device);
+        bool createSyncObjects();
     };
 
 } // TiRHI::Vulkan

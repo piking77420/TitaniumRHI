@@ -19,7 +19,7 @@ namespace TiRHI::Vulkan
     class GraphicPipeline;
     class DescriptorSet;
 
-    class CommandList : public BaseCommandList<CommandList, RHI, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
+    class CommandList : public BaseCommandList<CommandList, Device, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
                                                Vulkan::GraphicPipeline, DescriptorSet>
     {
     public:
@@ -40,9 +40,9 @@ namespace TiRHI::Vulkan
             }
         };
 
-        explicit CommandList(RHI& rhi);
+        explicit CommandList(Device& device);
 
-        bool build(Device& device);
+        bool build();
 
         bool beginRecord();
 

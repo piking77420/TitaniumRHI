@@ -9,7 +9,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
 
-    class RenderPassDescriptor : public BaseRenderPassDescriptor<RenderPassDescriptor, RHI>
+    class RenderPassDescriptor : public BaseRenderPassDescriptor<RenderPassDescriptor, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -17,9 +17,9 @@ namespace TiRHI::DirectX12
         RenderPassDescriptor() = delete;
         ~RenderPassDescriptor() = default;
         RHI_MOVE_ONLY(RenderPassDescriptor);
-        RenderPassDescriptor(RHI& rhi);
+        RenderPassDescriptor(Device& device);
 
-        bool build(Device&);
+        bool build();
 
     private:
     };

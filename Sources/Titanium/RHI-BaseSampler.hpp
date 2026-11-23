@@ -6,16 +6,16 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI>
-    class BaseSampler : public Object<T, TRHI>
+    template<typename T, typename TDevice>
+    class BaseSampler : public Object<T, TDevice>
     {
     public:
         BaseSampler() = delete;
         ~BaseSampler() = default;
         BaseSampler(BaseSampler&& other) = default;
         BaseSampler& operator=(BaseSampler&& other) = default;
-        BaseSampler(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+        BaseSampler(TDevice& device)
+            : Object<T, TDevice>(device)
         {
         }
 

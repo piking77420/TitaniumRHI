@@ -69,7 +69,7 @@ namespace TiRHI::DirectX12
             }
         };
 
-        bool build(RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
+        bool build(Surface& surface, const std::span<const Adapter>& adapters,
                    std::optional<size_t> index = {});
 
         void wait();

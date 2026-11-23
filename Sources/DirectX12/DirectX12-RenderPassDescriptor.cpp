@@ -2,14 +2,14 @@
 
 namespace TiRHI::DirectX12
 {
-    RenderPassDescriptor::RenderPassDescriptor(RHI& rhi)
+    RenderPassDescriptor::RenderPassDescriptor(Device& rhi)
         : BaseRenderPassDescriptor(rhi)
     {
     }
 
-    bool RenderPassDescriptor::build([[maybe_unused]] Device&)
+    bool RenderPassDescriptor::build()
     {
         return true;
     }
-
+        
 } // TiRHI::DirectX12
