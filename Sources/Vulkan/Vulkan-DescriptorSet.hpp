@@ -54,6 +54,10 @@ namespace TiRHI::Vulkan
 
         bool build();
 
+       std::uint64_t getLastFrameUsed(uint32_t frameIndex) const noexcept;
+
+       DescriptorSet& setLastFrameUsed(uint64_t value, uint32_t frameIndex) noexcept;
+
     private:
         friend Private;
 

@@ -121,16 +121,33 @@ namespace TiRHI::Vulkan
         vmaUnmapMemory(allocator, allocatedBuffer->allocation);
     }
 
-    std::uint64_t Buffer::getLastFrameUsed() const noexcept
+    uint32_t Buffer::getFrameAllocationIndex() const
     {
         const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
-        return m_allocatedBuffer[index].getLastFrameUsed();
+
+        return index;
     }
 
-    Buffer& Buffer::setLastFrameUsed(std::uint64_t value) noexcept
+    std::uint64_t Buffer::getLastFrameUsed(uint32_t frameIndex) const noexcept
     {
-        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
-        m_allocatedBuffer[index].setLastFrameUsed(value);
+        assert(frameIndex < m_allocatedBuffer.size());
+        if (frameIndex >= m_allocatedBuffer.size()) [[unlikely]]
+        {
+            RHI_LOG_FATAL(std::format(L"Invalid access to mark the Buffer set {}", getNameW()), Api);
+        }
+
+        return m_allocatedBuffer[frameIndex].getLastFrameUsed();
+    }
+
+    Buffer& Buffer::setLastFrameUsed(std::uint64_t value, uint32_t frameIndex) noexcept
+    {
+        assert(frameIndex < m_allocatedBuffer.size());
+        if (frameIndex >= m_allocatedBuffer.size()) [[unlikely]]
+        {
+            RHI_LOG_FATAL(std::format(L"Invalid access to mark the Buffer set {}", getNameW()), Api);
+        }
+
+        m_allocatedBuffer[frameIndex].setLastFrameUsed(value);
         return *this;
     }
 

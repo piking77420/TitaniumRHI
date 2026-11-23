@@ -19,7 +19,8 @@ namespace TiRHI::Vulkan
     class GraphicPipeline;
     class DescriptorSet;
     class Sampler;
-    using TrackedResource = std::variant<Texture*, Sampler*, Buffer*, RenderTargets*, GraphicPipeline*, Private::StagingBuffer>;
+    using TrackedResource = std::variant<Texture*, Sampler*, std::pair<Buffer*, uint32_t>, RenderTargets*, GraphicPipeline*,
+                     std::pair<DescriptorSet*, uint32_t>, Private::StagingBuffer>;
 
     class CommandList : public BaseCommandList<CommandList, Device, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
                                                Vulkan::GraphicPipeline, DescriptorSet>
@@ -60,7 +61,7 @@ namespace TiRHI::Vulkan
 
         void bindPipeline(GraphicPipeline& graphicPipeline);
 
-        void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+        void bindDescriptorSet(DescriptorSet& descriptorSet, uint32_t set);
 
         void bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer);
 
@@ -86,7 +87,7 @@ namespace TiRHI::Vulkan
 
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
-        std::vector<TrackedResource> m_resourceReference;
+        std::vector<TrackedResource> m_trackedResources;
 
         struct VulkanStorage
         {

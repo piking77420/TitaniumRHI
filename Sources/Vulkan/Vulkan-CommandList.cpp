@@ -84,6 +84,7 @@ namespace TiRHI::Vulkan
         beginInfo.flags = {};
         getcurrentFrameCmb().reset();
         getcurrentFrameCmb().begin(beginInfo);
+        m_trackedResources.clear();
         return true;
     }
 
@@ -143,6 +144,7 @@ namespace TiRHI::Vulkan
         if (depthAttachment && depthAttachment->loadOp == LoadOp::Clear && !beginRenderPass.clearDepthStencil)
             return false;
 
+        m_vulkanStorage.clearValues.clear();
         m_vulkanStorage.clearValues.reserve(attachmentCount);
 
         // Color attachments
@@ -177,18 +179,18 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
-        m_resourceReference.emplace_back(&renderTargets);
+        m_trackedResources.emplace_back(&renderTargets);
         // set submitted value
         for (Texture* texture : renderTargets.getColorAttachements())
         {
             if (texture)
-                m_resourceReference.emplace_back(texture);
+                m_trackedResources.emplace_back(texture);
         }
 
         if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
         {
             if (texture)
-                m_resourceReference.emplace_back(*texture);
+                m_trackedResources.emplace_back(*texture);
         }
 
         return true;
@@ -233,7 +235,7 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
                                              transitionData.dependencyFlags, {}, {}, barrier);
         texture.setState(state);
-        m_resourceReference.emplace_back(&texture);
+        m_trackedResources.emplace_back(&texture);
     }
 
     void CommandList::transitionResource(Buffer& buffer, ResourceState state)
@@ -255,6 +257,7 @@ namespace TiRHI::Vulkan
                                       L"the requested resource state is invalid for buffers.",
                                       toWString(currentState), toWString(state)),
                           Api);
+            return;
         }
         using namespace Private;
         const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
@@ -263,7 +266,8 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
                                              {}, {}, barrier, {});
         buffer.setState(state);
-        m_resourceReference.emplace_back(&buffer);
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>, &buffer,
+                                        buffer.getFrameAllocationIndex());
     }
 
     void CommandList::bindPipeline(GraphicPipeline& graphicPipeline)
@@ -271,18 +275,18 @@ namespace TiRHI::Vulkan
         BaseCommandList::bindPipeline(graphicPipeline);
         getcurrentFrameCmb().bindPipeline(vk::PipelineBindPoint::eGraphics,
                                           GraphicPipeline::Private::getPipeline(*m_recordState.graphicPipeline));
-        m_resourceReference.emplace_back(&graphicPipeline);
+        m_trackedResources.emplace_back(&graphicPipeline);
     }
 
-    void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
+    void CommandList::bindDescriptorSet(DescriptorSet& descriptorSet, uint32_t set)
     {
         if (!m_recordState.graphicPipeline) [[unlikely]]
             return; 
 
-        std::array<vk::DescriptorSet, 1> descriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+        std::array<vk::DescriptorSet, 1> vkDescriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
         getcurrentFrameCmb().bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics,
-            GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, descriporSet, {});
+            GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, vkDescriporSet, {});
         for (auto& binding : descriptorSet.getBindingsLayout().bindings)
         {
             std::visit(
@@ -293,14 +297,18 @@ namespace TiRHI::Vulkan
                     if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
                     {
                         if (value.texture)
-                            m_resourceReference.emplace_back(value.texture);
+                            m_trackedResources.emplace_back(value.texture);
 
                         if (value.sampler)
-                            m_resourceReference.emplace_back(value.sampler);
+                            m_trackedResources.emplace_back(value.sampler);
                     }
                     else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
                     {
-                        m_resourceReference.emplace_back(value.buffer);
+                        if (value.buffer)
+                        {
+                            m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>,
+                                                            value.buffer, value.buffer->getFrameAllocationIndex());
+                        }
                     }
                     else
                     {
@@ -309,6 +317,8 @@ namespace TiRHI::Vulkan
                 },
                 binding);
         }
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<DescriptorSet*, uint32_t>>, &descriptorSet,
+                                        getRHI().getCurrentFrame());
     }
 
     void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer)
@@ -320,7 +330,8 @@ namespace TiRHI::Vulkan
             return;
 
         getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
-        m_resourceReference.emplace_back(&buffer);
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>, &buffer,
+                                        buffer.getFrameAllocationIndex());
     }
 
     void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
@@ -335,7 +346,8 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().bindIndexBuffer(buffer.getVkBufferFrame(), static_cast<vk::DeviceSize>(offset),
                                              Vulkan::Private::toVulkan(format));
-        m_resourceReference.emplace_back(&buffer);
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>, &buffer,
+                                        buffer.getFrameAllocationIndex());
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -366,6 +378,7 @@ namespace TiRHI::Vulkan
 
         if (std::optional<PushConstant> pushConstant = m_recordState.graphicPipeline->getPushConstant())
         {
+            assert(size == pushConstant->size);
             getcurrentFrameCmb().pushConstants(layout, Vulkan::Private::toVulkan(pushConstant->flag), 0u,
                                                pushConstant->size, data);
         }
@@ -408,8 +421,8 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
                                                vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
-        m_resourceReference.emplace_back(std::move(stagingBuffer));
-        m_resourceReference.emplace_back(&texture);
+        m_trackedResources.emplace_back(std::move(stagingBuffer));
+        m_trackedResources.emplace_back(&texture);
     }
 
     void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
@@ -445,8 +458,9 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBuffer(stagingBuffer.getBuffer(), buffer.getVkBufferFrame(), region);
 
-        m_resourceReference.emplace_back(&buffer);
-        m_resourceReference.emplace_back(std::move(stagingBuffer));
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>, &buffer,
+                                        buffer.getFrameAllocationIndex());
+        m_trackedResources.emplace_back(std::move(stagingBuffer));
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
@@ -460,7 +474,7 @@ namespace TiRHI::Vulkan
 
         // TODO be able to choose level an layer
         vk::ImageSubresourceRange range{};
-        range.aspectMask = vk::ImageAspectFlagBits::eColor;
+        range.aspectMask = vk::ImageAspectFlagBits::eColor; // TODO choose eColor eDepth eStencil
         range.baseMipLevel = 0;
         range.levelCount = VK_REMAINING_MIP_LEVELS;
         range.baseArrayLayer = 0;
@@ -504,7 +518,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::markResourceFrame(uint64_t submisionValue)
     {
-        for (auto& res : m_resourceReference)
+        for (auto& res : m_trackedResources)
         {
             std::visit(
                 [&submisionValue](auto&& re)
@@ -513,6 +527,15 @@ namespace TiRHI::Vulkan
                     if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>, Private::StagingBuffer>)
                     {
                         re.setLastFrameUsed(submisionValue);
+                    }
+                    else if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>,
+                                                      std::pair<Buffer*, uint32_t>> ||
+                                       std::is_same_v<std::remove_reference_t<decltype(re)>,
+                                                      std::pair<DescriptorSet*, uint32_t>>)
+                    {
+                        auto& resourceAndFrameIndex = re;
+                        if (resourceAndFrameIndex.first)
+                            resourceAndFrameIndex.first->setLastFrameUsed(submisionValue, resourceAndFrameIndex.second);
                     }
                     else
                     {
@@ -523,7 +546,7 @@ namespace TiRHI::Vulkan
                 res);
         }
 
-       m_resourceReference.clear();
+       m_trackedResources.clear();
     }
 
 

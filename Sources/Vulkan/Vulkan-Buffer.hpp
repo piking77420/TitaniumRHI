@@ -57,9 +57,11 @@ namespace TiRHI::Vulkan
             return m_allocatedBuffer;
         }
 
-        std::uint64_t getLastFrameUsed() const noexcept;
+        uint32_t getFrameAllocationIndex() const; 
 
-        Buffer& setLastFrameUsed(std::uint64_t value) noexcept;
+        std::uint64_t getLastFrameUsed(uint32_t frameIndex) const noexcept;
+
+        Buffer& setLastFrameUsed(std::uint64_t value, uint32_t frameIndex) noexcept;
 
     private:
         std::vector<Vulkan::Private::AllocatedBuffer> m_allocatedBuffer;
