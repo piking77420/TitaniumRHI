@@ -6,14 +6,14 @@
 
 namespace TiRHI::Vulkan
 {
-    RenderPassDescriptor::RenderPassDescriptor(RHI& rhi)
-        : BaseRenderPassDescriptor<RenderPassDescriptor, RHI>(rhi)
+    RenderPassDescriptor::RenderPassDescriptor(Device& device)
+        : BaseRenderPassDescriptor(device)
     {
     }
 
-    bool RenderPassDescriptor::build(Device& device)
+    bool RenderPassDescriptor::build()
     {
-        return createRenderPass(device.getNativeDevice());
+        return createRenderPass(getDevice().getNativeDevice());
     }
 
     bool RenderPassDescriptor::createRenderPass(vk::Device device)

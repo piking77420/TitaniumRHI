@@ -8,15 +8,16 @@
 namespace TiRHI::DirectX12
 {
     class RHI;
+    class Device;
 
-    class Surface : public BaseSurface<Surface, RHI>
+    class Surface : public BaseSurface<Surface, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
 
         Surface() = delete;
         ~Surface() = default;
-        explicit Surface(RHI& rhi);
+        explicit Surface(Device& device);
 
         bool build(WindowHandle handle);
 

@@ -2,7 +2,7 @@
 
 namespace TiRHI::DirectX12
 {
-    bool DescriptorSet::build(Device& device)
+    bool DescriptorSet::build()
     {
         return true;
     }

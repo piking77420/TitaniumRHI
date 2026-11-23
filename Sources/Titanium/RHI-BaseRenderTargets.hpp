@@ -12,11 +12,10 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TRenderPassDescriptor, typename TTexture>
-    class BaseRenderTargets : public Object<T, TRHI>
+    template<typename T, typename TDevice, typename TRenderPassDescriptor, typename TTexture>
+    class BaseRenderTargets : public Object<T, TDevice>
     {
     public:
-        using _RHI = TRHI;
         using _RenderPassDescriptor = TRenderPassDescriptor;
         using _Texture = TTexture;
 
@@ -27,10 +26,10 @@ namespace TiRHI
         BaseRenderTargets(BaseRenderTargets&&) noexcept = default;
         BaseRenderTargets& operator=(BaseRenderTargets&& other) noexcept = default;
 
-        BaseRenderTargets(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+        BaseRenderTargets(TDevice& rhi)
+            : Object<T, TDevice>(rhi)
         {
-            static_assert(std::derived_from<T, BaseRenderTargets<T, TRHI, TRenderPassDescriptor, _Texture>>);
+            static_assert(std::derived_from<T, BaseRenderTargets<T, TDevice, TRenderPassDescriptor, _Texture>>);
         }
 
         uint32_t getWidth() const

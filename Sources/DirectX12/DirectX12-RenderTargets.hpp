@@ -14,7 +14,7 @@ namespace TiRHI::DirectX12
     class Device;
     class Texture;
 
-    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, RenderPassDescriptor, Texture>
+    class RenderTargets : public BaseRenderTargets<RenderTargets, Device, RenderPassDescriptor, Texture>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -22,13 +22,13 @@ namespace TiRHI::DirectX12
         RenderTargets() = delete;
         ~RenderTargets() = default;
         RHI_MOVE_ONLY(RenderTargets);
-        RenderTargets(RHI& rhi);
+        RenderTargets(Device& device);
 
         struct Private
         {
         };
 
-        bool build(Device& device);
+        bool build();
 
     private:
         friend Private;

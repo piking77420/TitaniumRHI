@@ -6,18 +6,18 @@
 
 namespace TiRHI::DirectX12
 {
-    GraphicPipeline::GraphicPipeline(RHI& rhi)
-        : BaseGraphicPipiline(rhi)
+    GraphicPipeline::GraphicPipeline(Device& device)
+        : BaseGraphicPipiline(device)
     {
     }
 
-    bool GraphicPipeline::build(Device& device)
+    bool GraphicPipeline::build()
     {
-        if (!device.isValid())
+        if (!getDevice().isValid())
             return false;
 
         std::span<const DescriptorSetLayoutEntry> descriptorSetLayoutEntries = getDescriptorSetLayoutEntries();
-        auto& descriptorManager = Device::Private::getDescriptorManager(device);
+        auto& descriptorManager = Device::Private::getDescriptorManager(getDevice());
 
         if (!descriptorSetLayoutEntries.empty() || getPushConstant().has_value() ||
             getVertexBindingDescription().empty() || getVertexInputAttributeDescription().empty())
@@ -105,7 +105,7 @@ namespace TiRHI::DirectX12
         desc.SampleDesc.Count = 1;
         desc.SampleDesc.Quality = 0;
 
-        const HRESULT hr = device.getNativeDevice()->CreateGraphicsPipelineState(
+        const HRESULT hr = getDevice().getNativeDevice()->CreateGraphicsPipelineState(
             &desc, IID_PPV_ARGS(m_pipelineState.ReleaseAndGetAddressOf()));
 
         return SUCCEEDED(hr);

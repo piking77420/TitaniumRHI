@@ -13,7 +13,6 @@ namespace TiRHI::Vulkan
 
     Buffer::Buffer(Buffer&& other) noexcept
         : BaseBuffer(std::move(other))
-        , m_device(std::exchange(other.m_device, nullptr))
         , m_allocatedBuffer(std::exchange(other.m_allocatedBuffer, {}))
     {
     }
@@ -25,19 +24,17 @@ namespace TiRHI::Vulkan
 
         destroy();
         BaseBuffer::operator=(std::move(other));
-        m_device = std::exchange(other.m_device, nullptr);
         m_allocatedBuffer = std::exchange(other.m_allocatedBuffer, {});
 
         return *this;
     }
 
-    bool Buffer::build(Device& device)
+    bool Buffer::build()
     {
         if (getSize() == 0 || getUsage() == BufferUsage::None)
             return false;
-        m_device = &device;
 
-        VmaAllocator& allocator = Device::Private::getAllocator(*m_device);
+        VmaAllocator& allocator = Device::Private::getAllocator(getDevice());
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = getSize();
@@ -94,16 +91,11 @@ namespace TiRHI::Vulkan
             return nullptr;
         }
 
-        if (!m_device)
-        {
-            return nullptr;
-        }
-
         Vulkan::Private::AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
         if (!allocatedBuffer)
             return nullptr;
 
-        VmaAllocator& allocator = Device::Private::getAllocator(*m_device);
+        VmaAllocator& allocator = Device::Private::getAllocator(getDevice());
 
         void* mapped = nullptr;
 
@@ -118,16 +110,11 @@ namespace TiRHI::Vulkan
         if (getSize() == 0)
             return;
 
-        if (!m_device)
-        {
-            return;
-        }
-
         Vulkan::Private::AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
         if (!allocatedBuffer)
             return;
 
-        VmaAllocator& allocator = Device::Private::getAllocator(*m_device);
+        VmaAllocator& allocator = Device::Private::getAllocator(getDevice());
 
         vmaFlushAllocation(allocator, allocatedBuffer->allocation, 0, m_size);
 
@@ -136,19 +123,16 @@ namespace TiRHI::Vulkan
 
     void Buffer::destroy()
     {
-        if (!m_device)
-            return;
-
         TiRHI::Private::DeferredDeletionQueue& defferdDeferredDeletionQueue =
-            Device::Private::getDeferredDeletionQueue(*m_device);
+            Device::Private::getDeferredDeletionQueue(getDevice());
 
         for (size_t i = 0; i < m_allocatedBuffer.size(); i++)
         {
             auto& allocatedBuffer = m_allocatedBuffer[i];
-            if (allocatedBuffer.allocation && m_device)
+            if (allocatedBuffer.allocation)
             {
                 defferdDeferredDeletionQueue.retire(allocatedBuffer.submissionValue,
-                                                    [allocator = Device::Private::getAllocator(*m_device),
+                                                    [allocator = Device::Private::getAllocator(getDevice()),
                                                      allocatedBuffer = std::move(allocatedBuffer)]()
                                                     {
                                                         vmaDestroyBuffer(allocator,

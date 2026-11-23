@@ -117,7 +117,7 @@ namespace TiRHI::Contract
         requires(T device, RHI& rhi, Surface& surface, const std::span<const Adapter>& adapters,
                  std::optional<size_t> index, std::span<const typename T::SubmitPresentDesc> submitPresentDescs) {
             { device.beginFrame() } -> std::same_as<void>;
-            { device.build(rhi, surface, adapters, index) } -> std::same_as<bool>;
+            { device.build(surface, adapters, index) } -> std::same_as<bool>;
             { device.wait() } -> std::same_as<void>;
             { device.submitPresent(submitPresentDescs) } -> std::same_as<void>;
             { device.isValid() } -> std::same_as<bool>;
@@ -127,28 +127,28 @@ namespace TiRHI::Contract
 
     // SwapChain
     template<typename T>
-    concept SwapChainContract = requires(T& swapChain, Device& device, Surface& surface, WindowHandle windowHandle,
+    concept SwapChainContract = requires(T& swapChain, Surface& surface, WindowHandle windowHandle,
                                          const RenderPassDescriptor&) {
-        { swapChain.build(device, surface) } -> std::same_as<bool>;
-        { swapChain.acquireNextImage(device) } -> std::same_as<AcquiredFrame>;
-        { swapChain.recreateSwapChain(device, surface) } -> std::same_as<bool>;
+        { swapChain.build(surface) } -> std::same_as<bool>;
+        { swapChain.acquireNextImage() } -> std::same_as<AcquiredFrame>;
+        { swapChain.recreateSwapChain(surface) } -> std::same_as<bool>;
         { std::as_const(swapChain).getRenderPassDescriptor() } -> std::same_as<const RenderPassDescriptor&>;
         { std::as_const(swapChain).getCurrentRenderTargets() } -> std::same_as<const RenderTargets&>;
         { swapChain.getCurrentRenderTargets() } -> std::same_as<RenderTargets&>;
         { std::as_const(swapChain.getCurrentSwapChainTexture()) } -> std::same_as<const Texture&>;
         { swapChain.getCurrentSwapChainTexture() } -> std::same_as<Texture&>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     static_assert(SwapChainContract<SwapChain>);
 
     // CommandList
 
     template<typename T>
-    concept CommandListContract = requires(T& commandList, Device& device, const Viewport& viewport,
+    concept CommandListContract = requires(T& commandList, const Viewport& viewport,
                                            const Rect2D& rect2D, const BeginRenderPass& beginRenderPass,
                                            RenderTargets& renderTargets, const GraphicPipeline& graphicPipeline,
                                            void* ptr, uint32_t uint) {
-        { commandList.build(device) } -> std::same_as<bool>;
+        { commandList.build() } -> std::same_as<bool>;
         { commandList.beginRecord() } -> std::same_as<bool>;
         { commandList.endRecord() } -> std::same_as<bool>;
         { commandList.setViewPort(viewport) } -> std::same_as<void>;
@@ -159,38 +159,38 @@ namespace TiRHI::Contract
         { commandList.draw(uint, uint, uint, uint) } -> std::same_as<void>;
         { commandList.drawIndexed(uint, uint, uint, uint, uint) } -> std::same_as<void>;
         { commandList.pushConstant(ptr, uint) } -> std::same_as<void>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     static_assert(CommandListContract<CommandList>);
 
     template<typename T>
-    concept RederPassDescriptorContract = requires(T& renderPassDescriptor, Device& device) {
-        { renderPassDescriptor.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    concept RederPassDescriptorContract = requires(T& renderPassDescriptor) {
+        { renderPassDescriptor.build() } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     static_assert(RederPassDescriptorContract<RenderPassDescriptor>);
 
     template<typename T>
     concept RenderTargetsContract = requires(T& renderTargets, Device& device) {
-        { renderTargets.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+        { renderTargets.build() } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     static_assert(RenderTargetsContract<RenderTargets>);
 
     template<typename T>
     concept TextureContract = requires(T& texture, Device& device) {
-        { texture.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+        { texture.build() } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     template<typename T>
     concept GraphicPipelineContract = requires(T& graphicPipeline, Device& device) {
-        { graphicPipeline.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+        { graphicPipeline.build() } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     template<typename T>
-    concept SamplerContract = requires(T& sampler, Device& device) {
-        { sampler.build(device) } -> std::same_as<bool>;
-    } && std::derived_from<T, Object<T, RHI>>;
+    concept SamplerContract = requires(T& sampler) {
+        { sampler.build() } -> std::same_as<bool>;
+    } && std::derived_from<T, Object<T, Device>>;
 
     static_assert(SamplerContract<Sampler>);
 

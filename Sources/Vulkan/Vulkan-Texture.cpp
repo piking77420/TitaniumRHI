@@ -5,8 +5,8 @@
 
 namespace TiRHI::Vulkan
 {
-    Texture::Texture(RHI& rhi)
-        : BaseTexture(rhi)
+    Texture::Texture(Device& device)
+        : BaseTexture(device)
     {
     }
 
@@ -16,8 +16,7 @@ namespace TiRHI::Vulkan
     }
 
     Texture::Texture(Texture&& other) noexcept
-        : BaseTexture<Texture, RHI>(std::move(other))
-        , m_device(std::exchange(other.m_device, nullptr))
+        : BaseTexture(std::move(other))
         , m_image(std::exchange(other.m_image, vk::Image{}))
         , m_uniqueView(std::move(other.m_uniqueView))
         , m_allocation(std::exchange(other.m_allocation, nullptr))
@@ -30,8 +29,7 @@ namespace TiRHI::Vulkan
             return *this;
 
         destroy();
-        BaseTexture<Texture, RHI>::operator=(std::move(other));
-        m_device = std::exchange(other.m_device, nullptr);
+        BaseTexture::operator=(std::move(other));
         m_image = std::exchange(other.m_image, vk::Image{});
         m_uniqueView = std::move(other.m_uniqueView);
         m_allocation = std::exchange(other.m_allocation, nullptr);
@@ -39,9 +37,8 @@ namespace TiRHI::Vulkan
         return *this;
     }
 
-    bool Texture::build(Device& device)
+    bool Texture::build()
     {
-        m_device = &device;
 
         vk::ImageCreateInfo imageCreateInfo{};
         imageCreateInfo.setImageType(vk::ImageType::e2D)
@@ -62,7 +59,7 @@ namespace TiRHI::Vulkan
         const VkImageCreateInfo nativeInfo = static_cast<VkImageCreateInfo>(imageCreateInfo);
 
         const vk::Result result =
-            static_cast<vk::Result>(vmaCreateImage(Device::Private::getAllocator(device), &nativeInfo, &allocationInfo,
+            static_cast<vk::Result>(vmaCreateImage(Device::Private::getAllocator(getDevice()), &nativeInfo, &allocationInfo,
                                                    reinterpret_cast<VkImage*>(&m_image), &m_allocation, nullptr));
 
         if (result != vk::Result::eSuccess)
@@ -85,15 +82,14 @@ namespace TiRHI::Vulkan
                             vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity})
             .setSubresourceRange(imageSubresourceRange);
 
-        m_uniqueView = device.getNativeDevice().createImageViewUnique(viewInfo);
+        m_uniqueView = getDevice().getNativeDevice().createImageViewUnique(viewInfo);
 
         return m_image != VK_NULL_HANDLE;
     }
 
-    bool Texture::build(Device& device, vk::Image image, Format format)
+    bool Texture::build(vk::Image image, Format format)
     {
         m_image = image;
-        m_device = &device;
 
         vk::ImageViewCreateInfo viewInfo{};
 
@@ -104,7 +100,7 @@ namespace TiRHI::Vulkan
                             vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity})
             .setSubresourceRange({vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
 
-        m_uniqueView = device.getNativeDevice().createImageViewUnique(viewInfo);
+        m_uniqueView = getDevice().getNativeDevice().createImageViewUnique(viewInfo);
 
         return m_image != VK_NULL_HANDLE;
     }
@@ -115,13 +111,13 @@ namespace TiRHI::Vulkan
         // Only VMA-allocated textures own their VkImage.
         // Swapchain images are owned by VkSwapchainKHR.
         // That allow swap chian to be used as an texture and particulary useful for command list tracking
-        if (m_allocation && m_device)
+        if (m_allocation)
         {
             TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
-                Device::Private::getDeferredDeletionQueue(*m_device);
+                Device::Private::getDeferredDeletionQueue(getDevice());
 
             deferredDeletionQueue.retire(
-                submissionValue, [allocator = Device::Private::getAllocator(*m_device), image = std::move(m_image),
+                submissionValue, [allocator = Device::Private::getAllocator(getDevice()), image = std::move(m_image),
                                     allocation = std::move(m_allocation), view = std::move(m_uniqueView)]()
                 { vmaDestroyImage(allocator, static_cast<VkImage>(image), allocation); });
         }
@@ -129,7 +125,7 @@ namespace TiRHI::Vulkan
         {
             // if swapchain
             TiRHI::Private::DeferredDeletionQueue& deferredDeletionQueue =
-                Device::Private::getDeferredDeletionQueue(*m_device);
+                Device::Private::getDeferredDeletionQueue(getDevice());
 
             deferredDeletionQueue.retire(submissionValue, [view = std::move(m_uniqueView)]() {});
         }

@@ -10,7 +10,7 @@ namespace TiRHI::Vulkan
     class Device;
     class Texture;
 
-    class RenderTargets : public BaseRenderTargets<RenderTargets, RHI, Vulkan::RenderPassDescriptor, Vulkan::Texture>
+    class RenderTargets : public BaseRenderTargets<RenderTargets, Device, Vulkan::RenderPassDescriptor, Vulkan::Texture>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
@@ -22,8 +22,8 @@ namespace TiRHI::Vulkan
         RenderTargets(RenderTargets&&) noexcept = default;
         RenderTargets& operator=(RenderTargets&& other) noexcept = default;
 
-        RenderTargets(RHI& rhi)
-            : BaseRenderTargets(rhi)
+        RenderTargets(Device& device)
+            : BaseRenderTargets(device)
         {
         }
 
@@ -35,7 +35,7 @@ namespace TiRHI::Vulkan
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
         void setSubmissionValue(uint64_t value)
         {
@@ -44,8 +44,6 @@ namespace TiRHI::Vulkan
 
     private:
         friend Private;
-
-        Device* m_device{nullptr};
 
         vk::UniqueFramebuffer m_frameBuffer;
 

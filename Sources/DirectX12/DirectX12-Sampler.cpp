@@ -5,12 +5,9 @@ namespace TiRHI::DirectX12
 {
     Sampler::~Sampler()
     {
-        if (!m_device)
-            return;
-
-        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
         defferdDestroy.retire(m_lastSubmitedValue,
-                              [device = m_device, sampler = std::move(m_samplerCpuHandle),
+                              [device = &getDevice(), sampler = std::move(m_samplerCpuHandle),
                                cpuHandle = std::move(m_samplerCpuHandle)]() mutable
                               {
                                   Device::Private::getDescriptorAllocatorRTV(*device).release(*cpuHandle);
@@ -20,17 +17,17 @@ namespace TiRHI::DirectX12
         m_lastSubmitedValue = 0;
     }
 
-    Sampler::Sampler(RHI& rhi)
-        : BaseSampler(rhi)
+    Sampler::Sampler(Device& device)
+        : BaseSampler(device)
     {
     }
 
-    bool Sampler::build(Device& device)
+    bool Sampler::build()
     {
-        if (!device.getNativeDevice())
+        if (!getDevice().getNativeDevice())
             return false;
 
-        m_samplerCpuHandle = Device::Private::getDescriptorAllocatorSampler(device).create(device);
+        m_samplerCpuHandle = Device::Private::getDescriptorAllocatorSampler(getDevice()).create(getDevice());
 
         if (!m_samplerCpuHandle || !*m_samplerCpuHandle)
             return false;
@@ -43,13 +40,13 @@ namespace TiRHI::DirectX12
         samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 
         samplerDesc.MipLODBias = 0.0f;
-        samplerDesc.MaxAnisotropy = 16;
+        samplerDesc.MaxAnisotropy = getAnisotropyEnabled() ? getMaxAnisotropy() : 0.0;
         samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 
-        samplerDesc.MinLOD = 0.0f;
-        samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+        samplerDesc.MinLOD = getMinLod();
+        samplerDesc.MaxLOD = getMaxLod() == LodClampNone ?  D3D12_FLOAT32_MAX : getMaxLod();
 
-        device.getNativeDevice()->CreateSampler(&samplerDesc, m_samplerCpuHandle->cpuHandle);
+        getDevice().getNativeDevice()->CreateSampler(&samplerDesc, m_samplerCpuHandle->cpuHandle);
 
         return true;
     }

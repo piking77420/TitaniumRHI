@@ -5,8 +5,8 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TDevice, typename TRHI>
-    class BaseBuffer : public Resource<T, TRHI>
+    template<typename T, typename TDevice>
+    class BaseBuffer : public Resource<T, TDevice>
     {
     public:
         using _Derived = T;
@@ -16,10 +16,10 @@ namespace TiRHI
         ~BaseBuffer() = default;
         BaseBuffer(BaseBuffer&&) noexcept = default;
         BaseBuffer& operator=(BaseBuffer&&) noexcept = default;
-        BaseBuffer(TRHI& rhi)
-            : Resource<T, TRHI>(rhi)
+        BaseBuffer(TDevice& device)
+            : Resource<T, TDevice>(device)
         {
-            static_assert(std::derived_from<T, BaseBuffer<T, _Device, TRHI>>);
+            static_assert(std::derived_from<T, BaseBuffer<T, _Device>>);
         }
 
         _Derived& setSize(uint64_t size)

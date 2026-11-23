@@ -11,7 +11,6 @@ namespace TiRHI::DirectX12
 
     Buffer::Buffer(Buffer&& other) noexcept
         : BaseBuffer(std::move(other))
-        , m_device(std::exchange(other.m_device, nullptr))
         , m_allocatedBuffers(std::exchange(other.m_allocatedBuffers, {}))
     {
     }
@@ -23,18 +22,17 @@ namespace TiRHI::DirectX12
 
         destroy();
         BaseBuffer::operator=(std::move(other));
-        m_device = std::exchange(other.m_device, nullptr);
         m_allocatedBuffers = std::exchange(other.m_allocatedBuffers, {});
 
         return *this;
     }
 
-    bool Buffer::build(Device& device)
+    bool Buffer::build()
     {
         if (getSize() == 0 || getUsage() == BufferUsage::None)
             return false;
 
-        D3D12MA::Allocator& allocator = Device::Private::getAllocator(device);
+        D3D12MA::Allocator& allocator = Device::Private::getAllocator(getDevice());
 
         D3D12MA::ALLOCATION_DESC allocDesc{};
 
@@ -94,7 +92,6 @@ namespace TiRHI::DirectX12
             }
         }
 
-        m_device = &device;
         return createHandle();
     }
 
@@ -113,16 +110,11 @@ namespace TiRHI::DirectX12
             return nullptr;
         }
 
-        if (!m_device)
-        {
-            return nullptr;
-        }
-
         AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
         if (!allocatedBuffer)
             return nullptr;
 
-        ID3D12Device* d3d12Device = m_device->getNativeDevice().Get();
+        ID3D12Device* d3d12Device = getDevice().getNativeDevice().Get();
 
         D3D12_RANGE readRange = {0, 0};
         void* mapped = nullptr;
@@ -142,11 +134,6 @@ namespace TiRHI::DirectX12
     {
         if (getSize() == 0)
             return;
-
-        if (!m_device)
-        {
-            return;
-        }
 
         AllocatedBuffer* allocatedBuffer = getAllocatedBufferFrame();
         if (!allocatedBuffer || !allocatedBuffer->allocation)
@@ -183,11 +170,8 @@ namespace TiRHI::DirectX12
 
     void Buffer::destroy()
     {
-        if (!m_device)
-            return;
-
         TiRHI::Private::DeferredDeletionQueue& m_deferredDeletionQueue =
-            Device::Private::getDeferredDeletionQueue(*m_device);
+            Device::Private::getDeferredDeletionQueue(getDevice());
 
         for (AllocatedBuffer& allocatedBuffer : m_allocatedBuffers)
         {
@@ -205,9 +189,6 @@ namespace TiRHI::DirectX12
 
     bool Buffer::createHandle()
     {
-        if (!m_device)
-            return false;
-
         m_constantBufferViews.reserve(m_allocatedBuffers.size());
 
         for (size_t i = 0; i < m_allocatedBuffers.size(); i++)
@@ -219,14 +200,14 @@ namespace TiRHI::DirectX12
             if ((getUsage() & BufferUsage::Constant) != BufferUsage::None)
             {
                 auto& handle = m_constantBufferViews.emplace_back(
-                    Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).create(*m_device));
+                    Device::Private::getDescriptorAllocatorCbvSrvUav(getDevice()).create(getDevice()));
                 if (!handle)
                     return false;
 
                 D3D12_CONSTANT_BUFFER_VIEW_DESC desc{};
                 desc.BufferLocation = alloc.allocation->GetResource()->GetGPUVirtualAddress();
                 desc.SizeInBytes = getSize();
-                m_device->getNativeDevice()->CreateConstantBufferView(&desc, handle->cpuHandle);
+                getDevice().getNativeDevice()->CreateConstantBufferView(&desc, handle->cpuHandle);
             }
         }
         return true;

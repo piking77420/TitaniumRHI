@@ -110,11 +110,6 @@ namespace TiRHI::DirectX12
         return Device(*this);
     }
 
-    SwapChain RHI::newSwapChain()
-    {
-        return SwapChain(*this);
-    }
-
     IDXGIFactory6* RHI::getNativeFactory()
     {
         return m_factory.getFactory().Get();

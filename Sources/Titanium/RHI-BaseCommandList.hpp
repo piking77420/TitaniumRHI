@@ -45,9 +45,9 @@ namespace TiRHI
         }
     };
 
-    template<typename T, typename TRHI, typename TRenderTarget, typename TRenderPassDescriptor,
+    template<typename T, typename TDevice, typename TRenderTarget, typename TRenderPassDescriptor,
              typename TGraphicPipeline, typename TDescriptorSet>
-    class BaseCommandList : public Object<T, TRHI>
+    class BaseCommandList : public Object<T, TDevice>
     {
     public:
         using _Derived = T;
@@ -62,10 +62,10 @@ namespace TiRHI
         BaseCommandList& operator=(const BaseCommandList&) = delete;
         BaseCommandList(BaseCommandList&&) noexcept = default;
         BaseCommandList& operator=(BaseCommandList&&) noexcept = default;
-        BaseCommandList(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+        BaseCommandList(TDevice& device)
+            : Object<T, TDevice>(device)
         {
-            static_assert(std::derived_from<T, BaseCommandList<T, TRHI, TRenderTarget, TRenderPassDescriptor,
+            static_assert(std::derived_from<T, BaseCommandList<T, TDevice, TRenderTarget, TRenderPassDescriptor,
                                                                TGraphicPipeline, TDescriptorSet>>);
         }
 

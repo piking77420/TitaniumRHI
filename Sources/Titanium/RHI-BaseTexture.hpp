@@ -5,16 +5,18 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI>
-    class BaseTexture : public Resource<T, TRHI>
+    template<typename T, typename TDevice>
+    class BaseTexture : public Resource<T, TDevice>
     {
     public:
+        using _Device = TDevice;
+
         BaseTexture() = delete;
         ~BaseTexture() = default;
         BaseTexture(BaseTexture&&) noexcept = default;
         BaseTexture& operator=(BaseTexture&&) noexcept = default;
-        BaseTexture(TRHI& rhi)
-            : Resource<T, TRHI>(rhi)
+        BaseTexture(TDevice& rhi)
+            : Resource<T, TDevice>(rhi)
         {
         }
 
@@ -76,7 +78,6 @@ namespace TiRHI
         uint64_t getTotalBytesSize() const
         {
             // TODO HANDLE LEVEL AND DEPTH
-
             return TiRHI::pixelSizeFromFormat(getFormat()) * getWidth() * getHeight();
         }
 

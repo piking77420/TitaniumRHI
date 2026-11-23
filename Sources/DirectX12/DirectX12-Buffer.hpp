@@ -13,7 +13,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
 
-    class Buffer : public BaseBuffer<Buffer, Device, RHI>
+    class Buffer : public BaseBuffer<Buffer, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -22,12 +22,12 @@ namespace TiRHI::DirectX12
         ~Buffer();
         Buffer(Buffer&& other) noexcept;
         Buffer& operator=(Buffer&& other) noexcept;
-        Buffer(RHI& rhi)
-            : BaseBuffer(rhi)
+        Buffer(Device& device)
+            : BaseBuffer(device)
         {
         }
 
-        bool build(Device& device);
+        bool build();
 
         bool isValid() const
         {
@@ -55,8 +55,6 @@ namespace TiRHI::DirectX12
         void setLastTimeLineUsedFrame(uint64_t timeLine);
 
     private:
-        Device* m_device{nullptr};
-
         struct AllocatedBuffer
         {
             MComPtr<D3D12MA::Allocation> allocation;

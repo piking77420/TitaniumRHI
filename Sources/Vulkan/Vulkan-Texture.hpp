@@ -10,7 +10,7 @@ namespace TiRHI::Vulkan
     class RHI;
     class Device;
 
-    class Texture : public BaseTexture<Texture, RHI>
+    class Texture : public BaseTexture<Texture, Device>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
@@ -18,13 +18,13 @@ namespace TiRHI::Vulkan
         ~Texture();
         Texture(Texture&& other) noexcept;
         Texture& operator=(Texture&& other) noexcept;
-        Texture(RHI& rhi);
+        Texture(Device& device);
 
         struct Private
         {
-            static bool build(Texture& texture, Device& device, vk::Image image, Format format)
+            static bool build(Texture& texture, vk::Image image, Format format)
             {
-                return texture.build(device, image, format);
+                return texture.build(image, format);
             }
 
             static vk::Image getImage(Texture& texture)
@@ -38,7 +38,7 @@ namespace TiRHI::Vulkan
             }
         };
 
-        bool build(Device& device);
+        bool build();
 
         bool isValid() const
         {
@@ -60,8 +60,6 @@ namespace TiRHI::Vulkan
     private:
         friend Private;
 
-        Device* m_device = nullptr;
-
         vk::Image m_image = VK_NULL_HANDLE;
 
         vk::UniqueImageView m_uniqueView;
@@ -70,7 +68,7 @@ namespace TiRHI::Vulkan
 
         uint64_t submissionValue = 0;
 
-        bool build(Device& device, vk::Image image, Format format);
+        bool build(vk::Image image, Format format);
 
         void destroy();
     };

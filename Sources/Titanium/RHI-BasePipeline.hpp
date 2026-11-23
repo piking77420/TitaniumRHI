@@ -15,8 +15,8 @@
 
 namespace TiRHI
 {
-    template<typename T, typename TRHI, typename TDescriptorSet>
-    class BasePipeline : public Object<T, TRHI>
+    template<typename T, typename TDevice, typename TDescriptorSet>
+    class BasePipeline : public Object<T, TDevice>
     {
     public:
         using DescriptorSet = TDescriptorSet;
@@ -29,10 +29,10 @@ namespace TiRHI
         BasePipeline& operator=(const BasePipeline&) = delete;
         BasePipeline(BasePipeline&&) noexcept = default;
         BasePipeline& operator=(BasePipeline&&) noexcept = default;
-        BasePipeline(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+        BasePipeline(TDevice& device)
+            : Object<T, TDevice>(device)
         {
-            static_assert(std::derived_from<T, BasePipeline<T, TRHI, TDescriptorSet>>);
+            static_assert(std::derived_from<T, BasePipeline<T, TDevice, TDescriptorSet>>);
         }
 
         BasePipeline& addModule(ShaderStage shaderStage, std::unique_ptr<uint8_t[]> data, uint32_t size,
@@ -137,8 +137,8 @@ namespace TiRHI
     };
 
     // TODO fix typo
-    template<typename T, typename TRHI, typename TDescriptorSet, typename TRenderPassDescriptor>
-    class BaseGraphicPipiline : public BasePipeline<T, TRHI, TDescriptorSet>
+    template<typename T, typename TDevice, typename TDescriptorSet, typename TRenderPassDescriptor>
+    class BaseGraphicPipiline : public BasePipeline<T, TDevice, TDescriptorSet>
     {
     public:
         using _Derived = T;
@@ -150,10 +150,10 @@ namespace TiRHI
         BaseGraphicPipiline& operator=(const BaseGraphicPipiline&) = delete;
         BaseGraphicPipiline(BaseGraphicPipiline&&) noexcept = default;
         BaseGraphicPipiline& operator=(BaseGraphicPipiline&&) noexcept = default;
-        BaseGraphicPipiline(TRHI& rhi)
-            : BasePipeline<T, TRHI, TDescriptorSet>(rhi)
+        BaseGraphicPipiline(TDevice& device)
+            : BasePipeline<T, TDevice, TDescriptorSet>(device)
         {
-            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TRHI, TDescriptorSet, TRenderPassDescriptor>>);
+            static_assert(std::derived_from<T, BaseGraphicPipiline<T, TDevice, TDescriptorSet, TRenderPassDescriptor>>);
         }
 
         T& setRenderPassDescritptor(const _RenderPassDescriptor* renderPassDescriptor)

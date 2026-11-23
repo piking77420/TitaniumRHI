@@ -14,7 +14,6 @@ namespace TiRHI::Vulkan
     GraphicPipeline::GraphicPipeline(GraphicPipeline&& other) noexcept
         : BaseGraphicPipiline(std::move(other))
     {
-        m_device = std::exchange(other.m_device, vk::Device{});
         m_pipelineLayout = std::exchange(other.m_pipelineLayout, vk::PipelineLayout{});
         m_pipeline = std::exchange(other.m_pipeline, vk::Pipeline{});
     }
@@ -26,26 +25,16 @@ namespace TiRHI::Vulkan
 
         destroy();
         BaseGraphicPipiline::operator=(std::move(other));
-        m_device = std::exchange(other.m_device, vk::Device{});
         m_pipelineLayout = std::exchange(other.m_pipelineLayout, vk::PipelineLayout{});
         m_pipeline = std::exchange(other.m_pipeline, vk::Pipeline{});
 
         return *this;
     }
 
-    bool GraphicPipeline::build(Device& device)
+    bool GraphicPipeline::build()
     {
-        if (!getRenderPassDescriptor())
+        if (!getRenderPassDescriptor() || !sanityCheck())
             return false;
-
-        m_device = device.getNativeDevice();
-        if (m_device == VK_NULL_HANDLE)
-            return false;
-
-        if (!sanityCheck())
-        {
-            return false;
-        }
 
         const BinaryModule* vertexBinary = nullptr;
 
@@ -69,7 +58,7 @@ namespace TiRHI::Vulkan
 
             info.pCode = code.data();
 
-            return device.getNativeDevice().createShaderModuleUnique(info);
+            return getDevice().getNativeDevice().createShaderModuleUnique(info);
         };
 
         vk::UniqueShaderModule vertexModule = createShaderModule(*vertexBinary);
@@ -163,7 +152,7 @@ namespace TiRHI::Vulkan
             for (auto& entry : getDescriptorSetLayoutEntries())
             {
                 vk::DescriptorSetLayout descriptorSetLayout =
-                    Device::Private::getDescriptorManager(device).getDescriptorSetLayout(entry.layout);
+                    Device::Private::getDescriptorManager(getDevice()).getDescriptorSetLayout(entry.layout);
 
                 if (descriptorSetLayout == VK_NULL_HANDLE)
                 {
@@ -189,7 +178,7 @@ namespace TiRHI::Vulkan
             layoutInfo.setPPushConstantRanges(&pushConstantRange).setPushConstantRangeCount(1);
         }
 
-        m_pipelineLayout = device.getNativeDevice().createPipelineLayout(layoutInfo);
+        m_pipelineLayout = getDevice().getNativeDevice().createPipelineLayout(layoutInfo);
 
         // 10. Graphics pipeline
         vk::GraphicsPipelineCreateInfo pipelineInfo{};
@@ -205,21 +194,18 @@ namespace TiRHI::Vulkan
         pipelineInfo.renderPass = getRenderPassDescriptor()->getNativeRenderPass();
         pipelineInfo.subpass = 0;
 
-        m_pipeline = device.getNativeDevice().createGraphicsPipeline(nullptr, pipelineInfo).value;
+        m_pipeline = getDevice().getNativeDevice().createGraphicsPipeline(nullptr, pipelineInfo).value;
 
         return m_pipeline != VK_NULL_HANDLE;
     }
 
     void GraphicPipeline::destroy()
     {
-        if (m_device)
-        {
-            m_device.destroyPipelineLayout(m_pipelineLayout);
-            m_pipelineLayout = VK_NULL_HANDLE;
+        getDevice().getNativeDevice().destroyPipelineLayout(m_pipelineLayout);
+        m_pipelineLayout = VK_NULL_HANDLE;
 
-            m_device.destroyPipeline(m_pipeline);
-            m_pipeline = VK_NULL_HANDLE;
-        }
+        getDevice().getNativeDevice().destroyPipeline(m_pipeline);
+        m_pipeline = VK_NULL_HANDLE;
     }
 
 } // namespace TiRHI::Vulkan

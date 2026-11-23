@@ -28,8 +28,6 @@ namespace TiRHI::DirectX12
 
         [[nodiscard]] Device newDevice();
 
-        [[nodiscard]] SwapChain newSwapChain();
-
         [[nodiscard]] IDXGIFactory6* getNativeFactory();
 
         [[nodiscard]] RhiApi getApi() const

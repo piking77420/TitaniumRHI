@@ -12,16 +12,19 @@
 namespace TiRHI::Vulkan
 {
     class RHI;
+    class Device;
 
-    class Surface : public BaseSurface<Surface, RHI>
+    class Surface : public BaseSurface<Surface, Device>
     {
     public:
+        static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;
+
         Surface() = delete;
         ~Surface();
         Surface(Surface&& other);
         Surface& operator=(Surface&& other);
-        Surface(RHI& rhi)
-            : BaseSurface(rhi)
+        Surface(Device& device)
+            : BaseSurface(device)
         {
         }
 

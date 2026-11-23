@@ -25,21 +25,20 @@ static uint8_t toPixColor(float value)
 
 namespace TiRHI::DirectX12
 {
-    CommandList::CommandList(RHI& rhi)
-        : BaseCommandList(rhi)
+    CommandList::CommandList(Device& device)
+        : BaseCommandList(device)
     {
     }
 
-    bool CommandList::build(Device& device)
+    bool CommandList::build()
     {
-        m_device = &device;
         m_allocators.resize(getRHI().getFrameInFlight());
 
         for (uint32_t i = 0; i < m_allocators.size(); ++i)
         {
             auto& cmdAlloc = m_allocators[i];
 
-            const HRESULT hrCmdAllocCreated = device.getNativeDevice()->CreateCommandAllocator(
+            const HRESULT hrCmdAllocCreated = getDevice().getNativeDevice()->CreateCommandAllocator(
                 D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
             if (FAILED(hrCmdAllocCreated))
             {
@@ -63,7 +62,7 @@ namespace TiRHI::DirectX12
             }
         }
 
-        const HRESULT hrCmdListCreated = device.getNativeDevice()->CreateCommandList(
+        const HRESULT hrCmdListCreated = getDevice().getNativeDevice()->CreateCommandList(
             0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_allocators[0].Get(), nullptr, IID_PPV_ARGS(&m_commandList));
         if (FAILED(hrCmdListCreated))
         {
@@ -87,9 +86,6 @@ namespace TiRHI::DirectX12
     bool CommandList::beginRecord()
     {
         if (!onBeginRecord())
-            return false;
-
-        if (!m_device)
             return false;
 
         const size_t currentFrame = getRHI().getCurrentFrame();
@@ -157,9 +153,6 @@ namespace TiRHI::DirectX12
 
     bool CommandList::beginRenderPass(const BeginRenderPass& beginRenderPass, RenderTargets& renderTargets)
     {
-        if (!m_device)
-            return false;
-
         if (!onBeginRenderPass(beginRenderPass, renderTargets))
             return false;
 
@@ -181,7 +174,7 @@ namespace TiRHI::DirectX12
 
         std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> desc{};
 
-        auto fillRenderTargetDesc = [device = m_device](D3D12_RENDER_PASS_RENDER_TARGET_DESC& desc,
+        auto fillRenderTargetDesc = [device = &getDevice()](D3D12_RENDER_PASS_RENDER_TARGET_DESC& desc,
                                                         const Texture& texture,
                                                         const AttachmentDescriptor& attachmentDescriptor)
         {
@@ -529,13 +522,13 @@ namespace TiRHI::DirectX12
 
     void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
     {
-        if (!m_device || !m_commandList || !texture || data.empty())
+        if (!m_commandList || !texture || data.empty())
             return;
 
         assert(texture.getState() == ResourceState::CopyDestination);
 
         ID3D12Resource* dstResource = Texture::Private::getImage(texture);
-        ID3D12Device* device = m_device->getNativeDevice().Get();
+        ID3D12Device* device = getDevice().getNativeDevice().Get();
 
         if (!dstResource)
             return;
@@ -555,7 +548,7 @@ namespace TiRHI::DirectX12
         if (numRows == 0 || rowSize == 0 || data.size_bytes() != rowSize * numRows)
             return;
 
-        DirectX12::Private::StagingBuffer staging(*m_device, uploadSize, m_lastSubmissionValue);
+        DirectX12::Private::StagingBuffer staging(getDevice(), uploadSize, m_lastSubmissionValue);
 
         if (!staging)
             return;
@@ -591,12 +584,12 @@ namespace TiRHI::DirectX12
 
     void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
     {
-        if (!m_device || !m_commandList || !buffer || data.empty())
+        if (!m_commandList || !buffer || data.empty())
             return;
 
-        ID3D12Device* nativeDevice = m_device->getNativeDevice().Get();
+        ID3D12Device* nativeDevice = getDevice().getNativeDevice().Get();
 
-        D3D12MA::Allocator& allocator = Device::Private::getAllocator(*m_device);
+        D3D12MA::Allocator& allocator = Device::Private::getAllocator(getDevice());
 
         ID3D12Resource* dst = buffer.getNativeBufferFrame();
 
@@ -606,7 +599,7 @@ namespace TiRHI::DirectX12
         assert(offset <= dst->GetDesc().Width);
         assert(size <= dst->GetDesc().Width - offset);
 
-        DirectX12::Private::StagingBuffer stagingBuffer(*m_device, size, m_lastSubmissionValue);
+        DirectX12::Private::StagingBuffer stagingBuffer(getDevice(), size, m_lastSubmissionValue);
 
         assert(SUCCEEDED(stagingBuffer.operator bool()));
 
@@ -627,11 +620,9 @@ namespace TiRHI::DirectX12
 
     void CommandList::bindDescriptorHeaps()
     {
-        assert(m_device);
+        ID3D12DescriptorHeap* heaps[] = {Device::Private::getDescriptorAllocatorCbvSrvUav(getDevice()).getHeap().Get(),
 
-        ID3D12DescriptorHeap* heaps[] = {Device::Private::getDescriptorAllocatorCbvSrvUav(*m_device).getHeap().Get(),
-
-                                         Device::Private::getDescriptorAllocatorSampler(*m_device).getHeap().Get()};
+                                         Device::Private::getDescriptorAllocatorSampler(getDevice()).getHeap().Get()};
 
         m_commandList->SetDescriptorHeaps(2, heaps);
     }

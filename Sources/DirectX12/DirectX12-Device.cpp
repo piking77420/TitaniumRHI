@@ -117,7 +117,7 @@ namespace TiRHI::DirectX12
         m_device = nullptr;
     }
 
-    bool Device::build(RHI& rhi, [[maybe_unused]] Surface& surface, const std::span<const Adapter>& adapters,
+    bool Device::build([[maybe_unused]] Surface& surface, const std::span<const Adapter>& adapters,
                        std::optional<size_t> index)
     {
         if (IDXGIFactory6* factory = getRHI().getNativeFactory())

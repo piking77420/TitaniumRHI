@@ -6,21 +6,14 @@ namespace TiRHI::Vulkan
 {
     Sampler::~Sampler()
     {
-        if (!m_device)
-            return;
 
-        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(*m_device);
+        auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
         defferdDestroy.retire(submissionValue,
                               [uniqueSampler = std::move(m_sampler)]() mutable { uniqueSampler.reset(); });
     }
 
-    bool Sampler::build(Device& device)
+    bool Sampler::build()
     {
-        vk::Device vkDevice = device.getNativeDevice();
-
-        if (vkDevice == VK_NULL_HANDLE)
-            return false;
-        m_device = &device;
         vk::SamplerCreateInfo info{};
         info.flags = {};
         info.pNext = nullptr;
@@ -56,7 +49,7 @@ namespace TiRHI::Vulkan
         // Coordinates
         info.unnormalizedCoordinates = VK_FALSE;
 
-        m_sampler = vkDevice.createSamplerUnique(info);
+        m_sampler = getDevice().getNativeDevice().createSamplerUnique(info);
 
         return m_sampler.get();
     }

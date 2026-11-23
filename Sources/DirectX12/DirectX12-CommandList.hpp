@@ -19,8 +19,8 @@ namespace TiRHI::DirectX12
     class GraphicPipeline;
     class DescriptorSet;
 
-    class CommandList
-        : public BaseCommandList<CommandList, RHI, RenderTargets, RenderPassDescriptor, GraphicPipeline, DescriptorSet>
+    class CommandList : public BaseCommandList<CommandList, Device, RenderTargets, RenderPassDescriptor,
+                                               GraphicPipeline, DescriptorSet>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -28,9 +28,9 @@ namespace TiRHI::DirectX12
         CommandList() = delete;
         ~CommandList() = default;
         RHI_MOVE_ONLY(CommandList);
-        CommandList(RHI& rhi);
+        CommandList(Device& device);
 
-        bool build(Device& device);
+        bool build();
 
         bool beginRecord();
 
@@ -94,7 +94,6 @@ namespace TiRHI::DirectX12
             }
         } m_recordStateD3D12;
 
-        Device* m_device{nullptr};
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
