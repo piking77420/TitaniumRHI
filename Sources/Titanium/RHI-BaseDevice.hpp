@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <format>
+#include <string_view>
 
 #include <Titanium/RHI-Object.hpp>
 #include <Titanium/RHI-Adapter.hpp>
@@ -14,7 +15,7 @@ namespace TiRHI
     class Adapter;
 
     template<typename T, typename TRHI, typename TAcquireFrame, typename TCommandList>
-    class BaseDevice : public Object<T, TRHI>
+    class BaseDevice 
     {
     public:
         BaseDevice() = delete;
@@ -22,10 +23,37 @@ namespace TiRHI
         BaseDevice(BaseDevice&& other) = default;
         BaseDevice& operator=(BaseDevice&& other) = default;
         BaseDevice(TRHI& rhi)
-            : Object<T, TRHI>(rhi)
+            : m_rhi(rhi)
         {
             static_assert(std::derived_from<T, BaseDevice<T, TRHI, TAcquireFrame, TCommandList>>);
         }
+
+        TRHI& getRHI()
+        {
+            return m_rhi;
+        }
+
+        const TRHI& getRHI() const 
+        {
+            return m_rhi;
+        }
+
+        std::string_view getName() const
+        {
+            return m_name;
+        }
+
+        std::wstring getNameW() const
+        {
+            return m_name.empty() ? std::wstring{m_name.begin(), m_name.end()} : std::wstring{};
+        }
+
+        T& setName(std::string name)
+        {
+            m_name = std::move(name);
+            return static_cast<T&>(*this);
+        }
+
 
         struct SubmitPresentDesc
         {
@@ -126,9 +154,7 @@ namespace TiRHI
             static constexpr int64_t scoreDiscretGpu = 2048;
             score +=
                 properties.deviceType == Adapter::Properties::Type::DiscreteGpu ? scoreDiscretGpu : -scoreDiscretGpu;
-#ifdef max
-#undef max
-#endif //
+
             return std::max(static_cast<decltype(score)>(-1), score);
         }
 
@@ -144,6 +170,11 @@ namespace TiRHI
 
             return index;
         }
+
+    private:
+        TRHI& m_rhi;
+
+        std::string m_name;
     };
 
 } // namespace TiRHI
