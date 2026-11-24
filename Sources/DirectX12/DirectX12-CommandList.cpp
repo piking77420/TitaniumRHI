@@ -16,7 +16,6 @@
 #include <DirectX12/DirectX12-Sampler.hpp>
 #include <DirectX12/DirectX12-Buffer.hpp>
 #include <DirectX12/DirectX12-Texture.hpp>
-#include <DirectX12/Private/StaginBuffer.hpp>
 
 static uint8_t toPixColor(float value)
 {
@@ -250,13 +249,13 @@ namespace TiRHI::DirectX12
         for (auto& texture : renderTargets.getColorAttachements())
         {
             if (texture)
-                texture->setSubmissionValue(m_lastSubmissionValue);
+                trackResource(*texture);
         }
 
         if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
         {
             if (texture)
-                (*texture)->setSubmissionValue(m_lastSubmissionValue);
+                trackResource(**texture);
         }
 
         return true;
@@ -317,6 +316,7 @@ namespace TiRHI::DirectX12
 
         m_commandList->ResourceBarrier(1, &barrier);
         texture.setState(state);
+        trackResource(texture);
     }
 
     void CommandList::transitionResource(Buffer& buffer, ResourceState state)
@@ -339,9 +339,10 @@ namespace TiRHI::DirectX12
 
         m_commandList->ResourceBarrier(1, &barrier);
         buffer.setState(state);
+        trackResource(buffer);
     }
 
-    void CommandList::bindPipeline(const _GraphicPipeline& graphicPipeline)
+    void CommandList::bindPipeline(_GraphicPipeline& graphicPipeline)
     {
         BaseCommandList::bindPipeline(graphicPipeline);
 
@@ -356,6 +357,7 @@ namespace TiRHI::DirectX12
         m_commandList->SetPipelineState(state);
 
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        trackResource(graphicPipeline);
     }
 
     void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
@@ -410,8 +412,8 @@ namespace TiRHI::DirectX12
                                       m_commandList->SetGraphicsRootDescriptorTable(
                                           rootParameterBindingSampler.rootParameterIndex, handleSampler->gpuHandle);
 
-                                      sampledTexture.texture->setSubmissionValue(m_lastSubmissionValue);
-                                      sampledTexture.sampler->setSubmissionValue(m_lastSubmissionValue);
+                                      trackResource(*sampledTexture.texture);
+                                      trackResource(*sampledTexture.sampler);
                                   });
                           },
                           [&](const DescriptorSet::ConstantBuffer& constantBuffer)
@@ -436,6 +438,7 @@ namespace TiRHI::DirectX12
                                       m_commandList->SetGraphicsRootDescriptorTable(
                                           rootParameterBindingBuffer.rootParameterIndex, handleBuffer->gpuHandle);
                                   });
+                              trackResource(*constantBuffer.buffer);
                           },
                           [&](auto&& value)
                           { static_assert(AlwaysFalse<decltype(value)>, "Unsupported binding type"); }},
@@ -580,6 +583,7 @@ namespace TiRHI::DirectX12
         destination.SubresourceIndex = 0;
 
         m_commandList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+        trackResource(std::move(staging));
     }
 
     void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
@@ -610,7 +614,8 @@ namespace TiRHI::DirectX12
             stagingBuffer.unmapData();
         }
         m_commandList->CopyBufferRegion(dst, offset, stagingBuffer.getBuffer(), 0, size);
-        buffer.setLastTimeLineUsedFrame(m_lastSubmissionValue);
+        trackResource(std::move(stagingBuffer));
+        trackResource(buffer);
     }
 
     void CommandList::resetOnRecord()
@@ -695,14 +700,65 @@ namespace TiRHI::DirectX12
             }
 
             m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
-
+            trackResource(texture);
             return true;
         }
     }
 
-    void CommandList::setLastSubmissionValue(uint64_t lastSubmissionValue)
+    void CommandList::markResourceFrame(uint64_t submisionValue)
     {
-        m_lastSubmissionValue = lastSubmissionValue;
+        for (auto& res : m_trackedResource)
+        {
+            std::visit(
+                [&submisionValue](auto&& re)
+                {
+                    if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>, Private::StagingBuffer>)
+                    {
+                        re.setLastFrameUsed(submisionValue);
+                    }
+                    else if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>,
+                                                      std::pair<Buffer*, uint32_t>>)
+                    {
+                        auto& resourceAndFrameIndex = re;
+                        if (resourceAndFrameIndex.first)
+                            resourceAndFrameIndex.first->setLastFrameUsed(submisionValue, resourceAndFrameIndex.second);
+                    }
+                    else
+                    {
+                        if (re)
+                            re->setLastFrameUsed(submisionValue);
+                    }
+                },
+                res);
+        }
+        m_lastSubmissionValue = submisionValue;
+        m_trackedResource.clear();
+    }
+
+    void CommandList::trackResource(Buffer& buffer)
+    {
+        m_trackedResource.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>, &buffer,
+                                       buffer.getCurrentAllocatedFrameIndex());
+    }
+
+    void CommandList::trackResource(Sampler& sampler)
+    {
+        m_trackedResource.emplace_back(&sampler);
+    }
+
+    void CommandList::trackResource(Texture& texture)
+    {
+        m_trackedResource.emplace_back(&texture);
+    }
+
+    void CommandList::trackResource(GraphicPipeline& graphicPipeline)
+    {
+        m_trackedResource.emplace_back(&graphicPipeline);
+    }
+
+    void CommandList::trackResource(Private::StagingBuffer&& stagingBuffer)
+    {
+        m_trackedResource.emplace_back(std::move(stagingBuffer));
     }
 
 } // namespace TiRHI::DirectX12

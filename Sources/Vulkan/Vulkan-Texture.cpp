@@ -17,7 +17,7 @@ namespace TiRHI::Vulkan
 
     Texture::Texture(Texture&& other) noexcept
         : BaseTexture(std::move(other))
-        , Vulkan::Private::FrameTracked<Texture>(std::move(other))
+        , TiRHI::Private::FrameTracked<Texture>(std::move(other))
         , m_image(std::exchange(other.m_image, vk::Image{}))
         , m_uniqueView(std::move(other.m_uniqueView))
         , m_allocation(std::exchange(other.m_allocation, nullptr))
@@ -31,7 +31,7 @@ namespace TiRHI::Vulkan
 
         destroy();
         BaseTexture::operator=(std::move(other));
-        Vulkan::Private::FrameTracked<Texture>::operator=(std::move(other));
+        TiRHI::Private::FrameTracked<Texture>::operator=(std::move(other));
         m_image = std::exchange(other.m_image, vk::Image{});
         m_uniqueView = std::move(other.m_uniqueView);
         m_allocation = std::exchange(other.m_allocation, nullptr);

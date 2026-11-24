@@ -5,6 +5,7 @@
 #include <Titanium/RHI-BasePipeline.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/DirectX12-DescriptorSet.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::DirectX12::Private
 {
@@ -17,13 +18,14 @@ namespace TiRHI::DirectX12
     class Device;
     class RenderPassDescriptor;
 
-    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, Device, DescriptorSet, RenderPassDescriptor>
+    class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, Device, DescriptorSet, RenderPassDescriptor>,
+                            public TiRHI::Private::FrameTracked<GraphicPipeline>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
 
         GraphicPipeline() = delete;
-        ~GraphicPipeline() = default;
+        ~GraphicPipeline();
         RHI_MOVE_ONLY(GraphicPipeline);
         explicit GraphicPipeline(Device& device);
 

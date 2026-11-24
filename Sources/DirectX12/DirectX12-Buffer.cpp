@@ -144,14 +144,14 @@ namespace TiRHI::DirectX12
 
     ID3D12Resource* Buffer::getNativeBufferFrame()
     {
-        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+        const size_t index = getCurrentAllocatedFrameIndex();
 
         return m_allocatedBuffers.size() >= (index + 1) ? m_allocatedBuffers[index].allocation->GetResource() : nullptr;
     }
 
     const TiRHI::DirectX12::Private::DescriptorHandle* Buffer::getDescriptorHandleFrame() const
     {
-        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+        const size_t index = getCurrentAllocatedFrameIndex();
 
         if (index >= m_constantBufferViews.size())
             return nullptr;
@@ -161,11 +161,20 @@ namespace TiRHI::DirectX12
         return descriptor ? &descriptor.value() : nullptr;
     }
 
-    void Buffer::setLastTimeLineUsedFrame(uint64_t timeLine)
+    uint32_t Buffer::getCurrentAllocatedFrameIndex() const
     {
-        const size_t index = getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
-        if (index < m_allocatedBuffers.size())
-            m_allocatedBuffers[index].lastTimeLineUsed = timeLine;
+        return getUpdateMode() == BufferUpdateMode::Static ? 0 : getRHI().getCurrentFrame();
+    }
+
+    Buffer& Buffer::setLastFrameUsed(uint64_t value, uint32_t frameIndex)
+    {
+        assert(frameIndex < m_allocatedBuffers.size());
+        if (frameIndex >= m_allocatedBuffers.size())
+        {
+            RHI_LOG_FATAL(std::format(L"Buffer {}, frame index outside of bound", getNameW()), Api);
+        }
+        m_allocatedBuffers[frameIndex].setLastFrameUsed(value);
+        return *this;
     }
 
     void Buffer::destroy()
@@ -175,7 +184,7 @@ namespace TiRHI::DirectX12
 
         for (AllocatedBuffer& allocatedBuffer : m_allocatedBuffers)
         {
-            m_deferredDeletionQueue.retire(allocatedBuffer.lastTimeLineUsed,
+            m_deferredDeletionQueue.retire(allocatedBuffer.getLastFrameUsed(),
                                          [allocation = std::move(allocatedBuffer.allocation)]() mutable
                                          { allocation.Reset(); });
         }

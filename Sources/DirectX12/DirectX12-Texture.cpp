@@ -19,7 +19,7 @@ namespace TiRHI::DirectX12
         {
             auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
             deferredDestroy.retire(
-                m_lastSubmitedValue,
+                getLastFrameUsed(),
                 [device = &getDevice(), image = std::move(m_image), alloc = std::move(m_allocation),
                  renderTargetView = std::exchange(m_renderTargetView, std::nullopt),
                  shaderRenderView = std::exchange(m_shaderRenderView, std::nullopt)]() mutable

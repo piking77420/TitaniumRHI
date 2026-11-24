@@ -1,12 +1,14 @@
 #ifndef TITANIUM_DIRECTX12_COMMAND_LIST_H
 #define TITANIUM_DIRECTX12_COMMAND_LIST_H
 
-#include <Titanium/RHI-SpecialMembers.hpp>
-#include <optional>
 #include <vector>
+#include <optional>
+#include <variant>
+#include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseCommandList.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <d3d12.h>
+#include <Private/StaginBuffer.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -15,9 +17,13 @@ namespace TiRHI::DirectX12
     class RenderTargets;
     class Texture;
     class Buffer;
+    class Sampler;
     class RenderPassDescriptor;
     class GraphicPipeline;
     class DescriptorSet;
+
+    using TrackedResource = std::variant<Texture*, Sampler*, std::pair<Buffer*, uint32_t>,
+                                         GraphicPipeline*, Private::StagingBuffer>;
 
     class CommandList : public BaseCommandList<CommandList, Device, RenderTargets, RenderPassDescriptor,
                                                GraphicPipeline, DescriptorSet>
@@ -52,7 +58,7 @@ namespace TiRHI::DirectX12
 
         void transitionResource(Buffer& buffer, ResourceState state);
 
-        void bindPipeline(const _GraphicPipeline& graphicPipeline);
+        void bindPipeline(_GraphicPipeline& graphicPipeline);
 
         void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
 
@@ -76,7 +82,7 @@ namespace TiRHI::DirectX12
             return m_commandList.Get();
         }
 
-        void setLastSubmissionValue(uint64_t lastSubmissionValue);
+        void markResourceFrame(uint64_t submisionValue);
 
     private:
         struct SetGraphicsRootDescriptorTable
@@ -98,6 +104,7 @@ namespace TiRHI::DirectX12
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
         std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
         uint64_t m_lastSubmissionValue = 0;
+        std::vector<TrackedResource> m_trackedResource;
 
         void resetOnRecord();
 
@@ -106,6 +113,20 @@ namespace TiRHI::DirectX12
         void bindRootSignature(ID3D12RootSignature* rootSignature);
 
         bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
+
+        void trackResource(Buffer& buffer);
+
+        void trackResource(Sampler& sampler);
+
+        void trackResource(Texture& texture);
+
+        void trackResource(GraphicPipeline& graphicPipeline);
+
+        void trackResource(Private::StagingBuffer&& stagingBuffer);
+
+        void trackResource(Private::StagingBuffer& stagingBuffer) = delete;
+
+        void trackResource(const Private::StagingBuffer& stagingBuffer) = delete;
     };
 
 } // namespace TiRHI::DirectX12

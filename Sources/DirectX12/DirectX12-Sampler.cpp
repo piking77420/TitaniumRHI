@@ -6,15 +6,15 @@ namespace TiRHI::DirectX12
     Sampler::~Sampler()
     {
         auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
-        defferdDestroy.retire(m_lastSubmitedValue,
+        defferdDestroy.retire(getLastFrameUsed(),
                               [device = &getDevice(), sampler = std::move(m_samplerCpuHandle),
                                cpuHandle = std::move(m_samplerCpuHandle)]() mutable
                               {
-                                  Device::Private::getDescriptorAllocatorRTV(*device).release(*cpuHandle);
+                                  Device::Private::getDescriptorAllocatorSampler(*device).release(*cpuHandle);
                                   sampler.reset();
                               });
 
-        m_lastSubmitedValue = 0;
+        setLastFrameUsed(0);
     }
 
     Sampler::Sampler(Device& device)

@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <Vulkan/Vulkan-Header.hpp>
-#include <Private/FrameTracked.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 #include <vma/vk_mem_alloc.h>
 
 namespace TiRHI::Private
@@ -18,7 +18,7 @@ namespace TiRHI::Vulkan
 
 namespace TiRHI::Vulkan::Private
 {
-    struct AllocatedBuffer : public FrameTracked<AllocatedBuffer>
+    struct AllocatedBuffer : public TiRHI::Private::FrameTracked<AllocatedBuffer>
     {
         vk::Buffer buffer{};
         VmaAllocation allocation = VK_NULL_HANDLE;

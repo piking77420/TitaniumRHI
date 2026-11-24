@@ -4,7 +4,7 @@
 #include <Titanium/RHI-BasePipeline.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
 #include <Vulkan/Vulkan-DescriptorSet.hpp>
-#include <Vulkan/Private/FrameTracked.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -13,7 +13,7 @@ namespace TiRHI::Vulkan
     class RenderPassDescriptor;
 
     class GraphicPipeline : public BaseGraphicPipiline<GraphicPipeline, Device, DescriptorSet, RenderPassDescriptor>,
-                            public Private::FrameTracked<GraphicPipeline>
+                            public TiRHI::Private::FrameTracked<GraphicPipeline>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;

@@ -71,13 +71,14 @@ namespace TiRHI::Vulkan
 
         assert(adapters.size() == nativePhysicalDevice.size());
         std::vector<Adapter::Features> finalFeatures;
-        // clang-format off
         m_adapter = adapters[m_adapterIndex];
+        // clang-format off
         return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
                createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
                createSynchronisationPrimitives() && 
-               initVmaAllocator(getRHI().getInstance());
+               initVmaAllocator(getRHI().getInstance()) && 
+               initCommandPool();
         // clang-format on
     }
 
@@ -352,6 +353,20 @@ namespace TiRHI::Vulkan
         }
 
         return true;
+    }
+
+    bool Device::initCommandPool()
+    {
+        vk::CommandPoolCreateInfo vkCommandPoolCreateInfo{};
+        vkCommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
+        vkCommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+        vkCommandPoolCreateInfo.queueFamilyIndex = getNativeGraphicQueueIndex();
+
+        vk::Device vkDevice = getNativeDevice();
+
+        m_commandPool = vkDevice.createCommandPoolUnique(vkCommandPoolCreateInfo);
+        
+        return m_commandPool.get();
     }
 
     uint64_t Device::Private::getNextSubmissionValue(const Device& device)

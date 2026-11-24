@@ -83,8 +83,6 @@ namespace TiRHI::Vulkan
         void markResourceFrame(uint64_t submisionValue);
 
     private:
-        vk::UniqueCommandPool m_commandPool;
-
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
         std::vector<TrackedResource> m_trackedResources;
@@ -94,9 +92,29 @@ namespace TiRHI::Vulkan
             std::vector<vk::ClearValue> clearValues;
         } m_vulkanStorage;
 
+        std::array<uint64_t, MaxFramesInFlight> m_lastSubmitedFrames;
+
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
 
         static vk::BufferMemoryBarrier makeBufferBarrier(Buffer& buffer, ResourceState current, ResourceState target);
+        
+        void trackResource(Texture& texture);
+
+        void trackResource(Sampler& sampler);
+
+        void trackResource(Buffer& buffer);
+
+        void trackResource(GraphicPipeline& graphicPipeline);
+
+        void trackResource(RenderTargets& renderTargets);
+
+        void trackResource(DescriptorSet& descriptorSet);
+
+        void trackResource(Private::StagingBuffer&& stagingBuffer);
+
+        void trackResource(Private::StagingBuffer& stagingBuffer) = delete;
+
+        void trackResource(const Private::StagingBuffer& stagingBuffer) = delete;
     };
 
 } // namespace TiRHI::Vulkan

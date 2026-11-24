@@ -5,13 +5,13 @@
 #include <cstddef>
 #include <Titanium/RHITypes.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
-#include <Vulkan/Private/FrameTracked.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::Vulkan::Private
 {
     struct DescriptorSetHandle
     {
-        struct DescriptorSetTracked : public FrameTracked<DescriptorSetTracked>
+        struct DescriptorSetTracked : public TiRHI::Private::FrameTracked<DescriptorSetTracked>
         {
             vk::DescriptorSet descriptorSet;
         };

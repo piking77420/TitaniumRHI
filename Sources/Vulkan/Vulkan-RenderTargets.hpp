@@ -3,7 +3,7 @@
 
 #include <Titanium/RHI-BaseRenderTargets.hpp>
 #include <Vulkan/Vulkan-RenderPassDescriptor.hpp>
-#include <Vulkan/Private/FrameTracked.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::Vulkan
 {
@@ -12,7 +12,7 @@ namespace TiRHI::Vulkan
     class Texture;
 
     class RenderTargets : public BaseRenderTargets<RenderTargets, Device, Vulkan::RenderPassDescriptor, Vulkan::Texture>,
-                          public Private::FrameTracked<RenderTargets>
+                          public TiRHI::Private::FrameTracked<RenderTargets>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::Vulkan;

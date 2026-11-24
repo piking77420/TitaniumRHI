@@ -5,6 +5,7 @@
 
 #include <Titanium/RHI-SpecialMembers.hpp>
 #include <Titanium/RHI-BaseTexture.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
 
@@ -13,7 +14,7 @@ namespace TiRHI::DirectX12
     class RHI;
     class Device;
 
-    class Texture : public BaseTexture<Texture, Device>
+    class Texture : public BaseTexture<Texture, Device>, public TiRHI::Private::FrameTracked<Texture>
     {
     public:
         static constexpr TiRHI::RhiApi Api = RhiApi::DirectX12;
@@ -65,11 +66,6 @@ namespace TiRHI::DirectX12
             return isValid();
         }
 
-        void setSubmissionValue(uint64_t value)
-        {
-            m_lastSubmitedValue = value;
-        }
-
     private:
         friend Private;
 
@@ -80,8 +76,6 @@ namespace TiRHI::DirectX12
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_renderTargetView;
 
         std::optional<TiRHI::DirectX12::Private::DescriptorHandle> m_shaderRenderView;
-
-        uint64_t m_lastSubmitedValue = 0;
 
         bool build(MComPtr<ID3D12Resource> image);
 
