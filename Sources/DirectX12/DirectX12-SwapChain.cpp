@@ -8,6 +8,7 @@
 #include <DirectX12/DirectX12-Surface.hpp>
 #include <DirectX12/DirectX12-RenderPassDescriptor.hpp>
 #include <DirectX12/DirectX12-RenderTargets.hpp>
+#include <DirectX12/Private/RhiToDirectX12.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -79,7 +80,7 @@ namespace TiRHI::DirectX12
         const DXGI_SWAP_CHAIN_DESC1 desc{
             .Width = getWidth(),
             .Height = getHeight(),
-            .Format = DXGI_FORMAT_R8G8B8A8_UNORM, // TODO ABSTRACT
+            .Format = DirectX12::Private::toDirectX12(getFormat()), // TODO ABSTRACT
             .Stereo = false,
             .SampleDesc = {.Count = 1, .Quality = 0},
             .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
@@ -93,8 +94,7 @@ namespace TiRHI::DirectX12
         MComPtr<IDXGISwapChain1> swapchain1;
         const HRESULT hrSwapChainCreated = getRHI().getNativeFactory()->CreateSwapChainForHwnd(
             getDevice().getNativeGraphicQueue().Get(), reinterpret_cast<HWND>(surface.getWindowHandle()), &desc,
-            nullptr,
-            nullptr, &swapchain1);
+            nullptr, nullptr, &swapchain1);
 
         std::string_view name = getName();
         if (!name.empty())
@@ -140,9 +140,10 @@ namespace TiRHI::DirectX12
             }
             else
             {
-                auto& texture = m_textures.emplace_back(getDevice()).setFlags(
-                    TextureFlags::RenderTarget); // Had to do this in order to create rtv handle
-                texture.setName("SwapchainBackBuffer [" + std::to_string(i) + "]");
+                auto& texture =
+                    m_textures.emplace_back(getDevice())
+                        .setFlags(TextureFlags::RenderTarget); // Had to do this in order to create rtv handle
+                texture.setName("SwapchainBackBuffer [" + std::to_string(i) + "]").setFormat(getFormat());
                 Texture::Private::build(texture, image);
 
                 RHI_LOG_INFO(std::format(L"Get SwapChain Buffer [%1] success.\n handle: {}, name: {}", i,

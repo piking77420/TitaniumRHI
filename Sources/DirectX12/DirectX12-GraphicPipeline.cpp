@@ -10,8 +10,7 @@ namespace TiRHI::DirectX12
     {
         auto& deferredDeletionQueue = Device::Private::getDeferredDeletionQueue(getDevice());
         deferredDeletionQueue.retire(getLastFrameUsed(),
-                                     [pipelineState = std::move(m_pipelineState)]() mutable { pipelineState.Reset();
-            });
+                                     [pipelineState = std::move(m_pipelineState)]() mutable { pipelineState.Reset(); });
     }
 
     GraphicPipeline::GraphicPipeline(Device& device)
@@ -21,7 +20,7 @@ namespace TiRHI::DirectX12
 
     bool GraphicPipeline::build()
     {
-        if (!getDevice().isValid())
+        if (!sanityCheck())
             return false;
 
         std::span<const DescriptorSetLayoutEntry> descriptorSetLayoutEntries = getDescriptorSetLayoutEntries();
@@ -78,7 +77,7 @@ namespace TiRHI::DirectX12
         desc.PrimitiveTopologyType = DirectX12::Private::toDirectX12TopologyType(getPrimitiveTopology());
         desc.RasterizerState.FillMode = DirectX12::Private::toDirectX12(getPolygoneMode());
         desc.RasterizerState.CullMode = DirectX12::Private::toDirectX12(getCullFlagMode());
-        desc.RasterizerState.FrontCounterClockwise = DirectX12::Private::toDirectX12(getCullFlagMode());
+        desc.RasterizerState.FrontCounterClockwise = DirectX12::Private::toDirectX12(getFrontFace());
         desc.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
         desc.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
         desc.RasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
@@ -100,18 +99,32 @@ namespace TiRHI::DirectX12
         blend.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
         desc.SampleMask = UINT_MAX;
+        const RenderPassDescriptor* renderPassDescriptor = getRenderPassDescriptor();
 
+        desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
         desc.DepthStencilState.DepthEnable = FALSE;
+        desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
         desc.DepthStencilState.StencilEnable = FALSE;
 
-        // TODO use color attachelment
+        if (const auto depthAttachment = renderPassDescriptor->getDepthAttachement())
+        {
+            desc.DSVFormat = DirectX12::Private::toDirectX12(depthAttachment->format);
 
-        desc.NumRenderTargets = 1;
-        desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-
-        desc.SampleDesc.Count = 1;
-        desc.SampleDesc.Quality = 0;
+            desc.DepthStencilState.DepthEnable = TRUE;
+            desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+            desc.DepthStencilState.DepthFunc = DirectX12::Private::toDirectX12(getDepthCompareOp());
+        }
+        assert(renderPassDescriptor->getColorAttachements().size() < 8);
+        desc.NumRenderTargets = static_cast<UINT>(renderPassDescriptor->getColorAttachements().size());
+        for (size_t i = 0; i < renderPassDescriptor->getColorAttachements().size(); i++)
+        {
+            desc.RTVFormats[i] =
+                DirectX12::Private::toDirectX12(renderPassDescriptor->getColorAttachements()[i].format);
+            // TODO
+            desc.SampleDesc.Count = 1;
+            desc.SampleDesc.Quality = 0;
+        }
 
         const HRESULT hr = getDevice().getNativeDevice()->CreateGraphicsPipelineState(
             &desc, IID_PPV_ARGS(m_pipelineState.ReleaseAndGetAddressOf()));

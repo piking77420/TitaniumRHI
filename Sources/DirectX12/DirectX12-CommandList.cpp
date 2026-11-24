@@ -174,8 +174,8 @@ namespace TiRHI::DirectX12
         std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> desc{};
 
         auto fillRenderTargetDesc = [device = &getDevice()](D3D12_RENDER_PASS_RENDER_TARGET_DESC& desc,
-                                                        const Texture& texture,
-                                                        const AttachmentDescriptor& attachmentDescriptor)
+                                                            const Texture& texture,
+                                                            const AttachmentDescriptor& attachmentDescriptor)
         {
             const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& handle =
                 Texture::Private::getRenderTargetViewHandle(texture);
@@ -210,33 +210,52 @@ namespace TiRHI::DirectX12
 
         if (depthAtt)
         {
-            const Texture& depthTexture = *depthTargetAttachement.value();
-            const std::optional<TiRHI::DirectX12::Private::DescriptorHandle>& handle =
-                Texture::Private::getRenderTargetViewHandle(depthTexture);
-            if (!handle)
-            {
-                RHI_LOG_ERROR(std::format(L"Failed to get D3D12_CPU_DESCRIPTOR_HANDLE fo the texture {}",
-                                          depthTexture.getNameW()),
-                              RhiApi::DirectX12);
+            if (!depthTargetAttachement || !*depthTargetAttachement)
                 return false;
-            }
+
+            const Texture& depthTexture = **depthTargetAttachement;
+
+            const auto& handle = Texture::Private::getRenderTargetViewHandle(depthTexture);
+
+            if (!handle)
+                return false;
+
             depthDesc.cpuDescriptor = handle->cpuHandle;
+
             depthDesc.DepthBeginningAccess.Type = Private::toDirectX12(depthAtt->loadOp);
+
             depthDesc.DepthEndingAccess.Type = Private::toDirectX12(depthAtt->storeOp);
+
             depthDesc.StencilBeginningAccess.Type = Private::toDirectX12(depthAtt->stencilLoadOp);
+
             depthDesc.StencilEndingAccess.Type = Private::toDirectX12(depthAtt->stencilStoreOp);
 
-            if (beginRenderPass.clearDepthStencil)
-            {
-                depthDesc.DepthBeginningAccess.Clear.ClearValue.Format = Private::toDirectX12(depthAtt->format);
+            const bool clearDepth = depthAtt->loadOp == LoadOp::Clear;
 
-                depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth =
-                    beginRenderPass.clearDepthStencil->depth;
-            }
-            else
+            const bool clearStencil = depthAtt->stencilLoadOp == LoadOp::Clear;
+
+            if (clearDepth || clearStencil)
             {
-                // A CLEAR operation requires a clear value.
-                return false;
+                if (!beginRenderPass.clearDepthStencil)
+                    return false;
+
+                D3D12_CLEAR_VALUE clearValue{};
+
+                clearValue.Format = Private::toDirectX12(depthAtt->format);
+
+                clearValue.DepthStencil.Depth = beginRenderPass.clearDepthStencil->depth;
+
+                clearValue.DepthStencil.Stencil = beginRenderPass.clearDepthStencil->stencil;
+
+                if (clearDepth)
+                {
+                    depthDesc.DepthBeginningAccess.Clear.ClearValue = clearValue;
+                }
+
+                if (clearStencil)
+                {
+                    depthDesc.StencilBeginningAccess.Clear.ClearValue = clearValue;
+                }
             }
 
             depthDescPtr = &depthDesc;
@@ -263,13 +282,15 @@ namespace TiRHI::DirectX12
 
     void CommandList::endRenderPass()
     {
+        assert(m_recordState.renderTargets);
+
         m_commandList->EndRenderPass();
 
-        if (m_recordState.renderPassDescritptor)
+        if (!renderTargetTransition(*m_recordState.renderTargets, true))
         {
-            renderTargetTransition(*m_recordState.renderTargets, true);
-            setRenderPassRenderTargetState(false);
+            RHI_LOG_FATAL(L"Failed to transition render targets", RhiApi::DirectX12);
         }
+
         onEndRenderPass();
     }
 
@@ -356,7 +377,7 @@ namespace TiRHI::DirectX12
         ID3D12PipelineState* state = GraphicPipeline::Private::getPipelineState(*m_recordState.graphicPipeline);
         m_commandList->SetPipelineState(state);
 
-        m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_commandList->IASetPrimitiveTopology(DirectX12::Private::toDirectX12(graphicPipeline.getPrimitiveTopology()));
         trackResource(graphicPipeline);
     }
 
@@ -647,62 +668,94 @@ namespace TiRHI::DirectX12
         // here we need to do it by ourself
 
         const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
+
         if (!renderPassDescriptor)
             return false;
 
-        std::span attachements = renderTargets.getColorAttachements();
-        std::optional depthAttachement = renderTargets.getDepthAttachement();
+        const auto colorTextures = renderTargets.getColorAttachements();
+        const auto depthTexture = renderTargets.getDepthAttachement();
 
-        if (attachements.size() != renderPassDescriptor->getAttachementCount())
-        {
-            RHI_LOG_ERROR(
-                std::format(L"CommandList {}: renderTargetTransition but d3d12 renderTargets size is not equal to ",
-                            this->getNameW()),
-                RhiApi::DirectX12);
+        const auto colorDescriptors = renderPassDescriptor->getColorAttachements();
 
+        const auto depthDescriptor = renderPassDescriptor->getDepthAttachement();
+
+        if (colorTextures.size() != colorDescriptors.size())
             return false;
+
+        if (depthTexture.has_value() != depthDescriptor.has_value())
+            return false;
+
+        // Validate attachments before modifying resource states.
+        for (const auto* texture : colorTextures)
+        {
+            if (!texture)
+                return false;
+        }
+
+        if (depthTexture && !*depthTexture)
+            return false;
+
+        m_barriers.clear();
+        m_barriers.reserve(colorTextures.size() + (depthTexture.has_value() ? 1 : 0));
+
+        auto addTransition = [&](Texture& texture, const AttachmentDescriptor& desc)
+        {
+            const ResourceState currentState = texture.getState();
+
+            const ResourceState nextState = IsOutTransition ? desc.finalState : desc.renderState;
+
+            const D3D12_RESOURCE_STATES before = Private::toDirectX12(currentState);
+
+            const D3D12_RESOURCE_STATES after = Private::toDirectX12(nextState);
+
+#if 0
+            RHI_LOG_INFO(std::format(L"Texture {}: {} -> {} (0x{:X} -> 0x{:X})", texture.getNameW(),
+                                     toWString(currentState), toWString(nextState), static_cast<uint32_t>(before),
+                                     static_cast<uint32_t>(after)),
+                         RhiApi::DirectX12);
+#endif
+            if (before != after)
+            {
+                D3D12_RESOURCE_BARRIER barrier{};
+
+                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+                barrier.Transition.pResource = Texture::Private::getImage(texture);
+
+                barrier.Transition.StateBefore = before;
+                barrier.Transition.StateAfter = after;
+
+                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+                m_barriers.push_back(barrier);
+            }
+
+            texture.setState(nextState);
+            trackResource(texture);
+        };
+
+        // Color attachments
+        for (size_t i = 0; i < colorTextures.size(); ++i)
+        {
+            addTransition(*colorTextures[i], colorDescriptors[i]);
+        }
+
+        // Depth attachment
+        if (depthTexture)
+        {
+            addTransition(**depthTexture, *depthDescriptor);
+        }
+
+        // Submit all barriers in a single call.
+        if (!m_barriers.empty())
+        {
+            m_commandList->ResourceBarrier(static_cast<UINT>(m_barriers.size()), m_barriers.data());
         }
 
         m_barriers.clear();
-        m_barriers.reserve(attachements.size());
-        for (size_t i = 0; i < attachements.size(); i++)
-        {
-            const bool isDepthAtt = (i == attachements.size() - 1) && renderPassDescriptor->getDepthAttachement();
 
-            Texture& texture = isDepthAtt ? *(*depthAttachement) : *attachements[i];
-            const AttachmentDescriptor& desc = isDepthAtt ? *renderPassDescriptor->getDepthAttachement()
-                                                          : renderPassDescriptor->getColorAttachements()[i];
-
-            const ResourceState current = texture.getState();
-
-            if (!IsOutTransition && current != desc.initialState)
-            {
-                RHI_LOG_WARNING(std::format(L"CommandList {}: Texture {} is in state {} but render pass expected {}",
-                                            getNameW(), texture.getNameW(), toWString(current),
-                                            toWString(desc.initialState)),
-                                RhiApi::DirectX12);
-            }
-
-            D3D12_RESOURCE_BARRIER& barrier = m_barriers.emplace_back();
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource = Texture::Private::getImage(texture);
-            barrier.Transition.StateBefore =
-                IsOutTransition ? Private::toDirectX12(desc.renderState) : Private::toDirectX12(desc.initialState);
-            barrier.Transition.StateAfter =
-                IsOutTransition ? Private::toDirectX12(desc.finalState) : Private::toDirectX12(desc.renderState);
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-            if (barrier.Transition.StateBefore && barrier.Transition.StateAfter)
-            {
-                RHI_LOG_WARNING(
-                    std::format(L" Texture {} Transition state before is the same after", texture.getNameW()),
-                    RhiApi::DirectX12);
-            }
-
-            m_commandList->ResourceBarrier(m_barriers.size(), m_barriers.data());
-            trackResource(texture);
-            return true;
-        }
+        return true;
     }
 
     void CommandList::markResourceFrame(uint64_t submisionValue)

@@ -108,25 +108,80 @@ namespace TiRHI::DirectX12
     bool Texture::createHandle()
     {
         bool isOk = true;
+        auto& device = getDevice();
+        MComPtr<ID3D12Device> nativeDevice = device.getNativeDevice();
 
+        const bool isDepth = isDepthFormat(getFormat());
+
+        // RTV / DSV
         if ((getFlags() & TextureFlags::RenderTarget) != TextureFlags::None)
         {
-            m_renderTargetView = Device::Private::getDescriptorAllocatorRTV(getDevice()).create(getDevice());
-            assert(m_renderTargetView);
-            getDevice().getNativeDevice()->CreateRenderTargetView(m_image.Get(), nullptr,
-                                                                  m_renderTargetView->cpuHandle);
-            if (!m_renderTargetView)
-                isOk = false;
+            if (isDepth)
+            {
+                m_renderTargetView = Device::Private::getDescriptorAllocatorDsv(device).create(device);
+
+                if (m_renderTargetView)
+                {
+                    D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
+                    desc.Format = DirectX12::Private::toDirectX12(getFormat());
+                    desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+                    desc.Flags = D3D12_DSV_FLAG_NONE;
+                    desc.Texture2D.MipSlice = 0;
+
+                    nativeDevice->CreateDepthStencilView(m_image.Get(), &desc, m_renderTargetView->cpuHandle);
+                }
+                else
+                {
+                    isOk = false;
+                }
+            }
+            else
+            {
+                m_renderTargetView = Device::Private::getDescriptorAllocatorRTV(device).create(device);
+
+                if (m_renderTargetView)
+                {
+                    D3D12_RENDER_TARGET_VIEW_DESC desc{};
+                    desc.Format = DirectX12::Private::toDirectX12(getFormat());
+                    desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+                    desc.Texture2D.MipSlice = 0;
+                    desc.Texture2D.PlaneSlice = 0;
+
+                    nativeDevice->CreateRenderTargetView(m_image.Get(), &desc, m_renderTargetView->cpuHandle);
+                }
+                else
+                {
+                    isOk = false;
+                }
+            }
         }
 
+        // SRV
         if ((getFlags() & TextureFlags::ShaderResource) != TextureFlags::None)
         {
-            m_shaderRenderView = Device::Private::getDescriptorAllocatorCbvSrvUav(getDevice()).create(getDevice());
-            assert(m_shaderRenderView);
-            getDevice().getNativeDevice()->CreateShaderResourceView(m_image.Get(), nullptr,
-                                                                    m_shaderRenderView->cpuHandle);
-            if (!m_shaderRenderView)
+            m_shaderRenderView = Device::Private::getDescriptorAllocatorCbvSrvUav(device).create(device);
+
+            if (m_shaderRenderView)
+            {
+                D3D12_SHADER_RESOURCE_VIEW_DESC desc{};
+
+                desc.Format = isDepth ? DirectX12::Private::toDirectX12SRVFormat(getFormat())
+                                      : DirectX12::Private::toDirectX12(getFormat());
+
+                desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+                desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+                desc.Texture2D.MostDetailedMip = 0;
+                desc.Texture2D.MipLevels = m_image->GetDesc().MipLevels;
+                desc.Texture2D.PlaneSlice = 0;
+                desc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+                nativeDevice->CreateShaderResourceView(m_image.Get(), &desc, m_shaderRenderView->cpuHandle);
+            }
+            else
+            {
                 isOk = false;
+            }
         }
 
         return isOk;

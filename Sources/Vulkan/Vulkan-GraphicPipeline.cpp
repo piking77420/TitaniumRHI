@@ -251,7 +251,7 @@ namespace TiRHI::Vulkan
 
                         device.destroyPipeline(pipeline);
                     });
-        
+
         m_pipelineLayout = VK_NULL_HANDLE;
         m_pipeline = VK_NULL_HANDLE;
     }

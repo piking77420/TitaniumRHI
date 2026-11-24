@@ -400,21 +400,21 @@ namespace TiRHI::Vulkan::Private
     {
         switch (compareOp)
         {
-        case TiRHI::CompareOp::eNever:
+        case TiRHI::CompareOp::Never:
             return vk::CompareOp::eNever;
-        case TiRHI::CompareOp::eLess:
+        case TiRHI::CompareOp::Less:
             return vk::CompareOp::eLess;
-        case TiRHI::CompareOp::eEqual:
+        case TiRHI::CompareOp::Equal:
             return vk::CompareOp::eEqual;
-        case TiRHI::CompareOp::eLessOrEqual:
+        case TiRHI::CompareOp::LessOrEqual:
             return vk::CompareOp::eLessOrEqual;
-        case TiRHI::CompareOp::eGreater:
+        case TiRHI::CompareOp::Greater:
             return vk::CompareOp::eGreater;
-        case TiRHI::CompareOp::eNotEqual:
+        case TiRHI::CompareOp::NotEqual:
             return vk::CompareOp::eNotEqual;
-        case TiRHI::CompareOp::eGreaterOrEqual:
+        case TiRHI::CompareOp::GreaterOrEqual:
             return vk::CompareOp::eGreaterOrEqual;
-        case TiRHI::CompareOp::eAlways:
+        case TiRHI::CompareOp::Always:
             return vk::CompareOp::eAlways;
         default:
             break;

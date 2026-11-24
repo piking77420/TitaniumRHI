@@ -197,7 +197,7 @@ namespace TiRHI
 
         bool m_depthCompare = false;
 
-        CompareOp m_depthCompareOp = CompareOp::eLessOrEqual;
+        CompareOp m_depthCompareOp = CompareOp::LessOrEqual;
     };
 
 } // namespace TiRHI

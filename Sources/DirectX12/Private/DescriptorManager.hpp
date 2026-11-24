@@ -86,6 +86,7 @@ namespace TiRHI::DirectX12::Private
             size_t operator()(const RootSignatureLayoutKeyView& key) const noexcept
             {
                 uint32_t hash = 0;
+                hashCombine(hash, static_cast<uint32_t>(key.descriptorsLayouts.size()));
 
                 for (const auto& entry : key.descriptorsLayouts)
                 {
@@ -130,9 +131,19 @@ namespace TiRHI::DirectX12::Private
                         return false;
                 }
 
-                return std::ranges::equal(
-                    a.descriptorsLayouts, b.descriptorsLayouts, [](const auto& lhs, const auto& rhs)
-                    { return lhs.setIndex == rhs.setIndex && lhs.layout.cachedHash == rhs.layout.cachedHash; });
+                if (a.descriptorsLayouts.size() != b.descriptorsLayouts.size())
+                    return false;
+
+                for (size_t i = 0; i < a.descriptorsLayouts.size(); i++)
+                {
+                    if (a.descriptorsLayouts[i].setIndex != b.descriptorsLayouts[i].setIndex)
+                        return false;
+
+                    if (a.descriptorsLayouts[i].layout != b.descriptorsLayouts[i].layout)
+                        return false;
+                }
+
+                return true;
             }
 
             bool operator()(const RootSignatureLayoutKey& a, const RootSignatureLayoutKey& b) const

@@ -152,6 +152,21 @@ namespace TiRHI
 #undef X
     };
 
+    constexpr bool isDepthFormat(Format format) noexcept
+    {
+        switch (format)
+        {
+        case Format::D16UNorm:
+        case Format::D32Float:
+        case Format::D24UNormS8UInt:
+        case Format::D32FloatS8UInt:
+            return true;
+
+        default:
+            return false;
+        }
+    }
+
     uint32_t pixelSizeFromFormat(Format format);
 
 #define RHI_SHADER_STAGE_LIST(X)                                                                                       \
@@ -601,14 +616,14 @@ namespace TiRHI
     constexpr float LodClampNone = 1000.f;
 
 #define RHI_COMPARE_OP_LIST(X)                                                                                         \
-    X(eNever)                                                                                                          \
-    X(eLess)                                                                                                           \
-    X(eEqual)                                                                                                          \
-    X(eLessOrEqual)                                                                                                    \
-    X(eGreater)                                                                                                        \
-    X(eNotEqual)                                                                                                       \
-    X(eGreaterOrEqual)                                                                                                 \
-    X(eAlways)
+    X(Never)                                                                                                           \
+    X(Less)                                                                                                            \
+    X(Equal)                                                                                                           \
+    X(LessOrEqual)                                                                                                     \
+    X(Greater)                                                                                                         \
+    X(NotEqual)                                                                                                        \
+    X(GreaterOrEqual)                                                                                                  \
+    X(Always)
 
     enum class CompareOp
     {
