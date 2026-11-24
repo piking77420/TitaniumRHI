@@ -71,6 +71,13 @@ namespace TiRHI::Vulkan
 
             if (VulkanCheckErrorStatus(vkResult))
                 return false;
+
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eBuffer;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkBuffer>(allocatedBuffer.buffer));
+            nameInfo.pObjectName = getName().data();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
         }
 
         return true;

@@ -51,6 +51,16 @@ namespace TiRHI::Vulkan
 
         m_sampler = getDevice().getNativeDevice().createSamplerUnique(info);
 
+        if (m_sampler)
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eSampler;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkSampler>(m_sampler.get()));
+            nameInfo.pObjectName = getName().data();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+        }
+
         return m_sampler.get();
     }
 

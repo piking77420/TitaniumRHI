@@ -454,7 +454,7 @@ namespace TiRHI::Vulkan::Private
         return flags;
     }
 
-    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags)
+    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags, vk::ImageAspectFlags aspectFlag)
     {
         vk::ImageUsageFlags flags{};
 
@@ -462,7 +462,12 @@ namespace TiRHI::Vulkan::Private
             flags |= vk::ImageUsageFlagBits::eSampled;
 
         if ((textureFlags & TextureFlags::RenderTarget) != TextureFlags::None)
-            flags |= vk::ImageUsageFlagBits::eColorAttachment;
+        {
+            if (aspectFlag & vk::ImageAspectFlagBits::eColor)
+                flags |= vk::ImageUsageFlagBits::eColorAttachment;
+            if (aspectFlag & vk::ImageAspectFlagBits::eDepth || aspectFlag & vk::ImageAspectFlagBits::eStencil)
+                flags |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+        }
 
         if ((textureFlags & TextureFlags::UnorderedAccess) != TextureFlags::None)
             flags |= vk::ImageUsageFlagBits::eStorage;

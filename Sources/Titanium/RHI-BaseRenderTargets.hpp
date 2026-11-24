@@ -16,6 +16,7 @@ namespace TiRHI
     class BaseRenderTargets : public Object<T, TDevice>
     {
     public:
+        using _Derived = T;
         using _RenderPassDescriptor = TRenderPassDescriptor;
         using _Texture = TTexture;
 
@@ -70,9 +71,25 @@ namespace TiRHI
             if (!m_renderPassDescriptor)
             {
                 RHI_LOG_ERROR(std::format(L"missing Render target {}", this->getNameW()),
-                              RhiApi::None); // TODO allow rhiapi or expose api in template
+                              _Derived::Api);
 
                 return false;
+            }
+
+            if (m_colorAttachements.size() != m_renderPassDescriptor->getColorAttachements().size())
+            {
+                RHI_LOG_ERROR(std::format(L"Render Targets {} and his RenderPassDescriptor {} has an color attachement count missmatch", this->getNameW(),
+                                          m_renderPassDescriptor->getNameW()),
+                              _Derived::Api);
+            }
+
+            if (m_depthAttachement.has_value() != m_renderPassDescriptor->getDepthAttachement().has_value())
+            {
+                RHI_LOG_ERROR(
+                    std::format(
+                        L"Render Targets {} and his RenderPassDescriptor {} has an depth attachement",
+                        this->getNameW(), m_renderPassDescriptor->getNameW()),
+                    _Derived::Api);
             }
 
             return true;

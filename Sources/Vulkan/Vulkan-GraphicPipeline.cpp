@@ -128,6 +128,38 @@ namespace TiRHI::Vulkan
         rasterizer.depthBiasEnable = vk::False;
         rasterizer.lineWidth = 1.0f;
 
+        // Depth
+        vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo{};
+
+        pipelineDepthStencilStateCreateInfo.pNext = nullptr;
+        pipelineDepthStencilStateCreateInfo.flags = {};
+
+        pipelineDepthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
+        pipelineDepthStencilStateCreateInfo.depthWriteEnable = VK_TRUE;
+        pipelineDepthStencilStateCreateInfo.depthCompareOp = vk::CompareOp::eLess;
+
+        pipelineDepthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;
+        pipelineDepthStencilStateCreateInfo.minDepthBounds = 0.0f;
+        pipelineDepthStencilStateCreateInfo.maxDepthBounds = 1.0f;
+
+        pipelineDepthStencilStateCreateInfo.stencilTestEnable = VK_FALSE;
+
+        pipelineDepthStencilStateCreateInfo.front.failOp = vk::StencilOp::eKeep;
+        pipelineDepthStencilStateCreateInfo.front.passOp = vk::StencilOp::eKeep;
+        pipelineDepthStencilStateCreateInfo.front.depthFailOp = vk::StencilOp::eKeep;
+        pipelineDepthStencilStateCreateInfo.front.compareOp = vk::CompareOp::eAlways;
+        pipelineDepthStencilStateCreateInfo.front.compareMask = 0xFF;
+        pipelineDepthStencilStateCreateInfo.front.writeMask = 0xFF;
+        pipelineDepthStencilStateCreateInfo.front.reference = 0;
+
+        pipelineDepthStencilStateCreateInfo.back.failOp = vk::StencilOp::eKeep;
+        pipelineDepthStencilStateCreateInfo.back.passOp = vk::StencilOp::eKeep;
+        pipelineDepthStencilStateCreateInfo.back.depthFailOp = vk::StencilOp::eKeep;
+        pipelineDepthStencilStateCreateInfo.back.compareOp = vk::CompareOp::eAlways;
+        pipelineDepthStencilStateCreateInfo.back.compareMask = 0xFF;
+        pipelineDepthStencilStateCreateInfo.back.writeMask = 0xFF;
+        pipelineDepthStencilStateCreateInfo.back.reference = 0;
+
         // 7. Multisampling
         vk::PipelineMultisampleStateCreateInfo multisampling{};
         multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
@@ -193,8 +225,17 @@ namespace TiRHI::Vulkan
         pipelineInfo.layout = m_pipelineLayout;
         pipelineInfo.renderPass = getRenderPassDescriptor()->getNativeRenderPass();
         pipelineInfo.subpass = 0;
+        if (getRenderPassDescriptor()->getDepthAttachement())
+            pipelineInfo.pDepthStencilState = &pipelineDepthStencilStateCreateInfo;
 
         m_pipeline = getDevice().getNativeDevice().createGraphicsPipeline(nullptr, pipelineInfo).value;
+
+        vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+        nameInfo.objectType = vk::ObjectType::ePipeline;
+        nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkPipeline>(m_pipeline));
+        nameInfo.pObjectName = getName().data();
+
+        getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
 
         return m_pipeline != VK_NULL_HANDLE;
     }

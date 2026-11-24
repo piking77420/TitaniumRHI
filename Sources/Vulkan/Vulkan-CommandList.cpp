@@ -216,52 +216,60 @@ namespace TiRHI::Vulkan
 
     void CommandList::transitionResource(Texture& texture, const ResourceState state)
     {
-        const ResourceState currentState = texture.getState();
-        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
-            return;
+        if (state != ResourceState::Undefined)
+        {
+            const ResourceState currentState = texture.getState();
+            if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
+                return;
 
-        if (state == ResourceState::CopyDestination) [[unlikely]]
-            assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
+            if (state == ResourceState::CopyDestination) [[unlikely]]
+                assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
 
-        using namespace Private;
+            using namespace Private;
 
-        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+            const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
 
-        const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
+            const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
 
-        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
-                                             transitionData.dependencyFlags, {}, {}, barrier);
+            getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag,
+                                                 transitionData.dstPipelineStageFlag, transitionData.dependencyFlags,
+                                                 {}, {}, barrier);
+        }
         texture.setState(state);
         trackResource(texture);
     }
 
     void CommandList::transitionResource(Buffer& buffer, ResourceState state)
     {
-        const ResourceState currentState = buffer.getState();
-
-        if (currentState == state)
-            return;
-
-        if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
+        if (state != ResourceState::Undefined)
         {
-            RHI_LOG_ERROR(L"Cannot transition buffer: the Vulkan buffer handle is null.", Api);
-            return;
+            const ResourceState currentState = buffer.getState();
+
+            if (currentState == state)
+                return;
+
+            if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
+            {
+                RHI_LOG_ERROR(L"Cannot transition buffer: the Vulkan buffer handle is null.", Api);
+                return;
+            }
+
+            if (!isValidBufferState(state))
+            {
+                RHI_LOG_ERROR(std::format(L"Cannot transition buffer from '{}' to '{}': "
+                                          L"the requested resource state is invalid for buffers.",
+                                          toWString(currentState), toWString(state)),
+                              Api);
+                return;
+            }
+            using namespace Private;
+            const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
+            const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+
+            getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag,
+                                                 transitionData.dstPipelineStageFlag, {}, {}, barrier, {});
         }
 
-        if (!isValidBufferState(state))
-        {
-            RHI_LOG_ERROR(std::format(L"Cannot transition buffer from '{}' to '{}': "
-                                      L"the requested resource state is invalid for buffers.",
-                                      toWString(currentState), toWString(state)),
-                          Api);
-            return;
-        }
-        using namespace Private;
-        const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
-        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
-
-        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
-                                             {}, {}, barrier, {});
         buffer.setState(state);
         trackResource(buffer);
     }
@@ -466,7 +474,7 @@ namespace TiRHI::Vulkan
 
         // TODO be able to choose level an layer
         vk::ImageSubresourceRange range{};
-        range.aspectMask = vk::ImageAspectFlagBits::eColor; // TODO choose eColor eDepth eStencil
+        range.aspectMask = imageAspectFlagBitsFromFormat(texture.getFormat());
         range.baseMipLevel = 0;
         range.levelCount = VK_REMAINING_MIP_LEVELS;
         range.baseArrayLayer = 0;

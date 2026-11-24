@@ -92,6 +92,27 @@ namespace TiRHI::Vulkan::Private
         descriptorSetHandle = {}; // reset
     }
 
+     void DescriporManager::release(const BindingsLayout& layout, size_t poolIndex ,vk::DescriptorSet & vkDescriptorSet)
+    {
+        // TODO CALL THIS IN DEFFERED DESTROY
+        auto it = m_descriptorPoolMap.find(layout);
+        if (it == m_descriptorPoolMap.end())
+            return;
+
+        auto& pools = it->second;
+        if (poolIndex >= pools.size())
+            return;
+
+        if (m_device == VK_NULL_HANDLE)
+            return;
+
+        m_device.freeDescriptorSets(pools[poolIndex].pool.get(), vkDescriptorSet);
+
+        pools[poolIndex].remainingSize += 1;
+
+        vkDescriptorSet = VK_NULL_HANDLE; // reset
+    }
+
     vk::DescriptorSetLayout DescriporManager::getDescriptorSetLayout(const BindingsLayout& layout)
     {
         auto it = m_descriptorLayoutMap.find(layout);

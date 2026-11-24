@@ -88,6 +88,17 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
+        Format getFormat() const noexcept
+        {
+            return m_format;
+        }
+
+        _Derived& setFormat(Format format) noexcept
+        {
+            m_format = format;
+            return static_cast<_Derived&>(*this);
+        }
+
         const TRenderPassDescriptor& getRenderPassDescriptor() const noexcept
         {
             return m_renderPassDescriptor;
