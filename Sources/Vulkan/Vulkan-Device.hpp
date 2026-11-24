@@ -64,6 +64,11 @@ namespace TiRHI::Vulkan
             {
                 return device.m_deferredDeletionQueue;
             }
+
+            static vk::CommandPool getDefaultCommandPool(Device& device)
+            {
+                return device.m_commandPool.get();
+            }
         };
 
         bool build(Surface& surface, const std::span<const Adapter>& adapters,
@@ -144,6 +149,8 @@ namespace TiRHI::Vulkan
 
         uint32_t m_presentQueueIndex = 0;
 
+        vk::UniqueCommandPool m_commandPool;
+
         struct Synchronisation
         {
             vk::UniqueFence inFlightFence;
@@ -176,6 +183,8 @@ namespace TiRHI::Vulkan
         bool initVolkTable();
 
         bool initVmaAllocator(Vulkan::Instance& instance);
+
+        bool initCommandPool();
     };
 
 } // namespace TiRHI::Vulkan

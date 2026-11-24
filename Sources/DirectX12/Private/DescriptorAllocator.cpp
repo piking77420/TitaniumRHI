@@ -80,15 +80,15 @@ namespace TiRHI::DirectX12::Private
 
             const uint32_t startIndex = block.start;
 
-            block.start += count;
+            block.start += static_cast<SIZE_T>(count);
 
-            assert((static_cast<int64_t>(block.count) - static_cast<int64_t>(count)) >= 0);
-            block.count -= count;
+            assert((static_cast<SIZE_T>(block.count) - static_cast<SIZE_T>(count)) >= 0);
+            block.count -= static_cast<SIZE_T>(count);
 
             if (block.count == 0)
                 m_freeBlocks.erase(m_freeBlocks.begin() + i);
 
-            return getHandle(startIndex, count);
+            return getHandle(static_cast<SIZE_T>(startIndex), count);
         }
 
         return std::nullopt;
@@ -103,7 +103,7 @@ namespace TiRHI::DirectX12::Private
         const SIZE_T offset = handle.cpuHandle.ptr - m_baseCpuPtr.ptr;
         assert(m_descriptorSize != 0);
         assert(offset % m_descriptorSize == 0);
-        const uint32_t start = static_cast<uint32_t>(offset / m_descriptorSize);
+        const SIZE_T start = static_cast<SIZE_T>(offset / m_descriptorSize);
 
         assert(start < m_capacity);
         assert(handle.count <= m_capacity - start);
@@ -142,12 +142,20 @@ namespace TiRHI::DirectX12::Private
         handle = {};
     }
 
-    DescriptorHandle DescriptorAllocator::getHandle(uint32_t index, uint32_t count)
+    DescriptorHandle DescriptorAllocator::getHandle(SIZE_T index, uint32_t count)
     {
+        const SIZE_T cpuHandle = m_baseCpuPtr.ptr + static_cast<SIZE_T>(m_descriptorSize) * index;
+        SIZE_T offset = cpuHandle - m_baseCpuPtr.ptr;
+        assert(offset >= 0);
+
+        assert(cpuHandle >= m_baseCpuPtr.ptr);
+        const SIZE_T gpuHandle =
+            m_shaderVisible ? (m_baseGpuPtr.ptr + static_cast<SIZE_T>(m_descriptorSize) * index) : SIZE_T{0};
+        assert(gpuHandle >= m_baseGpuPtr.ptr);
         return DescriptorHandle{
             .count = count,
-            .cpuHandle = m_baseCpuPtr.ptr + m_descriptorSize * index,
-            .gpuHandle = m_shaderVisible ? (m_baseGpuPtr.ptr + m_descriptorSize * index) : UINT64{0},
+            .cpuHandle = cpuHandle,
+            .gpuHandle = gpuHandle,
         };
     }
 

@@ -43,12 +43,21 @@ namespace TiRHI::Vulkan::Private
             .setDescriptorSetCount(static_cast<uint32_t>(count))
             .setPSetLayouts(layouts.data());
 
-        vk::Result result = device.allocateDescriptorSets(&allocInfo, handle.descriptorSets.data());
+        std::array<vk::DescriptorSet, MaxFramesInFlight> allocatedSet;
+
+        vk::Result result = device.allocateDescriptorSets(&allocInfo, allocatedSet.data());
         if (result != vk::Result::eSuccess)
         {
             RHI_LOG_ERROR(L"Faile to allocated Descriptor set", RhiApi::Vulkan);
             return std::nullopt;
         }
+
+        // write into handle
+        for (size_t i = 0; i < count; i++)
+        {
+            handle.descriptorSets[i].descriptorSet = allocatedSet[i];
+        }
+
         poolCache->remainingSize -= count;
 
         writeDescriptors(handle, layout, *layoutCache);
@@ -70,9 +79,13 @@ namespace TiRHI::Vulkan::Private
         if (m_device == VK_NULL_HANDLE)
             return;
 
+       std::array<vk::DescriptorSet, MaxFramesInFlight> allocatedSet;
+        for (size_t i = 0; i < descriptorSetHandle.descriptorCount; i++)
+            allocatedSet[i] = descriptorSetHandle.descriptorSets[i].descriptorSet;
+        
         m_device.freeDescriptorSets(
             pools[descriptorSetHandle.poolIndex].pool.get(),
-            std::span(descriptorSetHandle.descriptorSets.data(), descriptorSetHandle.descriptorCount));
+                                    std::span(allocatedSet.data(), descriptorSetHandle.descriptorCount));
 
         pools[descriptorSetHandle.poolIndex].remainingSize += descriptorSetHandle.descriptorCount;
 
@@ -243,7 +256,7 @@ namespace TiRHI::Vulkan::Private
                     [&](auto&& element)
                     {
                         // TODO HANDLE ARRAY AN other
-                        descriptorWrite.setDstSet(handle.descriptorSets[i])
+                        descriptorWrite.setDstSet(handle.descriptorSets[i].descriptorSet)
                             .setDstBinding(element.bindingIndex)
                             .setDstArrayElement(0)
                             .setDescriptorCount(1);

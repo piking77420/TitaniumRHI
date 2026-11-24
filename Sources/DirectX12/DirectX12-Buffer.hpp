@@ -7,6 +7,7 @@
 #include <Titanium/RHI-BaseBuffer.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 #include <DirectX12/Private/DescriptorAllocator.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::DirectX12
 {
@@ -52,13 +53,14 @@ namespace TiRHI::DirectX12
 
         const TiRHI::DirectX12::Private::DescriptorHandle* getDescriptorHandleFrame() const;
 
-        void setLastTimeLineUsedFrame(uint64_t timeLine);
+        uint32_t getCurrentAllocatedFrameIndex() const;
+
+        Buffer& setLastFrameUsed(uint64_t value, uint32_t frameIndex); 
 
     private:
-        struct AllocatedBuffer
+        struct AllocatedBuffer : public TiRHI::Private::FrameTracked<AllocatedBuffer>
         {
             MComPtr<D3D12MA::Allocation> allocation;
-            uint64_t lastTimeLineUsed;
         };
 
         std::vector<AllocatedBuffer> m_allocatedBuffers;

@@ -3,13 +3,14 @@
 
 #include <Titanium/RHI-BaseSampler.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::Vulkan
 {
     class RHI;
     class Device;
 
-    class Sampler : public TiRHI::BaseSampler<Sampler, Device>
+    class Sampler : public TiRHI::BaseSampler<Sampler, Device>, public TiRHI::Private::FrameTracked<Sampler>
     {
     public:
         Sampler() = delete;
@@ -31,19 +32,12 @@ namespace TiRHI::Vulkan
 
         bool build();
 
-        void setSubmissionValue(uint64_t value)
-        {
-            submissionValue = value;
-        }
-
     private:
         friend Private;
 
         Device* m_device{nullptr};
 
         vk::UniqueSampler m_sampler;
-
-        uint64_t submissionValue = 0;
     };
 
 } // namespace TiRHI::Vulkan

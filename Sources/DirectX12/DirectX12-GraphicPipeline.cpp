@@ -6,6 +6,14 @@
 
 namespace TiRHI::DirectX12
 {
+    GraphicPipeline::~GraphicPipeline()
+    {
+        auto& deferredDeletionQueue = Device::Private::getDeferredDeletionQueue(getDevice());
+        deferredDeletionQueue.retire(getLastFrameUsed(),
+                                     [pipelineState = std::move(m_pipelineState)]() mutable { pipelineState.Reset();
+            });
+    }
+
     GraphicPipeline::GraphicPipeline(Device& device)
         : BaseGraphicPipiline(device)
     {

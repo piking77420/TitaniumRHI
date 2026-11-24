@@ -8,7 +8,7 @@ namespace TiRHI::Vulkan
     {
 
         auto& defferdDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
-        defferdDestroy.retire(submissionValue,
+        defferdDestroy.retire(getLastFrameUsed(),
                               [uniqueSampler = std::move(m_sampler)]() mutable { uniqueSampler.reset(); });
     }
 

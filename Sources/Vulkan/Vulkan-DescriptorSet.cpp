@@ -77,15 +77,39 @@ namespace TiRHI::Vulkan
         switch (getDescriptorSetType())
         {
         case DescriptorSetType::Dynamic:
-            return m_handle.descriptorSets[getRHI().getCurrentFrame()];
+            return m_handle.descriptorSets[getRHI().getCurrentFrame()].descriptorSet;
         case DescriptorSetType::Immutable:
-            return m_handle.descriptorSets[0];
+            return m_handle.descriptorSets[0].descriptorSet;
         default:
             RHI_LOG_ERROR(std::format(L"Unknow DescriptorSetType {}", getNameW()), Api);
             break;
         }
 
         return {};
+    }
+
+    std::uint64_t DescriptorSet::getLastFrameUsed(uint32_t frameIndex) const noexcept
+    {
+        assert(frameIndex < m_handle.descriptorCount);
+        if (frameIndex >= m_handle.descriptorCount) [[unlikely]]
+        {
+            RHI_LOG_FATAL(std::format(L"Invalid access to mark the descriptor set {}", getNameW()), Api);
+        }
+
+        return m_handle.descriptorSets[frameIndex].getLastFrameUsed();
+    }
+
+    DescriptorSet& DescriptorSet::setLastFrameUsed(uint64_t value, uint32_t frameIndex) noexcept
+    {
+        assert(frameIndex < m_handle.descriptorCount);
+        if (frameIndex >= m_handle.descriptorCount) [[unlikely]]
+        {
+            RHI_LOG_FATAL(std::format(L"Invalid access to mark the descriptor set {}", getNameW()), Api);
+        }
+
+        m_handle.descriptorSets[frameIndex].setLastFrameUsed(value);
+
+        return *this;
     }
 
 } // namespace TiRHI::Vulkan

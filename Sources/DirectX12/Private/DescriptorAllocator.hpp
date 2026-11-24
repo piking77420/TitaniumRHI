@@ -64,7 +64,7 @@ namespace TiRHI::DirectX12::Private
     private:
         struct FreeBlock
         {
-            uint32_t start;
+            SIZE_T start;
             uint32_t count;
         };
 
@@ -84,7 +84,7 @@ namespace TiRHI::DirectX12::Private
 
         std::vector<FreeBlock> m_freeBlocks;
 
-        DescriptorHandle getHandle(uint32_t index, uint32_t count);
+        DescriptorHandle getHandle(SIZE_T index, uint32_t count);
     };
 
 } // namespace TiRHI::DirectX12::Private

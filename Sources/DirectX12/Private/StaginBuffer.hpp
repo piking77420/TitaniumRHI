@@ -4,6 +4,7 @@
 #include <vector>
 #include <D3D12MemAlloc.h>
 
+#include <Titanium/Private/FrameTracked.hpp>
 #include <DirectX12/DirectX12-Header.hpp>
 
 namespace D3D12MA
@@ -23,7 +24,7 @@ namespace TiRHI::DirectX12
 
 namespace TiRHI::DirectX12::Private
 {
-    class StagingBuffer
+    class StagingBuffer : public TiRHI::Private::FrameTracked<StagingBuffer>
     {
     public:
         StagingBuffer() = delete;

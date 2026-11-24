@@ -18,6 +18,9 @@ namespace TiRHI::Vulkan
     class RenderPassDescriptor;
     class GraphicPipeline;
     class DescriptorSet;
+    class Sampler;
+    using TrackedResource = std::variant<Texture*, Sampler*, std::pair<Buffer*, uint32_t>, RenderTargets*, GraphicPipeline*,
+                     std::pair<DescriptorSet*, uint32_t>, Private::StagingBuffer>;
 
     class CommandList : public BaseCommandList<CommandList, Device, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
                                                Vulkan::GraphicPipeline, DescriptorSet>
@@ -31,14 +34,6 @@ namespace TiRHI::Vulkan
         CommandList& operator=(const CommandList&) = delete;
         CommandList(CommandList&&) noexcept = default;
         CommandList& operator=(CommandList&& other) noexcept = default;
-
-        struct Private
-        {
-            static void setLastSubmissionValue(CommandList& commandlist, uint64_t lastSubmissionValue)
-            {
-                commandlist.m_submissionValue = lastSubmissionValue;
-            }
-        };
 
         explicit CommandList(Device& device);
 
@@ -64,9 +59,9 @@ namespace TiRHI::Vulkan
 
         void transitionResource(Buffer& buffer, ResourceState state);
 
-        void bindPipeline(const GraphicPipeline& graphicPipeline);
+        void bindPipeline(GraphicPipeline& graphicPipeline);
 
-        void bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set);
+        void bindDescriptorSet(DescriptorSet& descriptorSet, uint32_t set);
 
         void bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer);
 
@@ -85,27 +80,41 @@ namespace TiRHI::Vulkan
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 
+        void markResourceFrame(uint64_t submisionValue);
+
     private:
-        friend Private;
-
-        vk::UniqueCommandPool m_commandPool;
-
         std::vector<vk::UniqueCommandBuffer> m_commandBuffer;
 
-        const VolkDeviceTable* m_volkTable{nullptr};
+        std::vector<TrackedResource> m_trackedResources;
 
         struct VulkanStorage
         {
             std::vector<vk::ClearValue> clearValues;
         } m_vulkanStorage;
 
-        Device* m_device{nullptr}; // TODO fix this ugly
-
-        uint64_t m_submissionValue = 0;
+        std::array<uint64_t, MaxFramesInFlight> m_lastSubmitedFrames;
 
         static vk::ImageMemoryBarrier makeImageBarrier(Texture& texture, ResourceState current, ResourceState target);
 
         static vk::BufferMemoryBarrier makeBufferBarrier(Buffer& buffer, ResourceState current, ResourceState target);
+        
+        void trackResource(Texture& texture);
+
+        void trackResource(Sampler& sampler);
+
+        void trackResource(Buffer& buffer);
+
+        void trackResource(GraphicPipeline& graphicPipeline);
+
+        void trackResource(RenderTargets& renderTargets);
+
+        void trackResource(DescriptorSet& descriptorSet);
+
+        void trackResource(Private::StagingBuffer&& stagingBuffer);
+
+        void trackResource(Private::StagingBuffer& stagingBuffer) = delete;
+
+        void trackResource(const Private::StagingBuffer& stagingBuffer) = delete;
     };
 
 } // namespace TiRHI::Vulkan

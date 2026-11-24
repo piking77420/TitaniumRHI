@@ -71,13 +71,14 @@ namespace TiRHI::Vulkan
 
         assert(adapters.size() == nativePhysicalDevice.size());
         std::vector<Adapter::Features> finalFeatures;
-        // clang-format off
         m_adapter = adapters[m_adapterIndex];
+        // clang-format off
         return checkExtensionToEnableValid(adapters[m_adapterIndex], finalFeatures) &&
                createDevice(nativePhysicalDevice[m_adapterIndex], surface.getSurfaceNative(), adapters[m_adapterIndex], finalFeatures) &&
                initVolkTable() && 
                createSynchronisationPrimitives() && 
-               initVmaAllocator(getRHI().getInstance());
+               initVmaAllocator(getRHI().getInstance()) && 
+               initCommandPool();
         // clang-format on
     }
 
@@ -154,8 +155,6 @@ namespace TiRHI::Vulkan
         timelineInfo.setSignalSemaphoreValues(signalValues);
         submitInfos.back().setSignalSemaphores(last.signalSemaphores).setPNext(&timelineInfo);
 
-        // The current frame fence must already have been waited on and reset.
-
         // reset fence
         {
             std::array fences = {getNativeInFlightFence()};
@@ -164,7 +163,11 @@ namespace TiRHI::Vulkan
             m_dispatch.vkResetFences(m_device.get(), fencesCount, vkFences);
         }
         getNativeGraphicQueue().submit(submitInfos, getNativeInFlightFence());
-
+        for (const SubmitPresentDesc& submitPresentDesc : submitPresentDesc)
+        {
+            if (submitPresentDesc.commandList)
+                submitPresentDesc.commandList->markResourceFrame(submissionValue);
+        }
         m_timeLine.nextSubmissionValueFrames[getRHI().getCurrentFrame()] = submissionValue;
 
         if (!swapChains.empty())
@@ -350,6 +353,20 @@ namespace TiRHI::Vulkan
         }
 
         return true;
+    }
+
+    bool Device::initCommandPool()
+    {
+        vk::CommandPoolCreateInfo vkCommandPoolCreateInfo{};
+        vkCommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
+        vkCommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+        vkCommandPoolCreateInfo.queueFamilyIndex = getNativeGraphicQueueIndex();
+
+        vk::Device vkDevice = getNativeDevice();
+
+        m_commandPool = vkDevice.createCommandPoolUnique(vkCommandPoolCreateInfo);
+        
+        return m_commandPool.get();
     }
 
     uint64_t Device::Private::getNextSubmissionValue(const Device& device)

@@ -10,14 +10,15 @@ namespace TiRHI::Vulkan::Private
     }
 
     StagingBuffer::StagingBuffer(StagingBuffer&& other) noexcept
-        : m_deferredDeletionQueue(other.m_deferredDeletionQueue)
-        , m_allocatedBuffer(std::exchange(other.m_allocatedBuffer, {}))
+        : AllocatedBuffer(std::move(other))
+        , m_deferredDeletionQueue(other.m_deferredDeletionQueue)
+        , m_allocator(std::exchange(other.m_allocator, nullptr))
         , m_mappedData(std::exchange(other.m_mappedData, nullptr))
         , m_size(std::exchange(other.m_size, 0))
     {
     }
 
-    StagingBuffer::StagingBuffer(Device& device, uint64_t size, uint64_t timeLineFrame)
+    StagingBuffer::StagingBuffer(Device& device, uint64_t size)
         : m_deferredDeletionQueue(Device::Private::getDeferredDeletionQueue(device))
         , m_allocator(Device::Private::getAllocator(device))
         , m_size(size)
@@ -35,36 +36,25 @@ namespace TiRHI::Vulkan::Private
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
-        VkBuffer nativeBuffer = VK_NULL_HANDLE;
-        VmaAllocation allocation = nullptr;
-
         VmaAllocationInfo allocationInfo{};
-        const VkResult result =
-            vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &nativeBuffer, &allocation, &allocationInfo);
+        const VkResult result = vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo,
+                                                reinterpret_cast<VkBuffer*>(&buffer), &allocation, &allocationInfo);
 
         if (result != VK_SUCCESS)
         {
             m_size = 0;
             return;
         }
-
-        m_allocatedBuffer.buffer = vk::Buffer(nativeBuffer);
-        m_allocatedBuffer.allocation = allocation;
-        m_allocatedBuffer.allocationInfo = allocationInfo;
-        m_allocatedBuffer.submissionValue = timeLineFrame;
     }
 
     std::byte* StagingBuffer::mapData() noexcept
     {
-        if (!m_allocatedBuffer)
-            return nullptr;
-
         if (m_mappedData)
             return m_mappedData;
 
         void* mapped = nullptr;
 
-        const VkResult result = vmaMapMemory(m_allocator, m_allocatedBuffer.allocation, &mapped);
+        const VkResult result = vmaMapMemory(m_allocator, allocation, &mapped);
 
         if (result != VK_SUCCESS)
         {
@@ -81,10 +71,10 @@ namespace TiRHI::Vulkan::Private
         if (!m_mappedData)
             return;
 
-        const VkResult result = vmaFlushAllocation(m_allocator, m_allocatedBuffer.allocation, 0, VK_WHOLE_SIZE);
+        const VkResult result = vmaFlushAllocation(m_allocator, allocation, 0, VK_WHOLE_SIZE);
         VulkanCheckErrorStatus(result);
 
-        vmaUnmapMemory(m_allocator, m_allocatedBuffer.allocation);
+        vmaUnmapMemory(m_allocator, allocation);
         m_mappedData = nullptr;
     }
 
@@ -93,12 +83,14 @@ namespace TiRHI::Vulkan::Private
         if (m_mappedData)
             unmapData();
 
-        if (m_allocatedBuffer)
+        if (buffer && allocation)
         {
-            const uint64_t retireValue = m_allocatedBuffer.submissionValue;
+            const uint64_t retireValue = getLastFrameUsed();
             m_deferredDeletionQueue.retire(
-                retireValue, [allocator = m_allocator, allocatedBuffer = std::move(m_allocatedBuffer)]()
-                { vmaDestroyBuffer(allocator, allocatedBuffer.buffer, allocatedBuffer.allocation); });
+                retireValue, [allocator = m_allocator, cBuffer = std::move(buffer), cAllocation = std::move(allocation)]()
+                                           { vmaDestroyBuffer(allocator, cBuffer, cAllocation); });
+            buffer = VK_NULL_HANDLE;
+            allocation = VK_NULL_HANDLE;
         }
 
         m_allocator = nullptr;

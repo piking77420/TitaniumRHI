@@ -47,8 +47,6 @@ namespace TiRHI::Vulkan
 
         vk::Buffer getVkBufferFrame();
 
-        void setSubmissionValue(uint64_t timeLine);
-
         std::span<Vulkan::Private::AllocatedBuffer> getAllocatedBuffer()
         {
             return m_allocatedBuffer;
@@ -58,6 +56,12 @@ namespace TiRHI::Vulkan
         {
             return m_allocatedBuffer;
         }
+
+        uint32_t getFrameAllocationIndex() const; 
+
+        std::uint64_t getLastFrameUsed(uint32_t frameIndex) const noexcept;
+
+        Buffer& setLastFrameUsed(std::uint64_t value, uint32_t frameIndex) noexcept;
 
     private:
         std::vector<Vulkan::Private::AllocatedBuffer> m_allocatedBuffer;

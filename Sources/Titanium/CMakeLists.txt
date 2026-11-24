@@ -7,6 +7,7 @@ target_sources(
     INTERFACE
         Private/DeferredDeletionQueue.cpp
         Private/DeferredDeletionQueue.hpp
+        Private/FrameTracked.hpp
         Private/StrongTypeId.hpp
         Log.hpp
         RHI-BaseAcquiredFrame.cpp

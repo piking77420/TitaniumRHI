@@ -36,24 +36,21 @@ namespace TiRHI::Vulkan
     {
     }
 
-    CommandList::~CommandList() = default;
+    CommandList::~CommandList()
+    {
+        auto& defferedDeleteQueue = Device::Private::getDeferredDeletionQueue(getDevice());
+        for (size_t i = 0; i < m_commandBuffer.size(); i++)
+        {
+            defferedDeleteQueue.retire(m_lastSubmitedFrames[i], [cmdBuffer = std::move(m_commandBuffer[i])](){});
+        }
+        
+    }
 
     bool CommandList::build()
     {
-        vk::CommandPoolCreateInfo vkCommandPoolCreateInfo{};
-        vkCommandPoolCreateInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
-        vkCommandPoolCreateInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-        vkCommandPoolCreateInfo.queueFamilyIndex = getDevice().getNativeGraphicQueueIndex();
-
-        vk::Device vkDevice = getDevice().getNativeDevice();
-        if (vkDevice == VK_NULL_HANDLE)
-        {
-            RHI_LOG_ERROR(L"vkDevice was null handle", RhiApi::Vulkan);
-            return false;
-        }
-        m_commandPool = vkDevice.createCommandPoolUnique(vkCommandPoolCreateInfo);
-
-        if (!m_commandPool) [[unlikely]]
+        vk::CommandPool commandPool = Device::Private::getDefaultCommandPool(getDevice());
+        
+        if (commandPool == VK_NULL_HANDLE) [[unlikely]]
         {
             RHI_LOG_ERROR(L"Failed to create command pool", RhiApi::Vulkan);
             return false;
@@ -61,20 +58,18 @@ namespace TiRHI::Vulkan
 
         vk::CommandBufferAllocateInfo vkCommandBufferAllocateInfo{};
         vkCommandBufferAllocateInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
-        vkCommandBufferAllocateInfo.commandPool = m_commandPool.get();
+        vkCommandBufferAllocateInfo.commandPool = commandPool;
         vkCommandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
         vkCommandBufferAllocateInfo.commandBufferCount = getRHI().getFrameInFlight();
 
-        m_commandBuffer = vkDevice.allocateCommandBuffersUnique(vkCommandBufferAllocateInfo);
+        m_commandBuffer = getDevice().getNativeDevice().allocateCommandBuffersUnique(vkCommandBufferAllocateInfo);
         if (m_commandBuffer.empty())
         {
             RHI_LOG_ERROR(L"Failed to allocate command buffers", RhiApi::Vulkan);
             return false;
         }
 
-        m_volkTable = &getDevice().getVolkTable();
-        m_device = &getDevice();
-        return m_device && m_volkTable;
+        return true;
     }
 
     bool CommandList::beginRecord()
@@ -82,15 +77,11 @@ namespace TiRHI::Vulkan
         if (!onBeginRecord())
             return false;
 
-        if (!m_device)
-            return false;
-
-        m_submissionValue = Device::Private::getNextSubmissionValue(*m_device);
         vk::CommandBufferBeginInfo beginInfo{};
         beginInfo.flags = {};
         getcurrentFrameCmb().reset();
         getcurrentFrameCmb().begin(beginInfo);
-
+        m_trackedResources.clear();
         return true;
     }
 
@@ -103,7 +94,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::beginDebugLabel(std::string_view name, std::optional<std::span<const float, 4>> color)
     {
-        if (!getRHI().getUseDebugLabel() || !m_volkTable) [[unlikely]]
+        if (!getRHI().getUseDebugLabel())
             return;
 
         vk::DebugUtilsLabelEXT label{};
@@ -119,7 +110,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::endDebugLabel()
     {
-        if (!getRHI().getUseDebugLabel() || !m_volkTable) [[unlikely]]
+        if (!getRHI().getUseDebugLabel())
             return;
 
         getcurrentFrameCmb().endDebugUtilsLabelEXT();
@@ -150,6 +141,7 @@ namespace TiRHI::Vulkan
         if (depthAttachment && depthAttachment->loadOp == LoadOp::Clear && !beginRenderPass.clearDepthStencil)
             return false;
 
+        m_vulkanStorage.clearValues.clear();
         m_vulkanStorage.clearValues.reserve(attachmentCount);
 
         // Color attachments
@@ -184,20 +176,20 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
+        trackResource(renderTargets);
         // set submitted value
-        for (auto& texture : renderTargets.getColorAttachements())
+        for (Texture* texture : renderTargets.getColorAttachements())
         {
             if (texture)
-                texture->setSubmissionValue(m_submissionValue);
+                trackResource(*texture);
         }
 
         if (const std::optional<Texture*>& texture = renderTargets.getDepthAttachement())
         {
             if (texture)
-                (*texture)->setSubmissionValue(m_submissionValue);
+                trackResource(**texture);
         }
 
-        renderTargets.setSubmissionValue(m_submissionValue);
         return true;
     }
 
@@ -240,6 +232,7 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
                                              transitionData.dependencyFlags, {}, {}, barrier);
         texture.setState(state);
+        trackResource(texture);
     }
 
     void CommandList::transitionResource(Buffer& buffer, ResourceState state)
@@ -261,6 +254,7 @@ namespace TiRHI::Vulkan
                                       L"the requested resource state is invalid for buffers.",
                                       toWString(currentState), toWString(state)),
                           Api);
+            return;
         }
         using namespace Private;
         const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
@@ -269,24 +263,26 @@ namespace TiRHI::Vulkan
         getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
                                              {}, {}, barrier, {});
         buffer.setState(state);
+        trackResource(buffer);
     }
 
-    void CommandList::bindPipeline(const GraphicPipeline& graphicPipeline)
+    void CommandList::bindPipeline(GraphicPipeline& graphicPipeline)
     {
         BaseCommandList::bindPipeline(graphicPipeline);
         getcurrentFrameCmb().bindPipeline(vk::PipelineBindPoint::eGraphics,
                                           GraphicPipeline::Private::getPipeline(*m_recordState.graphicPipeline));
+        trackResource(graphicPipeline);
     }
 
-    void CommandList::bindDescriptorSet(const DescriptorSet& descriptorSet, uint32_t set)
+    void CommandList::bindDescriptorSet(DescriptorSet& descriptorSet, uint32_t set)
     {
         if (!m_recordState.graphicPipeline) [[unlikely]]
-            return;
+            return; 
 
-        std::array<vk::DescriptorSet, 1> descriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+        std::array<vk::DescriptorSet, 1> vkDescriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
         getcurrentFrameCmb().bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics,
-            GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, descriporSet, {});
+            GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, vkDescriporSet, {});
         for (auto& binding : descriptorSet.getBindingsLayout().bindings)
         {
             std::visit(
@@ -297,14 +293,18 @@ namespace TiRHI::Vulkan
                     if constexpr (std::is_same_v<T, DescriptorSet::SampledTexture>)
                     {
                         if (value.texture)
-                            value.texture->setSubmissionValue(m_submissionValue);
+                            m_trackedResources.emplace_back(value.texture);
 
                         if (value.sampler)
-                            value.sampler->setSubmissionValue(m_submissionValue);
+                            m_trackedResources.emplace_back(value.sampler);
                     }
                     else if constexpr (std::is_same_v<T, DescriptorSet::ConstantBuffer>)
                     {
-                        value.buffer->setSubmissionValue(m_submissionValue);
+                        if (value.buffer)
+                        {
+                            m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>,
+                                                            value.buffer, value.buffer->getFrameAllocationIndex());
+                        }
                     }
                     else
                     {
@@ -313,6 +313,7 @@ namespace TiRHI::Vulkan
                 },
                 binding);
         }
+        trackResource(descriptorSet);
     }
 
     void CommandList::bindVertexBuffer(uint32_t bindingIndex, uint64_t offset, Buffer& buffer)
@@ -324,6 +325,7 @@ namespace TiRHI::Vulkan
             return;
 
         getcurrentFrameCmb().bindVertexBuffers(bindingIndex, buffer.getVkBufferFrame(), offset);
+        trackResource(buffer);
     }
 
     void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
@@ -338,12 +340,13 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().bindIndexBuffer(buffer.getVkBufferFrame(), static_cast<vk::DeviceSize>(offset),
                                              Vulkan::Private::toVulkan(format));
+        trackResource(buffer);
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
-        if (m_volkTable) [[likely]]
-            m_volkTable->vkCmdDraw(getcurrentFrameCmb(), vertexCount, instanceCount, firstVertex, firstInstance);
+        getDevice().getVolkTable().vkCmdDraw(getcurrentFrameCmb(), vertexCount, instanceCount, firstVertex,
+                                                  firstInstance);
     }
 
     void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
@@ -368,6 +371,7 @@ namespace TiRHI::Vulkan
 
         if (std::optional<PushConstant> pushConstant = m_recordState.graphicPipeline->getPushConstant())
         {
+            assert(size == pushConstant->size);
             getcurrentFrameCmb().pushConstants(layout, Vulkan::Private::toVulkan(pushConstant->flag), 0u,
                                                pushConstant->size, data);
         }
@@ -375,7 +379,7 @@ namespace TiRHI::Vulkan
 
     void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
     {
-        if (!m_device || !texture) [[unlikely]]
+        if (!texture) [[unlikely]]
             return;
         assert(texture.getState() == ResourceState::CopyDestination);
         std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
@@ -397,7 +401,7 @@ namespace TiRHI::Vulkan
             return;
 
         // TODO set m_submissionValue for texture
-        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_submissionValue);
+        Vulkan::Private::StagingBuffer stagingBuffer(getDevice(), data.size_bytes());
 
         if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
             return;
@@ -410,12 +414,13 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBufferToImage(stagingBuffer.getBuffer(), vktexture,
                                                vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
-        texture.setSubmissionValue(m_submissionValue);
+        trackResource(std::move(stagingBuffer));
+        trackResource(texture);
     }
 
     void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
     {
-        if (!m_device || !buffer) [[unlikely]]
+        if (!buffer) [[unlikely]]
             return;
 
         if (data.empty())
@@ -426,7 +431,7 @@ namespace TiRHI::Vulkan
         assert(offset <= buffer.getSize());
         assert(data.size_bytes() <= buffer.getSize() - offset);
 
-        Vulkan::Private::StagingBuffer stagingBuffer(*m_device, data.size_bytes(), m_submissionValue);
+        Vulkan::Private::StagingBuffer stagingBuffer(getDevice(), data.size_bytes());
 
         if (stagingBuffer.getBuffer() == VK_NULL_HANDLE) [[unlikely]]
             return;
@@ -446,7 +451,8 @@ namespace TiRHI::Vulkan
 
         getcurrentFrameCmb().copyBuffer(stagingBuffer.getBuffer(), buffer.getVkBufferFrame(), region);
 
-        buffer.setSubmissionValue(m_submissionValue);
+        trackResource(buffer);
+        trackResource(std::move(stagingBuffer));
     }
 
     vk::CommandBuffer CommandList::getcurrentFrameCmb() const
@@ -460,7 +466,7 @@ namespace TiRHI::Vulkan
 
         // TODO be able to choose level an layer
         vk::ImageSubresourceRange range{};
-        range.aspectMask = vk::ImageAspectFlagBits::eColor;
+        range.aspectMask = vk::ImageAspectFlagBits::eColor; // TODO choose eColor eDepth eStencil
         range.baseMipLevel = 0;
         range.levelCount = VK_REMAINING_MIP_LEVELS;
         range.baseArrayLayer = 0;
@@ -502,4 +508,74 @@ namespace TiRHI::Vulkan
         return barrier;
     }
 
+    void CommandList::markResourceFrame(uint64_t submisionValue)
+    {
+        for (auto& res : m_trackedResources)
+        {
+            std::visit(
+                [&submisionValue](auto&& re)
+                {
+                    
+                    if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>, Private::StagingBuffer>)
+                    {
+                        re.setLastFrameUsed(submisionValue);
+                    }
+                    else if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>,
+                                                      std::pair<Buffer*, uint32_t>> ||
+                                       std::is_same_v<std::remove_reference_t<decltype(re)>,
+                                                      std::pair<DescriptorSet*, uint32_t>>)
+                    {
+                        auto& resourceAndFrameIndex = re;
+                        if (resourceAndFrameIndex.first)
+                            resourceAndFrameIndex.first->setLastFrameUsed(submisionValue, resourceAndFrameIndex.second);
+                    }
+                    else
+                    {
+                        if (re)
+                            re->setLastFrameUsed(submisionValue);
+                    }
+                },
+                res);
+        }
+
+       m_trackedResources.clear();
+       m_lastSubmitedFrames[getRHI().getCurrentFrame()] = submisionValue;
+    }
+
+    void CommandList::trackResource(Texture& texture)
+    {
+        m_trackedResources.emplace_back(&texture);
+    }
+
+    void CommandList::trackResource(Sampler& sampler)
+    {
+        m_trackedResources.emplace_back(&sampler);
+    }
+
+    void CommandList::trackResource(Buffer& buffer)
+    {
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<Buffer*, uint32_t>>, &buffer,
+                                        buffer.getFrameAllocationIndex());
+    }
+
+    void CommandList::trackResource(GraphicPipeline& graphicPipeline)
+    {
+        m_trackedResources.emplace_back(&graphicPipeline);
+    }
+
+    void CommandList::trackResource(RenderTargets& renderTargets)
+    {
+        m_trackedResources.emplace_back(&renderTargets);
+    }
+
+    void CommandList::trackResource(DescriptorSet& descriptorSet)
+    {
+        m_trackedResources.emplace_back(std::in_place_type<std::pair<DescriptorSet*, uint32_t>>, &descriptorSet,
+                                       getRHI().getCurrentFrame());
+    }
+
+    void CommandList::trackResource(Private::StagingBuffer&& stagingBuffer)
+    {
+        m_trackedResources.emplace_back(std::move(stagingBuffer));
+    }
 } // namespace TiRHI::Vulkan

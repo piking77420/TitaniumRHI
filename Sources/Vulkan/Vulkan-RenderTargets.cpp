@@ -12,7 +12,7 @@ namespace TiRHI::Vulkan
     RenderTargets::~RenderTargets()
     {
         auto& deferredDestroy = Device::Private::getDeferredDeletionQueue(getDevice());
-        deferredDestroy.retire(m_lastSubmitedValue,
+        deferredDestroy.retire(getLastFrameUsed(),
                                [frameBuffer = std::move(m_frameBuffer)]() mutable
                                {
                                   

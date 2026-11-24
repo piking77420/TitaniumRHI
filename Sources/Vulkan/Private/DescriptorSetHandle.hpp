@@ -5,12 +5,18 @@
 #include <cstddef>
 #include <Titanium/RHITypes.hpp>
 #include <Vulkan/Vulkan-Header.hpp>
+#include <Titanium/Private/FrameTracked.hpp>
 
 namespace TiRHI::Vulkan::Private
 {
     struct DescriptorSetHandle
     {
-        std::array<vk::DescriptorSet, MaxFramesInFlight> descriptorSets{};
+        struct DescriptorSetTracked : public TiRHI::Private::FrameTracked<DescriptorSetTracked>
+        {
+            vk::DescriptorSet descriptorSet;
+        };
+
+        std::array<DescriptorSetTracked, MaxFramesInFlight> descriptorSets{};
         size_t descriptorCount = 0;
         size_t poolIndex = 0;
     };

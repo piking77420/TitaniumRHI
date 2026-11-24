@@ -201,10 +201,17 @@ namespace TiRHI::Vulkan
 
     void GraphicPipeline::destroy()
     {
-        getDevice().getNativeDevice().destroyPipelineLayout(m_pipelineLayout);
-        m_pipelineLayout = VK_NULL_HANDLE;
+        Device::Private::getDeferredDeletionQueue(getDevice())
+            .retire(getLastFrameUsed(),
+                    [device = getDevice().getNativeDevice(), pipelineLayout = std::move(m_pipelineLayout),
+                     pipeline = std::move(m_pipeline)]()
+                    {
+                        device.destroyPipelineLayout(pipelineLayout);
 
-        getDevice().getNativeDevice().destroyPipeline(m_pipeline);
+                        device.destroyPipeline(pipeline);
+                    });
+        
+        m_pipelineLayout = VK_NULL_HANDLE;
         m_pipeline = VK_NULL_HANDLE;
     }
 
