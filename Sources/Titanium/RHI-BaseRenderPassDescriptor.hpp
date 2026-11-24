@@ -26,11 +26,11 @@ namespace TiRHI
             static_assert(std::derived_from<T, BaseRenderPassDescriptor<T, TRHI>>);
         }
 
-        T& setColorAttachements(const std::span<const AttachmentDescriptor> attachementDescriptor)
+        T& setColorAttachments(const std::span<const AttachmentDescriptor> attachmentDescriptors)
         {
             m_colorAttachements.clear();
-
-            for (const auto& att : attachementDescriptor)
+            m_colorAttachements.reserve(attachmentDescriptors.size());
+            for (const auto& att : attachmentDescriptors)
             {
                 m_colorAttachements.emplace_back(att);
             }
@@ -46,7 +46,7 @@ namespace TiRHI
         {
             m_depthAttachement.reset();
             m_depthAttachement.emplace(attachmentDescriptor);
-            return static_cast<T&>(*this); 
+            return static_cast<T&>(*this);
         }
 
         const std::optional<AttachmentDescriptor>& getDepthAttachement() const

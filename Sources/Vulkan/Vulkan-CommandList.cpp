@@ -41,15 +41,14 @@ namespace TiRHI::Vulkan
         auto& defferedDeleteQueue = Device::Private::getDeferredDeletionQueue(getDevice());
         for (size_t i = 0; i < m_commandBuffer.size(); i++)
         {
-            defferedDeleteQueue.retire(m_lastSubmitedFrames[i], [cmdBuffer = std::move(m_commandBuffer[i])](){});
+            defferedDeleteQueue.retire(m_lastSubmitedFrames[i], [cmdBuffer = std::move(m_commandBuffer[i])]() {});
         }
-        
     }
 
     bool CommandList::build()
     {
         vk::CommandPool commandPool = Device::Private::getDefaultCommandPool(getDevice());
-        
+
         if (commandPool == VK_NULL_HANDLE) [[unlikely]]
         {
             RHI_LOG_ERROR(L"Failed to create command pool", RhiApi::Vulkan);
@@ -285,9 +284,10 @@ namespace TiRHI::Vulkan
     void CommandList::bindDescriptorSet(DescriptorSet& descriptorSet, uint32_t set)
     {
         if (!m_recordState.graphicPipeline) [[unlikely]]
-            return; 
+            return;
 
-        std::array<vk::DescriptorSet, 1> vkDescriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+        std::array<vk::DescriptorSet, 1> vkDescriporSet = {
+            DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
         getcurrentFrameCmb().bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics,
             GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, vkDescriporSet, {});
@@ -354,7 +354,7 @@ namespace TiRHI::Vulkan
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
         getDevice().getVolkTable().vkCmdDraw(getcurrentFrameCmb(), vertexCount, instanceCount, firstVertex,
-                                                  firstInstance);
+                                             firstInstance);
     }
 
     void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
@@ -523,7 +523,6 @@ namespace TiRHI::Vulkan
             std::visit(
                 [&submisionValue](auto&& re)
                 {
-                    
                     if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>, Private::StagingBuffer>)
                     {
                         re.setLastFrameUsed(submisionValue);
@@ -546,8 +545,8 @@ namespace TiRHI::Vulkan
                 res);
         }
 
-       m_trackedResources.clear();
-       m_lastSubmitedFrames[getRHI().getCurrentFrame()] = submisionValue;
+        m_trackedResources.clear();
+        m_lastSubmitedFrames[getRHI().getCurrentFrame()] = submisionValue;
     }
 
     void CommandList::trackResource(Texture& texture)
@@ -579,7 +578,7 @@ namespace TiRHI::Vulkan
     void CommandList::trackResource(DescriptorSet& descriptorSet)
     {
         m_trackedResources.emplace_back(std::in_place_type<std::pair<DescriptorSet*, uint32_t>>, &descriptorSet,
-                                       getRHI().getCurrentFrame());
+                                        getRHI().getCurrentFrame());
     }
 
     void CommandList::trackResource(Private::StagingBuffer&& stagingBuffer)

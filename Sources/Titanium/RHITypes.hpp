@@ -111,6 +111,18 @@ namespace TiRHI
     };
     IMPLEMENT_TO_STRING_TITANIUM(RhiApi, RHI_API_LIST)
 
+#define RHI_CLIP_SPACE_Y_DIRECTION_LIST(X)                                                                             \
+    X(Up)                                                                                                              \
+    X(Down)
+
+    enum class ClipSpaceYDirection : uint8_t
+    {
+#define X(name) name,
+        RHI_CLIP_SPACE_Y_DIRECTION_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(ClipSpaceYDirection, RHI_CLIP_SPACE_Y_DIRECTION_LIST)
+
 #define RHI_FORMAT_LIST(X)                                                                                             \
     X(R8UNorm)                                                                                                         \
     X(R8G8UNorm)                                                                                                       \
@@ -783,6 +795,7 @@ namespace TiRHI
 
     struct RhiCreate
     {
+        ClipSpaceYDirection clipSpaceYDirection;
         bool useDebugLabel = false;
         size_t frameInFlight = 2;
         LogCallBackSignature logCallback;

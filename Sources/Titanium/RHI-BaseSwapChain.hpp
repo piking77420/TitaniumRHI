@@ -122,7 +122,7 @@ namespace TiRHI
 
             const std::array attachments{attachement};
 
-            return m_renderPassDescriptor.setColorAttachements(attachments)
+            return m_renderPassDescriptor.setColorAttachments(attachments)
                 .setAcceptedPipelineType(PipelineType::Graphics)
                 .build();
         }
