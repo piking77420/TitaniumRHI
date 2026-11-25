@@ -73,9 +73,11 @@ namespace TiRHI::DirectX12
 
         void pushConstant(void* data, size_t size);
 
-        void upload2d(Texture& texture, std::span<const std::byte> data);
+        void upload2d(Texture& texture, std::span<const std::byte> data,
+                      TransitionMode TransitionMode = TransitionMode::Automatic);
 
-        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
+        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data,
+                          TransitionMode TransitionMode = TransitionMode::Automatic);
 
         ID3D12GraphicsCommandList1* getCommandListNative()
         {
@@ -102,7 +104,6 @@ namespace TiRHI::DirectX12
 
         std::vector<MComPtr<ID3D12CommandAllocator>> m_allocators;
         MComPtr<ID3D12GraphicsCommandList4> m_commandList;
-        std::vector<D3D12_RESOURCE_BARRIER> m_barriers;
         uint64_t m_lastSubmissionValue = 0;
         std::vector<TrackedResource> m_trackedResource;
 
@@ -111,8 +112,6 @@ namespace TiRHI::DirectX12
         void bindDescriptorHeaps();
 
         void bindRootSignature(ID3D12RootSignature* rootSignature);
-
-        bool renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition);
 
         void trackResource(Buffer& buffer);
 

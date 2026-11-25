@@ -165,12 +165,7 @@ namespace TiRHI::DirectX12
         // Validate before modifying command-list state.
         if (colorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT)
             return false;
-
-        if (!renderTargetTransition(renderTargets, false))
-            return false;
-
-        setRenderPassRenderTargetState(true);
-
+        transitionRenderPassAttachments();
         std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> desc{};
 
         auto fillRenderTargetDesc = [device = &getDevice()](D3D12_RENDER_PASS_RENDER_TARGET_DESC& desc,
@@ -260,7 +255,6 @@ namespace TiRHI::DirectX12
 
             depthDescPtr = &depthDesc;
         }
-
         m_commandList->BeginRenderPass(static_cast<UINT>(colorCount), colorCount > 0 ? desc.data() : nullptr,
                                        depthDescPtr, D3D12_RENDER_PASS_FLAG_NONE);
 
@@ -285,11 +279,6 @@ namespace TiRHI::DirectX12
         assert(m_recordState.renderTargets);
 
         m_commandList->EndRenderPass();
-
-        if (!renderTargetTransition(*m_recordState.renderTargets, true))
-        {
-            RHI_LOG_FATAL(L"Failed to transition render targets", RhiApi::DirectX12);
-        }
 
         onEndRenderPass();
     }
@@ -544,10 +533,13 @@ namespace TiRHI::DirectX12
         }
     }
 
-    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data, TransitionMode transitionMode)
     {
         if (!m_commandList || !texture || data.empty())
             return;
+
+        if (transitionMode == TransitionMode::Automatic)
+            transitionResource(texture, ResourceState::CopyDestination);
 
         assert(texture.getState() == ResourceState::CopyDestination);
 
@@ -607,10 +599,14 @@ namespace TiRHI::DirectX12
         trackResource(std::move(staging));
     }
 
-    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
+    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data,
+                                   TransitionMode transitionMode)
     {
         if (!m_commandList || !buffer || data.empty())
             return;
+
+        if (transitionMode == TransitionMode::Automatic)
+            transitionResource(buffer, ResourceState::CopyDestination);
 
         ID3D12Device* nativeDevice = getDevice().getNativeDevice().Get();
 
@@ -660,102 +656,6 @@ namespace TiRHI::DirectX12
 
         m_commandList->SetGraphicsRootSignature(rootSignature);
         m_recordStateD3D12.currentRootSignature = rootSignature;
-    }
-
-    bool CommandList::renderTargetTransition(RenderTargets& renderTargets, bool IsOutTransition)
-    {
-        // Vulkan does make initial state to render state and final state by him self
-        // here we need to do it by ourself
-
-        const RenderPassDescriptor* renderPassDescriptor = renderTargets.getRenderPassDescriptor();
-
-        if (!renderPassDescriptor)
-            return false;
-
-        const auto colorTextures = renderTargets.getColorAttachements();
-        const auto depthTexture = renderTargets.getDepthAttachement();
-
-        const auto colorDescriptors = renderPassDescriptor->getColorAttachements();
-
-        const auto depthDescriptor = renderPassDescriptor->getDepthAttachement();
-
-        if (colorTextures.size() != colorDescriptors.size())
-            return false;
-
-        if (depthTexture.has_value() != depthDescriptor.has_value())
-            return false;
-
-        // Validate attachments before modifying resource states.
-        for (const auto* texture : colorTextures)
-        {
-            if (!texture)
-                return false;
-        }
-
-        if (depthTexture && !*depthTexture)
-            return false;
-
-        m_barriers.clear();
-        m_barriers.reserve(colorTextures.size() + (depthTexture.has_value() ? 1 : 0));
-
-        auto addTransition = [&](Texture& texture, const AttachmentDescriptor& desc)
-        {
-            const ResourceState currentState = texture.getState();
-
-            const ResourceState nextState = IsOutTransition ? desc.finalState : desc.renderState;
-
-            const D3D12_RESOURCE_STATES before = Private::toDirectX12(currentState);
-
-            const D3D12_RESOURCE_STATES after = Private::toDirectX12(nextState);
-
-#if 0
-            RHI_LOG_INFO(std::format(L"Texture {}: {} -> {} (0x{:X} -> 0x{:X})", texture.getNameW(),
-                                     toWString(currentState), toWString(nextState), static_cast<uint32_t>(before),
-                                     static_cast<uint32_t>(after)),
-                         RhiApi::DirectX12);
-#endif
-            if (before != after)
-            {
-                D3D12_RESOURCE_BARRIER barrier{};
-
-                barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-
-                barrier.Transition.pResource = Texture::Private::getImage(texture);
-
-                barrier.Transition.StateBefore = before;
-                barrier.Transition.StateAfter = after;
-
-                barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-                m_barriers.push_back(barrier);
-            }
-
-            texture.setState(nextState);
-            trackResource(texture);
-        };
-
-        // Color attachments
-        for (size_t i = 0; i < colorTextures.size(); ++i)
-        {
-            addTransition(*colorTextures[i], colorDescriptors[i]);
-        }
-
-        // Depth attachment
-        if (depthTexture)
-        {
-            addTransition(**depthTexture, *depthDescriptor);
-        }
-
-        // Submit all barriers in a single call.
-        if (!m_barriers.empty())
-        {
-            m_commandList->ResourceBarrier(static_cast<UINT>(m_barriers.size()), m_barriers.data());
-        }
-
-        m_barriers.clear();
-
-        return true;
     }
 
     void CommandList::markResourceFrame(uint64_t submisionValue)

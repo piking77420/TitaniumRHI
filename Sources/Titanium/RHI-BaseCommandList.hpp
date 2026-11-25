@@ -9,6 +9,18 @@
 
 namespace TiRHI
 {
+#define RHI_TRANSITION_MODE_LIST(X)                                                                                    \
+    X(Automatic)                                                                                                       \
+    X(Manual)
+
+    enum class TransitionMode : uint8_t
+    {
+#define X(name) name,
+        RHI_TRANSITION_MODE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(TransitionMode, RHI_TRANSITION_MODE_LIST)
+
     struct ClearValueDepthStencil
     {
         float depth;
