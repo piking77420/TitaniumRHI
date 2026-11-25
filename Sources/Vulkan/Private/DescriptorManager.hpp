@@ -32,6 +32,8 @@ namespace TiRHI::Vulkan::Private
 
         void release(const BindingsLayout& layout, DescriptorSetHandle& descriptorSetHandle);
 
+        void release(const BindingsLayout& layout, size_t poolIndex , vk::DescriptorSet & vkDescriptorSet);
+
         vk::DescriptorSetLayout getDescriptorSetLayout(const BindingsLayout& layout);
 
     private:

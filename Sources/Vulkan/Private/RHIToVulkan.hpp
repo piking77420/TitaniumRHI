@@ -81,7 +81,7 @@ namespace TiRHI::Vulkan::Private
 
     vk::ShaderStageFlags toVulkan(ShaderStageFlags shaderStageFlags);
 
-    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags);
+    vk::ImageUsageFlags toVulkan(TextureFlags textureFlags, vk::ImageAspectFlags aspectFlag);
 
     vk::ImageAspectFlags imageAspectFlagBitsFromFormat(Format format);
 

@@ -78,6 +78,16 @@ namespace TiRHI::Vulkan
 
         m_surface = surface;
 
+        if (isSurfaceOk)
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eSurfaceKHR;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(surface);
+            nameInfo.pObjectName = getName().data();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+        }
+
         return isSurfaceOk;
     }
 

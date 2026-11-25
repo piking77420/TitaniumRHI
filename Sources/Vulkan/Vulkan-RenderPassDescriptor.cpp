@@ -99,6 +99,16 @@ namespace TiRHI::Vulkan
 
         m_renderPass = device.createRenderPassUnique(renderPassInfo);
 
+        if (m_renderPass)
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eRenderPass;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkRenderPass>(m_renderPass.get()));
+            nameInfo.pObjectName = getName().data();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+        }
+
         return m_renderPass.get() != VK_NULL_HANDLE;
     }
 

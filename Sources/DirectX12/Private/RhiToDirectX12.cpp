@@ -312,52 +312,36 @@ namespace TiRHI::DirectX12::Private
         }
     }
 
-    D3D12_RESOURCE_FLAGS textureFlagtoDirectX12(TextureFlags flag, Format format)
+    D3D12_RESOURCE_FLAGS textureFlagtoDirectX12(TextureFlags flags, Format format)
     {
-        D3D12_RESOURCE_FLAGS dx12flag;
+        D3D12_RESOURCE_FLAGS dx12Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        switch (format)
+        const bool isDepth = isDepthFormat(format);
+
+        if ((flags & TextureFlags::RenderTarget) != TextureFlags::None)
         {
-        case Format::D16UNorm:
-        case Format::D32Float:
-        case Format::D24UNormS8UInt:
-        case Format::D32FloatS8UInt:
-            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-            break;
-
-        case Format::R8UNorm:
-        case Format::R8G8UNorm:
-        case Format::R8G8B8A8UNorm:
-        case Format::R8G8B8A8UNormSRGB:
-        case Format::B8G8R8A8UNorm:
-        case Format::B8G8R8A8UNormSRGB:
-        case Format::R16Float:
-        case Format::R16G16Float:
-        case Format::R16G16B16A16Float:
-        case Format::R32Float:
-        case Format::R32G32Float:
-        case Format::R32G32B32A32Float:
-        case Format::R32UInt:
-        case Format::R32G32UInt:
-        case Format::R32G32B32A32UInt:
-            break;
-
-        default:
-            RHI_LOG_ERROR(
-                std::format(L"Unsupported RHI Format for textureFlagtoDirectX12 , Format = {}", toWString(format)),
-                RhiApi::Vulkan);
-            return {};
+            dx12Flags |= isDepth ? D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL : D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
         }
 
-        if ((flag & TextureFlags::RenderTarget) != TextureFlags::None)
+        if ((flags & TextureFlags::UnorderedAccess) != TextureFlags::None)
         {
-            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            if (isDepth)
+            {
+                RHI_LOG_ERROR(L"Depth textures cannot support unordered access", RhiApi::DirectX12);
+
+                return D3D12_RESOURCE_FLAG_NONE;
+            }
+
+            dx12Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
-        if ((flag & TextureFlags::UnorderedAccess) != TextureFlags::None)
+        if (isDepth && (flags & TextureFlags::RenderTarget) != TextureFlags::None &&
+            (flags & TextureFlags::ShaderResource) == TextureFlags::None)
         {
-            dx12flag |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+            dx12Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
         }
+
+        return dx12Flags;
     }
 
     D3D12_INPUT_CLASSIFICATION toDirectX12(VertexInputRate vertexInputRate)
@@ -394,6 +378,69 @@ namespace TiRHI::DirectX12::Private
         }
 
         return DXGI_FORMAT_UNKNOWN;
+    }
+
+    DXGI_FORMAT toDirectX12SRVFormat(Format format)
+
+    {
+        switch (format)
+        {
+        case Format::D16UNorm:
+            return DXGI_FORMAT_R16_UNORM;
+
+        case Format::D32Float:
+            return DXGI_FORMAT_R32_FLOAT;
+
+        case Format::D24UNormS8UInt:
+            return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
+        case Format::D32FloatS8UInt:
+            return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+
+        default:
+        {
+            RHI_LOG_FATAL(std::format(L"Unsupported toDirectX12SRVFormat, format = {}", toWString(format)),
+                          RhiApi::DirectX12);
+            return DXGI_FORMAT_UNKNOWN;
+        }
+        }
+        return DXGI_FORMAT_UNKNOWN;
+    }
+
+    D3D12_COMPARISON_FUNC toDirectX12(CompareOp compareOp)
+    {
+        switch (compareOp)
+        {
+        case TiRHI::CompareOp::Never:
+            return D3D12_COMPARISON_FUNC_NEVER;
+
+        case TiRHI::CompareOp::Less:
+            return D3D12_COMPARISON_FUNC_LESS;
+
+        case TiRHI::CompareOp::Equal:
+            return D3D12_COMPARISON_FUNC_EQUAL;
+
+        case TiRHI::CompareOp::LessOrEqual:
+            return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+        case TiRHI::CompareOp::Greater:
+            return D3D12_COMPARISON_FUNC_GREATER;
+
+        case TiRHI::CompareOp::NotEqual:
+            return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+
+        case TiRHI::CompareOp::GreaterOrEqual:
+            return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+
+        case TiRHI::CompareOp::Always:
+            return D3D12_COMPARISON_FUNC_ALWAYS;
+
+        default:
+            RHI_LOG_FATAL(std::format(L"Unsupported CompareOp, CompareOp = {}", toWString(compareOp)),
+                          RhiApi::DirectX12);
+
+            return D3D12_COMPARISON_FUNC_NONE;
+        }
     }
 
 } // namespace TiRHI::DirectX12::Private

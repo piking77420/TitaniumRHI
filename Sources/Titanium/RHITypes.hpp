@@ -111,6 +111,18 @@ namespace TiRHI
     };
     IMPLEMENT_TO_STRING_TITANIUM(RhiApi, RHI_API_LIST)
 
+#define RHI_CLIP_SPACE_Y_DIRECTION_LIST(X)                                                                             \
+    X(Up)                                                                                                              \
+    X(Down)
+
+    enum class ClipSpaceYDirection : uint8_t
+    {
+#define X(name) name,
+        RHI_CLIP_SPACE_Y_DIRECTION_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(ClipSpaceYDirection, RHI_CLIP_SPACE_Y_DIRECTION_LIST)
+
 #define RHI_FORMAT_LIST(X)                                                                                             \
     X(R8UNorm)                                                                                                         \
     X(R8G8UNorm)                                                                                                       \
@@ -139,6 +151,21 @@ namespace TiRHI
         RHI_FORMAT_LIST(X)
 #undef X
     };
+
+    constexpr bool isDepthFormat(Format format) noexcept
+    {
+        switch (format)
+        {
+        case Format::D16UNorm:
+        case Format::D32Float:
+        case Format::D24UNormS8UInt:
+        case Format::D32FloatS8UInt:
+            return true;
+
+        default:
+            return false;
+        }
+    }
 
     uint32_t pixelSizeFromFormat(Format format);
 
@@ -376,8 +403,8 @@ namespace TiRHI
     {
         Offset2DF position;
         Extend2DF extend;
-        float minDepth = 1.0;
-        float maxDepth = 0.0;
+        float minDepth = 0.0;
+        float maxDepth = 1.0;
 
         Viewport& setPosition(Offset2DF newOffset2DF) noexcept
         {
@@ -589,14 +616,14 @@ namespace TiRHI
     constexpr float LodClampNone = 1000.f;
 
 #define RHI_COMPARE_OP_LIST(X)                                                                                         \
-    X(eNever)                                                                                                          \
-    X(eLess)                                                                                                           \
-    X(eEqual)                                                                                                          \
-    X(eLessOrEqual)                                                                                                    \
-    X(eGreater)                                                                                                        \
-    X(eNotEqual)                                                                                                       \
-    X(eGreaterOrEqual)                                                                                                 \
-    X(eAlways)
+    X(Never)                                                                                                           \
+    X(Less)                                                                                                            \
+    X(Equal)                                                                                                           \
+    X(LessOrEqual)                                                                                                     \
+    X(Greater)                                                                                                         \
+    X(NotEqual)                                                                                                        \
+    X(GreaterOrEqual)                                                                                                  \
+    X(Always)
 
     enum class CompareOp
     {
@@ -783,6 +810,7 @@ namespace TiRHI
 
     struct RhiCreate
     {
+        ClipSpaceYDirection clipSpaceYDirection;
         bool useDebugLabel = false;
         size_t frameInFlight = 2;
         LogCallBackSignature logCallback;

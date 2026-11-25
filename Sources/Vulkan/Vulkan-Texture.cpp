@@ -41,6 +41,7 @@ namespace TiRHI::Vulkan
 
     bool Texture::build()
     {
+        const vk::ImageAspectFlags aspectFlag = Vulkan::Private::imageAspectFlagBitsFromFormat(m_format);
 
         vk::ImageCreateInfo imageCreateInfo{};
         imageCreateInfo.setImageType(vk::ImageType::e2D)
@@ -50,7 +51,7 @@ namespace TiRHI::Vulkan
             .setFormat(Vulkan::Private::toVulkan(getFormat()))
             .setSamples(vk::SampleCountFlagBits::e1)
             .setTiling(vk::ImageTiling::eOptimal)
-            .setUsage(Vulkan::Private::toVulkan(m_flags))
+            .setUsage(Vulkan::Private::toVulkan(m_flags, aspectFlag))
             .setSharingMode(vk::SharingMode::eExclusive)
             .setInitialLayout(vk::ImageLayout::eUndefined);
 
@@ -69,8 +70,18 @@ namespace TiRHI::Vulkan
             RHI_LOG_ERROR(std::format(L"Failed to create image : {} ", getNameW()), Api);
         }
 
+        if (m_image)
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eImage;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkImage>(m_image));
+            nameInfo.pObjectName = getName().data();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+        }
+
         vk::ImageSubresourceRange imageSubresourceRange{};
-        imageSubresourceRange.setAspectMask(Vulkan::Private::imageAspectFlagBitsFromFormat(m_format))
+        imageSubresourceRange.setAspectMask(aspectFlag)
             .setBaseMipLevel(0)
             .setLevelCount(1)
             .setBaseArrayLayer(0)
@@ -85,6 +96,17 @@ namespace TiRHI::Vulkan
             .setSubresourceRange(imageSubresourceRange);
 
         m_uniqueView = getDevice().getNativeDevice().createImageViewUnique(viewInfo);
+
+        if (m_uniqueView)
+        {
+            const std::string uniqueViewName = std::string(getName()) + " view";
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eImageView;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkImageView>(m_uniqueView.get()));
+            nameInfo.pObjectName = uniqueViewName.c_str();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+        }
 
         return m_image != VK_NULL_HANDLE;
     }

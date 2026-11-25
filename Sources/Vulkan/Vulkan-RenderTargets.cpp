@@ -24,13 +24,26 @@ namespace TiRHI::Vulkan
         if (!BaseRenderTargets::build())
             return false;
 
-        // m_renderPassDescriptor shoudl be valid
-        assert(getRenderPassDescriptor());
+        const RenderPassDescriptor* renderPassDescriptor = getRenderPassDescriptor();
 
-        std::vector<vk::ImageView> views;
-        views.push_back(Texture::Private::getImageView(*getColorAttachements()[0]));
+        if (!getRenderPassDescriptor())
+            return false;
 
-        // TODO multiple attachement
+
+        std::vector<vk::ImageView> views; 
+        views.reserve(renderPassDescriptor->getAttachementCount());
+
+        for (const auto& color : getColorAttachements())
+        {
+            if (color)
+                views.emplace_back(Texture::Private::getImageView(*color));
+        }
+
+        if (const std::optional<const Texture*> texture = getDepthAttachement(); texture)
+        {
+            views.emplace_back(Texture::Private::getImageView(**texture));
+        }
+
         vk::FramebufferCreateInfo framebufferInfo{};
         framebufferInfo.setRenderPass(getRenderPassDescriptor()->getNativeRenderPass())
             .setAttachments(views)
@@ -46,6 +59,13 @@ namespace TiRHI::Vulkan
             return false;
         }
 
+        vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+        nameInfo.objectType = vk::ObjectType::eFramebuffer;
+        nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkFramebuffer>(m_frameBuffer.get()));
+        nameInfo.pObjectName = getName().data();
+
+        getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+            
         return m_frameBuffer.get();
     }
 

@@ -41,15 +41,14 @@ namespace TiRHI::Vulkan
         auto& defferedDeleteQueue = Device::Private::getDeferredDeletionQueue(getDevice());
         for (size_t i = 0; i < m_commandBuffer.size(); i++)
         {
-            defferedDeleteQueue.retire(m_lastSubmitedFrames[i], [cmdBuffer = std::move(m_commandBuffer[i])](){});
+            defferedDeleteQueue.retire(m_lastSubmitedFrames[i], [cmdBuffer = std::move(m_commandBuffer[i])]() {});
         }
-        
     }
 
     bool CommandList::build()
     {
         vk::CommandPool commandPool = Device::Private::getDefaultCommandPool(getDevice());
-        
+
         if (commandPool == VK_NULL_HANDLE) [[unlikely]]
         {
             RHI_LOG_ERROR(L"Failed to create command pool", RhiApi::Vulkan);
@@ -216,52 +215,60 @@ namespace TiRHI::Vulkan
 
     void CommandList::transitionResource(Texture& texture, const ResourceState state)
     {
-        const ResourceState currentState = texture.getState();
-        if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
-            return;
+        if (state != ResourceState::Undefined)
+        {
+            const ResourceState currentState = texture.getState();
+            if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
+                return;
 
-        if (state == ResourceState::CopyDestination) [[unlikely]]
-            assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
+            if (state == ResourceState::CopyDestination) [[unlikely]]
+                assert((texture.getFlags() & TextureFlags::CopyDestination) != TextureFlags::None);
 
-        using namespace Private;
+            using namespace Private;
 
-        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+            const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
 
-        const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
+            const vk::ImageMemoryBarrier barrier = makeImageBarrier(texture, currentState, state);
 
-        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
-                                             transitionData.dependencyFlags, {}, {}, barrier);
+            getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag,
+                                                 transitionData.dstPipelineStageFlag, transitionData.dependencyFlags,
+                                                 {}, {}, barrier);
+        }
         texture.setState(state);
         trackResource(texture);
     }
 
     void CommandList::transitionResource(Buffer& buffer, ResourceState state)
     {
-        const ResourceState currentState = buffer.getState();
-
-        if (currentState == state)
-            return;
-
-        if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
+        if (state != ResourceState::Undefined)
         {
-            RHI_LOG_ERROR(L"Cannot transition buffer: the Vulkan buffer handle is null.", Api);
-            return;
+            const ResourceState currentState = buffer.getState();
+
+            if (currentState == state)
+                return;
+
+            if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
+            {
+                RHI_LOG_ERROR(L"Cannot transition buffer: the Vulkan buffer handle is null.", Api);
+                return;
+            }
+
+            if (!isValidBufferState(state))
+            {
+                RHI_LOG_ERROR(std::format(L"Cannot transition buffer from '{}' to '{}': "
+                                          L"the requested resource state is invalid for buffers.",
+                                          toWString(currentState), toWString(state)),
+                              Api);
+                return;
+            }
+            using namespace Private;
+            const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
+            const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
+
+            getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag,
+                                                 transitionData.dstPipelineStageFlag, {}, {}, barrier, {});
         }
 
-        if (!isValidBufferState(state))
-        {
-            RHI_LOG_ERROR(std::format(L"Cannot transition buffer from '{}' to '{}': "
-                                      L"the requested resource state is invalid for buffers.",
-                                      toWString(currentState), toWString(state)),
-                          Api);
-            return;
-        }
-        using namespace Private;
-        const vk::BufferMemoryBarrier barrier = makeBufferBarrier(buffer, currentState, state);
-        const TransitionData& transitionData = transitionMap[getResourceCombinaisonIndex(currentState, state)];
-
-        getcurrentFrameCmb().pipelineBarrier(transitionData.srcPipelineStageFlag, transitionData.dstPipelineStageFlag,
-                                             {}, {}, barrier, {});
         buffer.setState(state);
         trackResource(buffer);
     }
@@ -277,9 +284,10 @@ namespace TiRHI::Vulkan
     void CommandList::bindDescriptorSet(DescriptorSet& descriptorSet, uint32_t set)
     {
         if (!m_recordState.graphicPipeline) [[unlikely]]
-            return; 
+            return;
 
-        std::array<vk::DescriptorSet, 1> vkDescriporSet = {DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
+        std::array<vk::DescriptorSet, 1> vkDescriporSet = {
+            DescriptorSet::Private::getDescriptorSetFrame(descriptorSet)};
         getcurrentFrameCmb().bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics,
             GraphicPipeline::Private::getPipelineLayout(*m_recordState.graphicPipeline), set, vkDescriporSet, {});
@@ -346,7 +354,7 @@ namespace TiRHI::Vulkan
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
         getDevice().getVolkTable().vkCmdDraw(getcurrentFrameCmb(), vertexCount, instanceCount, firstVertex,
-                                                  firstInstance);
+                                             firstInstance);
     }
 
     void CommandList::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
@@ -466,7 +474,7 @@ namespace TiRHI::Vulkan
 
         // TODO be able to choose level an layer
         vk::ImageSubresourceRange range{};
-        range.aspectMask = vk::ImageAspectFlagBits::eColor; // TODO choose eColor eDepth eStencil
+        range.aspectMask = imageAspectFlagBitsFromFormat(texture.getFormat());
         range.baseMipLevel = 0;
         range.levelCount = VK_REMAINING_MIP_LEVELS;
         range.baseArrayLayer = 0;
@@ -515,7 +523,6 @@ namespace TiRHI::Vulkan
             std::visit(
                 [&submisionValue](auto&& re)
                 {
-                    
                     if constexpr (std::is_same_v<std::remove_reference_t<decltype(re)>, Private::StagingBuffer>)
                     {
                         re.setLastFrameUsed(submisionValue);
@@ -538,8 +545,8 @@ namespace TiRHI::Vulkan
                 res);
         }
 
-       m_trackedResources.clear();
-       m_lastSubmitedFrames[getRHI().getCurrentFrame()] = submisionValue;
+        m_trackedResources.clear();
+        m_lastSubmitedFrames[getRHI().getCurrentFrame()] = submisionValue;
     }
 
     void CommandList::trackResource(Texture& texture)
@@ -571,7 +578,7 @@ namespace TiRHI::Vulkan
     void CommandList::trackResource(DescriptorSet& descriptorSet)
     {
         m_trackedResources.emplace_back(std::in_place_type<std::pair<DescriptorSet*, uint32_t>>, &descriptorSet,
-                                       getRHI().getCurrentFrame());
+                                        getRHI().getCurrentFrame());
     }
 
     void CommandList::trackResource(Private::StagingBuffer&& stagingBuffer)

@@ -239,9 +239,26 @@ namespace TiRHI
             return m_vertexInputAttributeDescriptions;
         }
 
+        CompareOp getDepthCompareOp() const
+        {
+            return m_depthCompareOp;
+        }
+
+        T& setDepthCompareOp(CompareOp compareOp)
+        {
+            m_depthCompareOp = compareOp;
+            return static_cast<T&>(*this);
+        }
+
     protected:
         bool sanityCheck()
         {
+            if (!getRenderPassDescriptor())
+            {
+                RHI_LOG_ERROR(std::format(L"Graphics pipeline '{}': missing RenderPassDescriptor ", this->getNameW()),
+                              _Derived::Api);
+            }
+
             const auto bindings = getVertexBindingDescription();
             const auto attributes = getVertexInputAttributeDescription();
 
@@ -273,6 +290,8 @@ namespace TiRHI
         std::vector<VertexBindingDescription> m_vertexBindingDescriptions;
 
         std::vector<VertexInputAttributeDescription> m_vertexInputAttributeDescriptions;
+
+        CompareOp m_depthCompareOp = CompareOp::Never;
     };
 
 } // namespace TiRHI

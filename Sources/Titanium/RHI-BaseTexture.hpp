@@ -75,10 +75,28 @@ namespace TiRHI
             return static_cast<T&>(*this);
         }
 
+        SampleCount getSampleCount() const noexcept
+        {
+            return m_sampleCount;
+        }
+
+        T& setSampleCount(SampleCount sampleCount)
+        {
+            m_sampleCount = sampleCount;
+            return static_cast<T&>(*this);
+        }
+
         uint64_t getTotalBytesSize() const
         {
             // TODO HANDLE LEVEL AND DEPTH
             return TiRHI::pixelSizeFromFormat(getFormat()) * getWidth() * getHeight();
+        }
+
+        T& set(AttachmentDescriptor& attachemetDescriptor) noexcept
+        {
+            attachemetDescriptor.setFormat(getFormat()).setSampleCount(getSampleCount());
+
+            return static_cast<T&>(*this);
         }
 
     protected:
@@ -91,6 +109,8 @@ namespace TiRHI
         TextureFlags m_flags;
 
         Format m_format = Format::R8G8B8A8UNorm;
+
+        SampleCount m_sampleCount = SampleCount::Count1;
     };
 
 } // namespace TiRHI

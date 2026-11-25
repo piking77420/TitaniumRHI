@@ -32,6 +32,10 @@ namespace TiRHI::DirectX12::Private
 
     DXGI_FORMAT toDirectX12(IndexType type);
 
+    DXGI_FORMAT toDirectX12SRVFormat(Format format);
+
+    D3D12_COMPARISON_FUNC toDirectX12(CompareOp compareOp);
+
 } // TiRHI::DirectX12::Private
 
 #endif // TITANIUM_DIRECTX12_PRIVATE_RHI_TO_DIRECTX12_H

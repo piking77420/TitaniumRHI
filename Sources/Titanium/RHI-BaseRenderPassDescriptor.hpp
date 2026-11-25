@@ -26,16 +26,27 @@ namespace TiRHI
             static_assert(std::derived_from<T, BaseRenderPassDescriptor<T, TRHI>>);
         }
 
-        T& setColorAttachements(const std::span<const AttachmentDescriptor> attachementDescriptor)
+        T& setColorAttachments(const std::span<const AttachmentDescriptor> attachmentDescriptors)
         {
-            m_colorAttachements.insert(m_colorAttachements.end(), attachementDescriptor.begin(),
-                                       attachementDescriptor.end());
-            return reinterpret_cast<T&>(*this);
+            m_colorAttachements.clear();
+            m_colorAttachements.reserve(attachmentDescriptors.size());
+            for (const auto& att : attachmentDescriptors)
+            {
+                m_colorAttachements.emplace_back(att);
+            }
+            return static_cast<T&>(*this);
         }
 
         std::span<const AttachmentDescriptor> getColorAttachements() const
         {
             return std::span(m_colorAttachements);
+        }
+
+        T& setDepthAttachement(AttachmentDescriptor attachmentDescriptor)
+        {
+            m_depthAttachement.reset();
+            m_depthAttachement.emplace(attachmentDescriptor);
+            return static_cast<T&>(*this);
         }
 
         const std::optional<AttachmentDescriptor>& getDepthAttachement() const
@@ -46,7 +57,7 @@ namespace TiRHI
         T& setAcceptedPipelineType(PipelineType newAcceptedPipelineType)
         {
             m_acceptedPipelineType = newAcceptedPipelineType;
-            return reinterpret_cast<T&>(*this);
+            return static_cast<T&>(*this);
         }
 
         PipelineType getAcceptedPipelineType() const
@@ -64,7 +75,7 @@ namespace TiRHI
 
         std::optional<AttachmentDescriptor> m_depthAttachement;
 
-        PipelineType m_acceptedPipelineType;
+        PipelineType m_acceptedPipelineType = PipelineType::Graphics;
     };
 
 }

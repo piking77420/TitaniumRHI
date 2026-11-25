@@ -134,6 +134,9 @@ namespace TiRHI::DirectX12
             m_adapter = adapters[m_adapterIndex];
             onCreateDeviceSuccess(adapters[m_adapterIndex], success);
             return success && initMemoryAllocator(adapter) &&
+                   m_descriptorAllocatorDsv
+                       .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+                       .build(*this) &&
                    m_descriptorAllocatorRtv
                        .setDescriptorHeapType(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
                        .build(*this) &&

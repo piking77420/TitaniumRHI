@@ -9,7 +9,6 @@ namespace TiRHI::Vulkan
 {
     DescriptorSet::DescriptorSet(DescriptorSet&& other) noexcept
         : BaseDescriptorSet(std::move(other))
-        , m_descriptorManager(std::exchange(other.m_descriptorManager, nullptr))
         , m_handle(std::exchange(other.m_handle, {}))
     {
     }
@@ -20,7 +19,6 @@ namespace TiRHI::Vulkan
 
         BaseDescriptorSet::operator=(std::move(other));
         reset();
-        m_descriptorManager = std::exchange(other.m_descriptorManager, nullptr);
         m_handle = std::exchange(other.m_handle, {});
 
         return *this;
@@ -28,15 +26,24 @@ namespace TiRHI::Vulkan
 
     bool DescriptorSet::build()
     {
-        m_descriptorManager = &Device::Private::getDescriptorManager(getDevice());
-        if (!m_descriptorManager)
-            return false;
+        TiRHI::Vulkan::Private::DescriporManager& descriporManager =
+            Device::Private::getDescriptorManager(getDevice());
 
         const std::optional<TiRHI::Vulkan::Private::DescriptorSetHandle> handle =
-            m_descriptorManager->allocAndWriteDescriptors(getDevice().getNativeDevice(), getBindingsLayout(),
+            descriporManager.allocAndWriteDescriptors(getDevice().getNativeDevice(), getBindingsLayout(),
                                                           getNbrOfDescriptorSet());
         if (!handle)
             return false;
+
+        for (size_t i = 0; i < handle->descriptorCount; i++)
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameInfo{};
+            nameInfo.objectType = vk::ObjectType::eDescriptorSet;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkDescriptorSet>(handle->descriptorSets[i].descriptorSet));
+            nameInfo.pObjectName = getName().data();
+
+            getDevice().getNativeDevice().setDebugUtilsObjectNameEXT(nameInfo);
+        }
 
         m_handle = *handle;
         return true;
@@ -45,12 +52,52 @@ namespace TiRHI::Vulkan
     void DescriptorSet::reset()
     {
         // TODO defreed destroy
-        if (m_descriptorManager && m_handle.descriptorCount > 0)
-        {
-            m_descriptorManager->release(getBindingsLayout(), m_handle);
-        }
+        auto& defferedDeleteQueue = Device::Private::getDeferredDeletionQueue(getDevice());
+     
 
-        m_descriptorManager = nullptr;
+        if (m_handle.descriptorCount > 0)
+        {
+            TiRHI::Vulkan::Private::DescriporManager& descriporManager =
+                Device::Private::getDescriptorManager(getDevice());
+
+            bool areEqual = false;
+            uint64_t lastFrameUsed = m_handle.descriptorSets[0].getLastFrameUsed();
+            for (size_t i = 1; i < m_handle.descriptorCount; i++)
+            {
+                areEqual = lastFrameUsed == m_handle.descriptorSets[i].getLastFrameUsed();
+            }
+
+            if (areEqual)
+            {
+                defferedDeleteQueue.retire(
+                    lastFrameUsed,
+                                           [descriptorM = &descriporManager, layout = getBindingsLayout(),
+                                            handle = std::move(m_handle)]() mutable
+                    {
+                        descriptorM->release(layout, handle);
+
+                    });
+
+            }
+            else
+            {
+                // TODO optimse this
+                // expensive copy of layout for each vkdescriptor
+                // may use an better hash map
+                // -> cached value hash unique or use imutable map addrss
+
+                for (size_t i = 0; i < m_handle.descriptorCount; i++)
+                {
+                    defferedDeleteQueue.retire(m_handle.descriptorSets[i].getLastFrameUsed(),
+                                               [descriptorM = &descriporManager, layout = getBindingsLayout(),
+                                                handle = std::move(m_handle)]() mutable
+                                               {
+                                                   descriptorM->release(layout, handle);
+                                               });
+                }
+            }
+
+        }
     }
 
     size_t DescriptorSet::getNbrOfDescriptorSet()

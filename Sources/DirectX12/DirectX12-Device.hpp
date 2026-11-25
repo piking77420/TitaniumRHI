@@ -38,6 +38,11 @@ namespace TiRHI::DirectX12
                 return device.m_descriptorAllocatorRtv;
             }
 
+            static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorDsv(Device& device)
+            {
+                return device.m_descriptorAllocatorDsv;
+            }
+
             static DirectX12::Private::DescriptorAllocator& getDescriptorAllocatorSampler(Device& device)
             {
                 return device.m_descriptorAllocatorSampler;
@@ -69,8 +74,7 @@ namespace TiRHI::DirectX12
             }
         };
 
-        bool build(Surface& surface, const std::span<const Adapter>& adapters,
-                   std::optional<size_t> index = {});
+        bool build(Surface& surface, const std::span<const Adapter>& adapters, std::optional<size_t> index = {});
 
         void wait();
 
@@ -132,6 +136,8 @@ namespace TiRHI::DirectX12
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorSampler;
 
         DirectX12::Private::DescriptorAllocator m_descriptorAllocatorCbvSrvUav;
+
+        DirectX12::Private::DescriptorAllocator m_descriptorAllocatorDsv;
 
         DirectX12::Private::DescriptorManager m_descritproManager;
 

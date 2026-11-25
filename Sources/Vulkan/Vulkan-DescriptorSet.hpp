@@ -61,8 +61,6 @@ namespace TiRHI::Vulkan
     private:
         friend Private;
 
-        TiRHI::Vulkan::Private::DescriporManager* m_descriptorManager{nullptr};
-
         TiRHI::Vulkan::Private::DescriptorSetHandle m_handle{};
 
         void reset();

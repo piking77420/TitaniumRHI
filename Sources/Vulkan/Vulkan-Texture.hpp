@@ -33,7 +33,7 @@ namespace TiRHI::Vulkan
                 return texture.m_image;
             }
 
-            static vk::ImageView getImageView(Texture& texture)
+            static vk::ImageView getImageView(const Texture& texture)
             {
                 return texture.m_uniqueView.get();
             }

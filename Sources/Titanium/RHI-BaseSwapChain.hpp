@@ -88,6 +88,17 @@ namespace TiRHI
             return static_cast<_Derived&>(*this);
         }
 
+        Format getFormat() const noexcept
+        {
+            return m_format;
+        }
+
+        _Derived& setFormat(Format format) noexcept
+        {
+            m_format = format;
+            return static_cast<_Derived&>(*this);
+        }
+
         const TRenderPassDescriptor& getRenderPassDescriptor() const noexcept
         {
             return m_renderPassDescriptor;
@@ -111,7 +122,7 @@ namespace TiRHI
 
             const std::array attachments{attachement};
 
-            return m_renderPassDescriptor.setColorAttachements(attachments)
+            return m_renderPassDescriptor.setColorAttachments(attachments)
                 .setAcceptedPipelineType(PipelineType::Graphics)
                 .build();
         }
