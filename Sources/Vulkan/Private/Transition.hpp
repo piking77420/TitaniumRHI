@@ -5,12 +5,73 @@
 
 namespace TiRHI::Vulkan::Private
 {
-    struct TransitionData
+    [[nodiscard]] constexpr bool requiresBarrier(ResourceState from, ResourceState to)
+    {
+        return from != to || isWriteState(to);
+    }
+
+   struct TransitionData
     {
         vk::PipelineStageFlags srcPipelineStageFlag;
         vk::PipelineStageFlags dstPipelineStageFlag;
+
+        vk::AccessFlags srcAccessMask;
+        vk::AccessFlags dstAccessMask;
+
         vk::DependencyFlags dependencyFlags;
     };
+
+   static constexpr vk::AccessFlags getAccessFlags(ResourceState state)
+    {
+        using Access = vk::AccessFlagBits;
+
+        switch (state)
+        {
+        case ResourceState::Undefined:
+        case ResourceState::Present:
+            return {};
+
+        case ResourceState::Common:
+            return Access::eMemoryRead | Access::eMemoryWrite;
+
+        case ResourceState::VertexBuffer:
+            return Access::eVertexAttributeRead;
+
+        case ResourceState::IndexBuffer:
+            return Access::eIndexRead;
+
+        case ResourceState::ConstantBuffer:
+            return Access::eUniformRead;
+
+        case ResourceState::ShaderResource:
+            return Access::eShaderRead;
+
+        case ResourceState::UnorderedAccess:
+            return Access::eShaderRead | Access::eShaderWrite;
+
+        case ResourceState::RenderTarget:
+            return Access::eColorAttachmentRead | Access::eColorAttachmentWrite;
+
+        case ResourceState::DepthWrite:
+            return Access::eDepthStencilAttachmentRead | Access::eDepthStencilAttachmentWrite;
+
+        case ResourceState::DepthRead:
+            return Access::eDepthStencilAttachmentRead;
+
+        case ResourceState::CopySource:
+            return Access::eTransferRead;
+
+        case ResourceState::CopyDestination:
+            return Access::eTransferWrite;
+
+        case ResourceState::IndirectArgument:
+            return Access::eIndirectCommandRead;
+
+        default:
+            assert(false);
+            return {};
+        }
+    }
 
     static constexpr vk::DependencyFlags dependencyFlagFromTo(ResourceState from, ResourceState to)
     {
@@ -25,6 +86,9 @@ namespace TiRHI::Vulkan::Private
             from == ResourceState::Undefined ? vk::PipelineStageFlagBits::eTopOfPipe : Private::getPipelineStage(from);
         transitionData.dstPipelineStageFlag = Private::getPipelineStage(to);
         transitionData.dependencyFlags = dependencyFlagFromTo(from, to);
+        transitionData.srcAccessMask = Private::getAccessFlags(from);
+        transitionData.dstAccessMask = Private::getAccessFlags(to);
+
         return transitionData;
     }
 

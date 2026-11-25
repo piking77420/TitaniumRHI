@@ -22,6 +22,20 @@ namespace TiRHI::Vulkan
     using TrackedResource = std::variant<Texture*, Sampler*, std::pair<Buffer*, uint32_t>, RenderTargets*, GraphicPipeline*,
                      std::pair<DescriptorSet*, uint32_t>, Private::StagingBuffer>;
 
+
+#define RHI_TRANSITION_MODE_LIST(X)                                                                             \
+    X(Automatic)                                                                                                \
+    X(Manual)
+
+    enum class TransitionMode : uint8_t
+    {
+#define X(name) name,
+        RHI_TRANSITION_MODE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(TransitionMode, RHI_TRANSITION_MODE_LIST)
+
+
     class CommandList : public BaseCommandList<CommandList, Device, Vulkan::RenderTargets, Vulkan::RenderPassDescriptor,
                                                Vulkan::GraphicPipeline, DescriptorSet>
     {
@@ -74,9 +88,11 @@ namespace TiRHI::Vulkan
 
         void pushConstant(void* data, uint32_t size);
 
-        void upload2d(Texture& texture, std::span<const std::byte> data);
+        void upload2d(Texture& texture, std::span<const std::byte> data,
+                      TransitionMode transitionMode = TransitionMode::Automatic);
 
-        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
+        void uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data,
+                          TransitionMode transitionMode = TransitionMode::Automatic);
 
         vk::CommandBuffer getcurrentFrameCmb() const;
 
