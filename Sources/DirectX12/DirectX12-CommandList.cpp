@@ -478,6 +478,7 @@ namespace TiRHI::DirectX12
         view.StrideInBytes = stridesPerBinding[bindingIndex];
 
         m_commandList->IASetVertexBuffers(bindingIndex, 1, &view);
+        trackResource(buffer);
     }
 
     void CommandList::bindIndexBuffer(Buffer& buffer, uint64_t offset, IndexType format)
@@ -496,6 +497,7 @@ namespace TiRHI::DirectX12
         view.Format = DirectX12::Private::toDirectX12(format);
 
         m_commandList->IASetIndexBuffer(&view);
+        trackResource(buffer);
     }
 
     void CommandList::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
