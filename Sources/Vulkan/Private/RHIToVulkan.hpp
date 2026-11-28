@@ -22,41 +22,45 @@ namespace TiRHI::Vulkan::Private
 
     constexpr vk::PipelineStageFlags getPipelineStage(ResourceState state)
     {
+        using Stage = vk::PipelineStageFlagBits;
+
         switch (state)
         {
         case ResourceState::Undefined:
-            return vk::PipelineStageFlagBits::eTopOfPipe;
+            return Stage::eTopOfPipe;
 
         case ResourceState::Common:
-            return vk::PipelineStageFlagBits::eAllCommands;
+            return Stage::eAllCommands;
 
         case ResourceState::VertexBuffer:
         case ResourceState::IndexBuffer:
-            return vk::PipelineStageFlagBits::eVertexInput;
+            return Stage::eVertexInput;
 
         case ResourceState::ConstantBuffer:
         case ResourceState::ShaderResource:
         case ResourceState::UnorderedAccess:
-            return vk::PipelineStageFlagBits::eAllCommands;
+            return Stage::eAllGraphics | Stage::eComputeShader;
 
         case ResourceState::RenderTarget:
-            return vk::PipelineStageFlagBits::eColorAttachmentOutput;
+            return Stage::eColorAttachmentOutput;
 
         case ResourceState::DepthWrite:
         case ResourceState::DepthRead:
-            return vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+            return Stage::eEarlyFragmentTests | Stage::eLateFragmentTests;
 
         case ResourceState::CopySource:
         case ResourceState::CopyDestination:
-            return vk::PipelineStageFlagBits::eTransfer;
+            return Stage::eTransfer;
 
         case ResourceState::IndirectArgument:
-            return vk::PipelineStageFlagBits::eDrawIndirect;
+            return Stage::eDrawIndirect;
 
         case ResourceState::Present:
-            return vk::PipelineStageFlagBits::eBottomOfPipe;
+            return Stage::eBottomOfPipe;
+
+        default:
+            return Stage::eAllCommands;
         }
-        return vk::PipelineStageFlagBits::eAllCommands;
     }
 
     vk::AccessFlags getAccessMask(ResourceState state);

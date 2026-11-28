@@ -111,18 +111,6 @@ namespace TiRHI
     };
     IMPLEMENT_TO_STRING_TITANIUM(RhiApi, RHI_API_LIST)
 
-#define RHI_CLIP_SPACE_Y_DIRECTION_LIST(X)                                                                             \
-    X(Up)                                                                                                              \
-    X(Down)
-
-    enum class ClipSpaceYDirection : uint8_t
-    {
-#define X(name) name,
-        RHI_CLIP_SPACE_Y_DIRECTION_LIST(X)
-#undef X
-    };
-    IMPLEMENT_TO_STRING_TITANIUM(ClipSpaceYDirection, RHI_CLIP_SPACE_Y_DIRECTION_LIST)
-
 #define RHI_FORMAT_LIST(X)                                                                                             \
     X(R8UNorm)                                                                                                         \
     X(R8G8UNorm)                                                                                                       \
@@ -158,6 +146,19 @@ namespace TiRHI
         {
         case Format::D16UNorm:
         case Format::D32Float:
+        case Format::D24UNormS8UInt:
+        case Format::D32FloatS8UInt:
+            return true;
+
+        default:
+            return false;
+        }
+    }
+
+     constexpr bool isStencilFormat(Format format) noexcept
+    {
+        switch (format)
+        {
         case Format::D24UNormS8UInt:
         case Format::D32FloatS8UInt:
             return true;
@@ -317,6 +318,22 @@ namespace TiRHI
 #undef X
     };
 
+    [[nodiscard]] constexpr bool isWriteState(ResourceState state)
+    {
+        switch (state)
+        {
+        case ResourceState::Common:
+        case ResourceState::UnorderedAccess:
+        case ResourceState::RenderTarget:
+        case ResourceState::DepthWrite:
+        case ResourceState::CopyDestination:
+            return true;
+
+        default:
+            return false;
+        }
+    }
+
     constexpr size_t ResourceStateCount = static_cast<size_t>(ResourceState::Count);
 
     static constexpr size_t getResourceCombinaisonIndex(ResourceState from, ResourceState to)
@@ -460,10 +477,6 @@ namespace TiRHI
         LoadOp stencilLoadOp = LoadOp::DontCare;
         StoreOp stencilStoreOp = StoreOp::DontCare;
 
-        ResourceState initialState = ResourceState::Undefined;
-        ResourceState renderState = ResourceState::Undefined;
-        ResourceState finalState = ResourceState::Undefined;
-
         constexpr AttachmentDescriptor() = default;
 
         constexpr AttachmentDescriptor& setFormat(Format value) noexcept
@@ -493,30 +506,6 @@ namespace TiRHI
         constexpr AttachmentDescriptor& setStencilLoadOp(LoadOp value) noexcept
         {
             stencilLoadOp = value;
-            return *this;
-        }
-
-        constexpr AttachmentDescriptor& setStencilStoreOp(StoreOp value) noexcept
-        {
-            stencilStoreOp = value;
-            return *this;
-        }
-
-        constexpr AttachmentDescriptor& setInitialState(ResourceState value) noexcept
-        {
-            initialState = value;
-            return *this;
-        }
-
-        constexpr AttachmentDescriptor& setRenderState(ResourceState value) noexcept
-        {
-            renderState = value;
-            return *this;
-        }
-
-        constexpr AttachmentDescriptor& setFinalState(ResourceState value) noexcept
-        {
-            finalState = value;
             return *this;
         }
     };
@@ -694,6 +683,7 @@ namespace TiRHI
     // Default : for most buffers optimize for Gpu (SSBO, Vertex)
     // Upload : host wirtable
     // Readback : for readBacks
+        // TODO / may remove this since staging buffer are now hide
 #define RHI_DESCRIPTOR_BUFFER_MEMORY_TYPE_LIST(X)                                                                      \
     X(Default)                                                                                                         \
     X(Upload)                                                                                                          \
@@ -810,7 +800,6 @@ namespace TiRHI
 
     struct RhiCreate
     {
-        ClipSpaceYDirection clipSpaceYDirection;
         bool useDebugLabel = false;
         size_t frameInFlight = 2;
         LogCallBackSignature logCallback;

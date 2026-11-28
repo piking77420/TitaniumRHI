@@ -171,8 +171,6 @@ namespace TiRHI::Vulkan
             .setRenderArea(renderArea)
             .setClearValues(m_vulkanStorage.clearValues);
 
-        setRenderPassRenderTargetState(true);
-
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
         trackResource(renderTargets);
@@ -195,7 +193,6 @@ namespace TiRHI::Vulkan
     void CommandList::endRenderPass()
     {
         getcurrentFrameCmb().endRenderPass();
-        setRenderPassRenderTargetState(false);
         onEndRenderPass();
     }
 
@@ -218,7 +215,7 @@ namespace TiRHI::Vulkan
         if (state != ResourceState::Undefined)
         {
             const ResourceState currentState = texture.getState();
-            if (currentState == state || Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
+            if (Texture::Private::getImage(texture) == VK_NULL_HANDLE) [[unlikely]]
                 return;
 
             if (state == ResourceState::CopyDestination) [[unlikely]]
@@ -243,9 +240,6 @@ namespace TiRHI::Vulkan
         if (state != ResourceState::Undefined)
         {
             const ResourceState currentState = buffer.getState();
-
-            if (currentState == state)
-                return;
 
             if (buffer.getVkBufferFrame() == VK_NULL_HANDLE) [[unlikely]]
             {
@@ -385,10 +379,14 @@ namespace TiRHI::Vulkan
         }
     }
 
-    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data)
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data, TransitionMode transitionMode)
     {
         if (!texture) [[unlikely]]
             return;
+
+        if (transitionMode == TransitionMode::Automatic)
+            transitionResource(texture, ResourceState::CopyDestination);
+
         assert(texture.getState() == ResourceState::CopyDestination);
         std::array<vk::BufferImageCopy, 1> bufferImageCopy{};
         bufferImageCopy[0]
@@ -426,13 +424,17 @@ namespace TiRHI::Vulkan
         trackResource(texture);
     }
 
-    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data)
+    void CommandList::uploadBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data,
+                                   TransitionMode transitionMode)
     {
         if (!buffer) [[unlikely]]
             return;
 
         if (data.empty())
             return;
+
+        if (transitionMode == TransitionMode::Automatic)
+            transitionResource(buffer, ResourceState::CopyDestination);
 
         assert(buffer.getState() == ResourceState::CopyDestination);
 

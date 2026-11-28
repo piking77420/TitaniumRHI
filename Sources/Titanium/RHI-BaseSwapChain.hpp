@@ -113,12 +113,7 @@ namespace TiRHI
         bool createRenderPassDescriptor() noexcept
         {
             AttachmentDescriptor attachement{};
-            attachement.setFormat(m_format)
-                .setLoadOp(LoadOp::Clear)
-                .setStoreOp(StoreOp::Store)
-                .setInitialState(ResourceState::Present) // TO DO to put present need an resource tracker
-                .setRenderState(ResourceState::RenderTarget)
-                .setFinalState(ResourceState::Present);
+            attachement.setFormat(m_format).setLoadOp(LoadOp::Clear).setStoreOp(StoreOp::Store);
 
             const std::array attachments{attachement};
 

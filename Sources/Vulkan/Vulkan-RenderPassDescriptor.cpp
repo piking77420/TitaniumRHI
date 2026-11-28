@@ -18,7 +18,6 @@ namespace TiRHI::Vulkan
 
     bool RenderPassDescriptor::createRenderPass(vk::Device device)
     {
-
         const std::span colorAttachements = getColorAttachements();
         const std::optional depthAttachment = getDepthAttachement();
         const PipelineType accepetdPipeline = getAcceptedPipelineType();
@@ -46,12 +45,14 @@ namespace TiRHI::Vulkan
                 Private::toVulkanAttachementLoadOp(attachmentDescription.stencilLoadOp);
             vkAttachmentDescription.stencilStoreOp =
                 Private::toVulkanAttachementStoreOp(attachmentDescription.stencilStoreOp);
-            vkAttachmentDescription.initialLayout = Private::toVulkanImageLayout(attachmentDescription.initialState);
-            vkAttachmentDescription.finalLayout = Private::toVulkanImageLayout(attachmentDescription.finalState);
 
+            const vk::ImageLayout layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+            vkAttachmentDescription.initialLayout = layout;
+            vkAttachmentDescription.finalLayout = layout;
             vk::AttachmentReference& attachmentReference = vkColorAttachmentReferences[i];
+            attachmentReference.layout = layout;
             attachmentReference.attachment = static_cast<uint32_t>(i);
-            attachmentReference.layout = Private::toVulkanImageLayout(attachmentDescription.renderState);
         }
 
         vk::AttachmentReference vkDepthAttachmentReference{};
@@ -63,6 +64,9 @@ namespace TiRHI::Vulkan
             const AttachmentDescriptor& attachment = *depthAttachment;
             vk::AttachmentDescription& vkAttachment = vkAttachmentDescriptions[depthIndex];
 
+            bool isReading = attachment.loadOp == LoadOp::LoadOp;
+            bool isWritting = attachment.storeOp == StoreOp::Store;
+
             vkAttachment.format = Private::toVulkan(attachment.format);
             vkAttachment.samples = vk::SampleCountFlagBits::e1; // TODO
             vkAttachment.loadOp = Private::toVulkanAttachementLoadOp(attachment.loadOp);
@@ -70,14 +74,17 @@ namespace TiRHI::Vulkan
             vkAttachment.stencilLoadOp = Private::toVulkanAttachementLoadOp(attachment.stencilLoadOp);
             vkAttachment.stencilStoreOp = Private::toVulkanAttachementStoreOp(attachment.stencilStoreOp);
 
-            vkAttachment.initialLayout = attachment.loadOp == LoadOp::LoadOp
-                                             ? Private::toVulkanImageLayout(attachment.renderState)
-                                             : vk::ImageLayout::eUndefined;
-
-            vkAttachment.finalLayout = Private::toVulkanImageLayout(attachment.finalState);
-
             vkDepthAttachmentReference.attachment = depthIndex;
-            vkDepthAttachmentReference.layout = Private::toVulkanImageLayout(attachment.renderState);
+
+            if (!isReading && !isWritting)
+                return false;
+
+            const vk::ImageLayout layout = isWritting ? vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                                      : vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+
+            vkAttachment.initialLayout = layout;
+            vkAttachment.finalLayout = layout;
+            vkDepthAttachmentReference.layout = layout;
         }
 
         vk::SubpassDescription subpassDesc{};
@@ -90,6 +97,7 @@ namespace TiRHI::Vulkan
         {
             subpassDesc.pDepthStencilAttachment = &vkDepthAttachmentReference;
         }
+
 
         vk::RenderPassCreateInfo renderPassInfo{};
         renderPassInfo.attachmentCount = static_cast<uint32_t>(vkAttachmentDescriptions.size());
@@ -111,5 +119,4 @@ namespace TiRHI::Vulkan
 
         return m_renderPass.get() != VK_NULL_HANDLE;
     }
-
 } // namespace TiRHI::Vulkan

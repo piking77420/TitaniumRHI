@@ -9,6 +9,18 @@
 
 namespace TiRHI
 {
+#define RHI_TRANSITION_MODE_LIST(X)                                                                                    \
+    X(Automatic)                                                                                                       \
+    X(Manual)
+
+    enum class TransitionMode : uint8_t
+    {
+#define X(name) name,
+        RHI_TRANSITION_MODE_LIST(X)
+#undef X
+    };
+    IMPLEMENT_TO_STRING_TITANIUM(TransitionMode, RHI_TRANSITION_MODE_LIST)
+
     struct ClearValueDepthStencil
     {
         float depth;
@@ -210,45 +222,38 @@ namespace TiRHI
                 return false;
             }
 
-            for (size_t i = 0; i < attachmentCount; i++)
-            {
-                const bool isDepth = i == (attachmentCount - 1) && depthAttachment;
-                typename TRenderTarget::_Texture& texture = isDepth ? *(*depthTextures) : *colorTextures[i];
-                const AttachmentDescriptor& descriptor = isDepth ? *depthAttachment : colorAttachments[i];
-
-                if (texture.getState() != descriptor.initialState)
-                {
-                    RHI_LOG_WARNING(
-                        std::format(L"CommandList {}: Texture {} is in state {} but render pass expected {}",
-                                    this->getNameW(), texture.getNameW(), toWString(texture.getState()),
-                                    toWString(descriptor.initialState)),
-                        RhiApi::None);
-                }
-            }
-
             return true;
         }
 
-        void setRenderPassRenderTargetState(bool isSettingRenderState)
+        // THE RHI shoudln't make the transition automatically
+        // it should be the responsability of user or his render graph
+        /*
+        void transitionRenderPassAttachments()
         {
             if (!m_recordState.renderTargets || !m_recordState.renderPassDescritptor)
                 return;
 
-            const std::span colorAttachments = m_recordState.renderPassDescritptor->getColorAttachements();
-            const std::optional depthAttachment = m_recordState.renderPassDescritptor->getDepthAttachement();
-            const size_t attachmentCount = colorAttachments.size() + (depthAttachment.has_value() ? 1 : 0);
+            // TODO use the backen variant to batch the render state
+            auto& commandList = static_cast<T&>(*this);
+            auto& targets = *m_recordState.renderTargets;
 
-            const std::span colorTextures = m_recordState.renderTargets->getColorAttachements();
-            const std::optional depthTextures = m_recordState.renderTargets->getDepthAttachement();
+            for (auto& texture : targets.getColorAttachements())
+                static_cast<T&>(*this).transitionResource(*texture, ResourceState::RenderTarget);
 
-            for (size_t i = 0; i < attachmentCount; i++)
+            if (auto depthTexture = targets.getDepthAttachement())
             {
-                const bool isDepth = i == (attachmentCount - 1) && depthAttachment;
-                typename TRenderTarget::_Texture& texture = isDepth ? *(*depthTextures) : *colorTextures[i];
-                const AttachmentDescriptor& descriptor = isDepth ? *depthAttachment : colorAttachments[i];
-                texture.setState(isSettingRenderState ? descriptor.renderState : descriptor.finalState);
+                assert(m_recordState.renderPassDescritptor->getDepthAttachement());
+                const std::optional<AttachmentDescriptor>& attachement =
+        m_recordState.renderPassDescritptor->getDepthAttachement(); if (attachement)
+                {
+                    const bool isReading = attachement->loadOp == LoadOp::LoadOp;
+                    const bool isWritting = attachement->storeOp == StoreOp::Store;
+                    const bool isReadOnly = isReading && !isWritting;
+                    static_cast<T&>(*this).transitionResource(**depthTexture, isReadOnly ? ResourceState::DepthRead
+                                                                                         : ResourceState::DepthWrite);
+                }
             }
-        }
+        }*/
 
         void bindPipeline(const _GraphicPipeline& graphicPipeline)
         {

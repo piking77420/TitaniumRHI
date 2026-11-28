@@ -33,6 +33,7 @@ namespace TiRHI::Vulkan
         vk::UniqueRenderPass m_renderPass;
 
         bool createRenderPass(vk::Device device);
+
     };
 
 } // namespace TiRHI::Vulkan
