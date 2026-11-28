@@ -199,7 +199,7 @@ namespace TiRHI::Vulkan
 
     bool Device::checkExtensionToEnableValid(const Adapter& adapter, std::vector<Adapter::Features>& finalFeatures)
     {
-        const std::span<const Adapter::Features> requested = getFeaturesToEnable();
+        const std::span<const Adapter::Features> requested = getFeaturesEnable();
         const std::span<const Adapter::Features> supported = adapter.getFeatures();
 
         bool allSupported = true;
