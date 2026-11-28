@@ -225,6 +225,9 @@ namespace TiRHI
             return true;
         }
 
+        // THE RHI shoudln't make the transition automatically
+        // it should be the responsability of user or his render graph
+        /*
         void transitionRenderPassAttachments()
         {
             if (!m_recordState.renderTargets || !m_recordState.renderPassDescritptor)
@@ -240,8 +243,8 @@ namespace TiRHI
             if (auto depthTexture = targets.getDepthAttachement())
             {
                 assert(m_recordState.renderPassDescritptor->getDepthAttachement());
-                const std::optional<AttachmentDescriptor>& attachement = m_recordState.renderPassDescritptor->getDepthAttachement();
-                if (attachement)
+                const std::optional<AttachmentDescriptor>& attachement =
+        m_recordState.renderPassDescritptor->getDepthAttachement(); if (attachement)
                 {
                     const bool isReading = attachement->loadOp == LoadOp::LoadOp;
                     const bool isWritting = attachement->storeOp == StoreOp::Store;
@@ -250,7 +253,7 @@ namespace TiRHI
                                                                                          : ResourceState::DepthWrite);
                 }
             }
-        }
+        }*/
 
         void bindPipeline(const _GraphicPipeline& graphicPipeline)
         {

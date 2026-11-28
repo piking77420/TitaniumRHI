@@ -165,7 +165,6 @@ namespace TiRHI::DirectX12
         // Validate before modifying command-list state.
         if (colorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT)
             return false;
-        transitionRenderPassAttachments();
         std::array<D3D12_RENDER_PASS_RENDER_TARGET_DESC, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> desc{};
 
         auto fillRenderTargetDesc = [device = &getDevice()](D3D12_RENDER_PASS_RENDER_TARGET_DESC& desc,

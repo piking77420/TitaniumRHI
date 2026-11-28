@@ -171,8 +171,6 @@ namespace TiRHI::Vulkan
             .setRenderArea(renderArea)
             .setClearValues(m_vulkanStorage.clearValues);
 
-        transitionRenderPassAttachments();
-
         getcurrentFrameCmb().beginRenderPass(beginInfo, vk::SubpassContents::eInline);
 
         trackResource(renderTargets);
@@ -381,8 +379,7 @@ namespace TiRHI::Vulkan
         }
     }
 
-    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data,
-                               TransitionMode transitionMode)
+    void CommandList::upload2d(Texture& texture, std::span<const std::byte> data, TransitionMode transitionMode)
     {
         if (!texture) [[unlikely]]
             return;
