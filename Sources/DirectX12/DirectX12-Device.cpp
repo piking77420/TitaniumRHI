@@ -390,6 +390,11 @@ namespace TiRHI::DirectX12
 
     void Device::submitPresent(std::span<const SubmitPresentDesc> submitPresentDesc)
     {
+        const UINT64 fenceValue = ++m_synchronization.nextFrameFenceValue;
+
+        for (const auto& desc : submitPresentDesc)
+            desc.commandList->markResourceFrame(fenceValue);
+
         // Execute cmd lists
         {
             std::vector<ID3D12CommandList*> cmdListsArr;
@@ -400,8 +405,6 @@ namespace TiRHI::DirectX12
         }
 
         // sync part
-        const UINT64 fenceValue = ++m_synchronization.nextFrameFenceValue;
-
         // when gpu is done set the nect value of the fence
         const HRESULT hrFenceSignal = m_graphicsQueue->Signal(m_synchronization.frameFence.Get(), fenceValue);
 
@@ -410,9 +413,6 @@ namespace TiRHI::DirectX12
             RHI_LOG_ERROR(std::format(L"SwapChain Fence Signal failed!\nError Code: {}", hrFenceSignal),
                           RhiApi::DirectX12);
         }
-
-        for (const auto& desc : submitPresentDesc)
-            desc.commandList->markResourceFrame(fenceValue);
 
         m_synchronization.frameFenceValue[getRHI().getCurrentFrame()] = fenceValue;
 

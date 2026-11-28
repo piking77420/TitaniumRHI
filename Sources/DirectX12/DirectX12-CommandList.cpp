@@ -70,8 +70,8 @@ namespace TiRHI::DirectX12
         }
         else
         {
-            const LPCWSTR name = getName().empty() ? L"" : getNameW().c_str();
-            m_commandList->SetName(name);
+            const std::wstring name = getNameW();
+            m_commandList->SetName(name.c_str());
             RHI_LOG_INFO(std::format(L"Create Command List success.\nName : {}, Handle : {}", name,
                                      reinterpret_cast<void*>(m_commandList.Get())),
                          RhiApi::DirectX12);

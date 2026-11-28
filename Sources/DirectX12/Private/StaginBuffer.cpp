@@ -16,13 +16,15 @@ namespace TiRHI::DirectX12::Private
         , m_mappedData(std::exchange(other.m_mappedData, nullptr))
         , m_size(std::exchange(other.m_size, 0))
     {
+        setLastFrameUsed(other.getLastFrameUsed());
     }
 
     StagingBuffer::StagingBuffer(Device& device, uint64_t size, uint64_t timeLineFrame)
         : m_deferredDeletionQueue(Device::Private::getDeferredDeletionQueue(device))
-        , m_timeLineFrame(timeLineFrame)
         , m_size(size)
     {
+        setLastFrameUsed(timeLineFrame);
+
         D3D12MA::Allocator& allocator = Device::Private::getAllocator(device);
 
         D3D12MA::ALLOCATION_DESC allocDesc{};
@@ -81,11 +83,11 @@ namespace TiRHI::DirectX12::Private
     {
         if (m_allocation)
         {
-            m_deferredDeletionQueue.retire(m_timeLineFrame,
+            m_deferredDeletionQueue.retire(getLastFrameUsed(),
                                            [allocation = std::move(m_allocation)]() mutable { allocation.Reset(); });
             m_mappedData = nullptr;
             m_size = 0;
-            m_timeLineFrame = 0;
+            setLastFrameUsed(0);
         }
     }
 }

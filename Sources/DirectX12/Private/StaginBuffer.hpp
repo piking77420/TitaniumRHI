@@ -62,7 +62,6 @@ namespace TiRHI::DirectX12::Private
         MComPtr<D3D12MA::Allocation> m_allocation;
         std::byte* m_mappedData = nullptr;
         uint64_t m_size = 0;
-        uint64_t m_timeLineFrame = 0;
 
         void reset();
     };
